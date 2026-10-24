@@ -17,7 +17,7 @@
   `;
   document.head.appendChild(style);
 
-  const MIN_VISIBLE=650;
+  const MIN_VISIBLE=250;
   let active=null;
   let pending=false;
   let started=0;

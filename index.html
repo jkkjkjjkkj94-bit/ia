@@ -34,37 +34,34 @@
     </section>
 
     <section id="v-knowledge" class="view">
-      <div class="locked gate">Entre como administrador para visualizar e gerenciar a base de conhecimento.</div>
-      <div class="admin hide">
-        <div class="card knowledge-card">
-          <div class="head knowledge-head">
-            <div>
-              <h3>Base de conhecimento</h3>
-              <div class="sub"><span id="kbCount">0</span> respostas encontradas</div>
-            </div>
-            <div class="tools">
-              <button class="btn light" id="exportK">Exportar minhas</button>
-              <label class="btn light" for="importK">Importar CSV</label>
-              <input id="importK" type="file" accept=".csv,text/csv" hidden>
-            </div>
+      <div class="card knowledge-card">
+        <div class="head knowledge-head">
+          <div>
+            <h3>Base de conhecimento</h3>
+            <div class="sub"><span id="kbCount">0</span> respostas encontradas</div>
           </div>
-
-          <div class="filter-grid">
-            <div class="field no-margin">
-              <label>Buscar</label>
-              <input id="kbSearch" placeholder="Ex.: soma, porcentagem, bom dia...">
-            </div>
-            <div class="field no-margin">
-              <label>Tema / tag</label>
-              <select id="categoryFilter"><option value="">Todos os temas</option></select>
-            </div>
+          <div class="tools base-admin-only hide">
+            <button class="btn light" id="exportK">Exportar minhas</button>
+            <label class="btn light" for="importK">Importar CSV</label>
+            <input id="importK" type="file" accept=".csv,text/csv" hidden>
           </div>
-
-          <div id="categoryChips" class="chips"></div>
-          <div id="importInfo" class="info hide"></div>
-          <div id="kList" class="list knowledge-list"></div>
-          <div class="pager"><button class="btn light" id="prevK">← Anterior</button><span id="pageInfo">Página 1</span><button class="btn light" id="nextK">Próxima →</button></div>
         </div>
+
+        <div class="filter-grid">
+          <div class="field no-margin">
+            <label>Buscar</label>
+            <input id="kbSearch" placeholder="Ex.: soma, porcentagem, bom dia...">
+          </div>
+          <div class="field no-margin">
+            <label>Tema / tag</label>
+            <select id="categoryFilter"><option value="">Todos os temas</option></select>
+          </div>
+        </div>
+
+        <div id="categoryChips" class="chips"></div>
+        <div id="importInfo" class="info hide"></div>
+        <div id="kList" class="list knowledge-list"><div class="locked">Selecione a aba Base para carregar.</div></div>
+        <div class="pager"><button class="btn light" id="prevK">← Anterior</button><span id="pageInfo">Página 1</span><button class="btn light" id="nextK">Próxima →</button></div>
       </div>
     </section>
 
@@ -106,5 +103,6 @@
 <div class="modal" id="modal"><div class="box"><h3>Administrador</h3><div class="field"><label>E-mail</label><input id="email" type="email"></div><div class="field"><label>Senha</label><input id="pass" type="password"></div><div class="row"><button class="btn dark" id="login">Entrar</button><button class="btn light" id="close">Cancelar</button></div></div></div>
 <div class="toast" id="toast"></div>
 <script type="module" src="app.js"></script>
+<script type="module" src="base.js"></script>
 </body>
 </html>

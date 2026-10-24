@@ -64,7 +64,7 @@
   async function searchWeb(question,bubble){
     if(!question||bubble.dataset.webSearching==='1')return;
     bubble.dataset.webSearching='1';
-    bubble.innerHTML='<div class="web-searching">Pesquisando na internet...</div>';
+    bubble.innerHTML='<div class="web-searching">Preparando resposta...</div>';
     try{
       const r=await fetch(FUNCTION_URL,{
         method:'POST',
@@ -72,16 +72,19 @@
         body:JSON.stringify({query:question})
       });
       const data=await r.json().catch(()=>({}));
-      if(!r.ok)throw new Error(data?.error||'Falha na pesquisa');
+      if(!r.ok)throw new Error(data?.error||'Falha ao responder');
       bubble.innerHTML='';
-      const answer=document.createElement('div');answer.className='web-answer';answer.textContent=data.answer||'Não encontrei informação clara o suficiente para responder com segurança.';
+      const answer=document.createElement('div');answer.className='web-answer';answer.textContent=data.answer||'Não consegui formular uma resposta clara.';
       bubble.appendChild(answer);
-      renderConfidence(bubble,data.confidence);
-      renderSources(bubble,data.sources);
+      if(data.mode==='web'){
+        renderConfidence(bubble,data.confidence);
+        renderSources(bubble,data.sources);
+      }
       bubble.dataset.webAnswered='1';
+      bubble.dataset.answerMode=data.mode||'direct';
     }catch(err){
-      console.error('Pesquisa web:',err);
-      bubble.textContent='Não consegui pesquisar na internet agora. Prefiro não inventar uma resposta. Tente novamente mais tarde.';
+      console.error('BuscaIA:',err);
+      bubble.textContent='Não consegui responder agora. Tente novamente em instantes.';
       bubble.dataset.webError='1';
     }
     msgs.scrollTop=msgs.scrollHeight;

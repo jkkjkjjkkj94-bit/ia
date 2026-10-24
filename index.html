@@ -71,7 +71,8 @@ input,textarea{width:100%;border:1px solid var(--l);border-radius:10px;padding:1
           <form id="teachForm">
             <div class="field"><label>Pergunta</label><input id="tq" required></div>
             <div class="field"><label>Palavras-chave</label><input id="tk" placeholder="horário, mercado, atendimento"></div>
-            <div class="field"><label>Resposta</label><textarea id="ta" required></textarea></div>
+            <div class="field"><label>Resposta principal</label><textarea id="ta" required></textarea></div>
+            <div class="field"><label>Respostas alternativas</label><textarea id="talt" placeholder="Uma resposta diferente por linha"></textarea></div>
             <button class="btn dark">Salvar resposta</button>
           </form>
         </div>
@@ -132,6 +133,8 @@ import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
 
 const sb=createClient('https://ccsypggvelcxsqszepfs.supabase.co','sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG');
 let K=[],P=[],U=[],user=null,ctx=null;
+const replyHistory=new Map();
+const usedReplies=new Set();
 
 const $=id=>document.getElementById(id);
 const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim();
@@ -152,6 +155,35 @@ function best(t){
   for(const x of K){const z=Math.max(sim(t,x.question),sim(t,x.question+' '+(x.keywords||[]).join(' ')));if(z>s){s=z;b=x}}
   return s>=.30?b:null
 }
+
+function replyFor(item){
+  const key=item.id||norm(item.question);
+  const pool=[item.answer,...(item.alternatives||[])].map(x=>(x||'').trim()).filter(Boolean);
+  const unique=[...new Set(pool)];
+  let state=replyHistory.get(key)||{used:new Set(),count:0};
+
+  let candidates=unique.filter(x=>!state.used.has(x)&&!usedReplies.has(x));
+  if(!candidates.length)candidates=unique.filter(x=>!state.used.has(x));
+
+  let reply='';
+  if(candidates.length){
+    reply=candidates[Math.floor(Math.random()*candidates.length)];
+  }else{
+    const base=unique[0]||item.answer||'';
+    const prefixes=['Claro —','Sem problema —','De outro jeito:','Resumindo:','Em outras palavras:','Posso explicar assim:','Uma forma diferente de dizer isso:','Reforçando a ideia:','Dito de outra maneira:','Simplificando:','Vamos por outro ângulo:','Outra maneira de responder:'];
+    const suffixes=['',' Espero que ajude.',' Se quiser, posso detalhar mais.',' Essa é a ideia principal.',' Pode me perguntar de outra forma também.',' Esse é o ponto central.',' Se precisar, continuo daqui.',' Posso complementar se quiser.',' Essa é a resposta mais direta.',' Vamos seguindo.',' Fico à disposição para outra pergunta.',' Pode continuar a conversa.'];
+    let n=state.count;
+    for(let tries=0;tries<prefixes.length*suffixes.length;tries++,n++){
+      const candidate=`${prefixes[n%prefixes.length]} ${base}${suffixes[Math.floor(n/prefixes.length)%suffixes.length]}`.trim();
+      if(!state.used.has(candidate)&&!usedReplies.has(candidate)){reply=candidate;break}
+    }
+    if(!reply)reply=`${base} — outra forma de responder (${state.count+1}).`;
+  }
+
+  state.used.add(reply);state.count++;
+  replyHistory.set(key,state);usedReplies.add(reply);
+  return reply
+}
 function cat(t){
   const n=norm(t),m={mercado:['mercado','supermercado','mercearia'],farmacia:['farmacia','remedio'],restaurante:['restaurante','almocar','jantar'],hospital:['hospital','upa'],posto:['posto','gasolina','combustivel']};
   for(const[c,w]of Object.entries(m))if(w.some(x=>n.includes(x)))return c;
@@ -170,7 +202,7 @@ async function load(){
 }
 
 function render(){
-  $('knowledge').innerHTML=K.length?K.map(x=>`<div class="item"><div><b>${esc(x.question)}</b><p>${esc(x.answer)}</p><p>${(x.keywords||[]).map(k=>`<span class="tag">${esc(k)}</span>`).join(' ')}</p></div><button class="btn danger" onclick="delK('${x.id}')">Excluir</button></div>`).join(''):'<div class="locked">Nenhuma resposta.</div>';
+  $('knowledge').innerHTML=K.length?K.map(x=>`<div class="item"><div><b>${esc(x.question)}</b><p>${esc(x.answer)}</p><p>${(x.alternatives||[]).length?`<span class="tag">${(x.alternatives||[]).length} variação(ões)</span> `:''}${(x.keywords||[]).map(k=>`<span class="tag">${esc(k)}</span>`).join(' ')}</p></div><button class="btn danger" onclick="delK('${x.id}')">Excluir</button></div>`).join(''):'<div class="locked">Nenhuma resposta.</div>';
   $('places').innerHTML=P.length?P.map(x=>`<div class="item"><div><b>${esc(x.name)}</b> <span class="tag">${esc(x.category)}</span><p>${esc([x.neighborhood,x.city].filter(Boolean).join(' • '))}<br>${esc(x.address||'')} ${esc(x.hours||'')}</p></div><button class="btn danger" onclick="delP('${x.id}')">Excluir</button></div>`).join(''):'<div class="locked">Nenhum local.</div>';
   $('pending').innerHTML=U.length?U.map(x=>`<div class="item"><div><b>${esc(x.question)}</b><p>${new Date(x.created_at).toLocaleString('pt-BR')}</p></div><button class="btn danger" onclick="delU('${x.id}')">Excluir</button></div>`).join(''):'<div class="locked">Sem perguntas pendentes.</div>'
 }
@@ -192,7 +224,7 @@ $('chatForm').onsubmit=async e=>{
     }
     if(placeIntent(t)){ctx={c:cat(t),q:t};msg('Qual sua cidade ou bairro?');return}
     const b=best(t);
-    if(b){msg(b.answer);await log(t,true)}
+    if(b){msg(replyFor(b));await log(t,true)}
     else{msg('Ainda não tenho uma resposta para isso. Registrei sua pergunta para o administrador.');await log(t,false);await pend(t)}
   }catch(err){console.error(err);msg('Não consegui acessar a base agora. Tente novamente.')}
 };
@@ -212,7 +244,7 @@ $('login').onclick=async()=>{
 
 $('teachForm').onsubmit=async e=>{
   e.preventDefault();
-  const row={question:$('tq').value.trim(),keywords:$('tk').value.split(',').map(x=>x.trim()).filter(Boolean),answer:$('ta').value.trim()};
+  const row={question:$('tq').value.trim(),keywords:$('tk').value.split(',').map(x=>x.trim()).filter(Boolean),answer:$('ta').value.trim(),alternatives:$('talt').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)};
   const{data,error}=await sb.from('knowledge').insert(row).select().single();
   if(error)return toast(error.message);
   K.unshift(data);e.target.reset();render();toast('Resposta salva e já disponível no chat')
@@ -230,8 +262,8 @@ $('exportAnswers').onclick=()=>{
   if(!user)return toast('Entre como administrador.');
   const csvCell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const lines=[
-    ['pergunta','palavras_chave','resposta','criado_em'].map(csvCell).join(';'),
-    ...K.map(x=>[x.question,(x.keywords||[]).join(', '),x.answer,x.created_at||''].map(csvCell).join(';'))
+    ['pergunta','palavras_chave','resposta','respostas_alternativas','criado_em'].map(csvCell).join(';'),
+    ...K.map(x=>[x.question,(x.keywords||[]).join(', '),x.answer,(x.alternatives||[]).join(' || '),x.created_at||''].map(csvCell).join(';'))
   ];
   const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='buscaia-respostas.csv';
@@ -295,6 +327,7 @@ $('importAnswers').onchange=async e=>{
     const iq=headerIndex(headers,['pergunta','question']);
     const ik=headerIndex(headers,['palavras_chave','palavras-chave','palavras chave','keywords']);
     const ia=headerIndex(headers,['resposta','answer']);
+    const ialt=headerIndex(headers,['respostas_alternativas','respostas alternativas','alternatives','alternative_answers']);
     if(iq<0||ia<0)throw new Error('O CSV precisa ter as colunas "pergunta" e "resposta".');
 
     const existing=new Set(K.map(x=>norm(x.question)));
@@ -306,11 +339,12 @@ $('importAnswers').onchange=async e=>{
       const question=(r[iq]||'').trim();
       const answer=(r[ia]||'').trim();
       const keywords=ik>=0?(r[ik]||'').split(',').map(x=>x.trim()).filter(Boolean):[];
+      const alternatives=ialt>=0?(r[ialt]||'').split('||').map(x=>x.trim()).filter(Boolean):[];
       if(!question||!answer){invalid++;continue}
       const key=norm(question);
       if(existing.has(key)||seen.has(key)){duplicates++;continue}
       seen.add(key);
-      pendingRows.push({question,keywords,answer})
+      pendingRows.push({question,keywords,answer,alternatives})
     }
 
     if(!pendingRows.length){

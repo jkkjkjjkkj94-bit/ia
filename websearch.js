@@ -11,6 +11,10 @@
     .web-answer{white-space:pre-wrap}
     .web-searching{display:flex;align-items:center;gap:7px;color:#64748b;font-size:12px}
     .web-searching:before{content:'◌';display:inline-block;animation:webSpin .8s linear infinite}
+    .web-confidence{display:inline-flex;align-items:center;margin-top:9px;padding:4px 7px;border-radius:999px;background:#fff;border:1px solid #dbe3ec;color:#64748b;font-size:10px;font-weight:700}
+    .web-confidence[data-level="baixa"]{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+    .web-confidence[data-level="média"]{background:#f8fafc;color:#475569}
+    .web-confidence[data-level="alta"]{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
     .web-sources{margin-top:10px;padding-top:9px;border-top:1px solid #dbe3ec;display:grid;gap:6px}
     .web-sources-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#64748b}
     .web-source{display:flex;align-items:center;gap:7px;text-decoration:none;color:#1d4ed8;background:#fff;border:1px solid #dbe3ec;border-radius:9px;padding:7px 9px;font-size:11px;max-width:100%}
@@ -30,6 +34,17 @@
 
   function safeSourceUrl(raw){
     try{const u=new URL(raw);return /^https?:$/.test(u.protocol)?u:null}catch{return null}
+  }
+
+  function renderConfidence(bubble,level){
+    if(!level)return;
+    const allowed=['baixa','média','alta'];
+    const value=allowed.includes(level)?level:'média';
+    const badge=document.createElement('div');
+    badge.className='web-confidence';
+    badge.dataset.level=value;
+    badge.textContent=`Confiança da busca: ${value}`;
+    bubble.appendChild(badge);
   }
 
   function renderSources(bubble,sources){
@@ -59,13 +74,14 @@
       const data=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(data?.error||'Falha na pesquisa');
       bubble.innerHTML='';
-      const answer=document.createElement('div');answer.className='web-answer';answer.textContent=data.answer||'Não encontrei uma resposta clara na internet.';
+      const answer=document.createElement('div');answer.className='web-answer';answer.textContent=data.answer||'Não encontrei informação clara o suficiente para responder com segurança.';
       bubble.appendChild(answer);
+      renderConfidence(bubble,data.confidence);
       renderSources(bubble,data.sources);
       bubble.dataset.webAnswered='1';
     }catch(err){
       console.error('Pesquisa web:',err);
-      bubble.textContent='Não consegui pesquisar na internet agora. Tente novamente em instantes.';
+      bubble.textContent='Não consegui pesquisar na internet agora. Prefiro não inventar uma resposta. Tente novamente mais tarde.';
       bubble.dataset.webError='1';
     }
     msgs.scrollTop=msgs.scrollHeight;

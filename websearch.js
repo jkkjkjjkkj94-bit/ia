@@ -75,9 +75,12 @@
     if(!question||bubble.dataset.webSearching==='1')return;
     bubble.dataset.webSearching='1';
     bubble.innerHTML='<div class="web-searching">Preparando resposta...</div>';
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),6000);
     try{
       const r=await fetch(FUNCTION_URL,{
         method:'POST',
+        signal:controller.signal,
         headers:{'Content-Type':'application/json','apikey':PUBLISHABLE_KEY},
         body:JSON.stringify({query:question})
       });
@@ -94,8 +97,10 @@
       bubble.dataset.answerMode=data.mode||'direct';
     }catch(err){
       console.error('BuscaIA:',err);
-      bubble.textContent='Não consegui responder agora. Tente novamente em instantes.';
+      bubble.textContent=err?.name==='AbortError'?'A resposta demorou mais que o esperado. Tente novamente.':'Não consegui responder agora. Tente novamente em instantes.';
       bubble.dataset.webError='1';
+    }finally{
+      clearTimeout(timer);
     }
     msgs.scrollTop=msgs.scrollHeight;
   }

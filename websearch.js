@@ -37,6 +37,17 @@
     return all.at(-1)||null;
   }
 
+  function collectHistory(bubble,currentQuestion){
+    const all=[...msgs.querySelectorAll('.msg')];
+    const stop=all.indexOf(bubble);
+    const prior=(stop>=0?all.slice(0,stop):all)
+      .filter(n=>!n.dataset.typing&&!n.classList.contains('typing-indicator'))
+      .map(n=>({role:n.classList.contains('user')?'user':'assistant',text:(n.textContent||'').trim()}))
+      .filter(x=>x.text&&!FALLBACKS.has(x.text)&&!/^Preparando resposta/.test(x.text));
+    if(prior.at(-1)?.role==='user'&&prior.at(-1)?.text===currentQuestion)prior.pop();
+    return prior.slice(-8);
+  }
+
   function safeSourceUrl(raw){
     try{const u=new URL(raw);return /^https?:$/.test(u.protocol)?u:null}catch{return null}
   }
@@ -74,6 +85,7 @@
   async function searchWeb(question,bubble){
     if(!question||bubble.dataset.webSearching==='1')return;
     bubble.dataset.webSearching='1';
+    const history=collectHistory(bubble,question);
     bubble.innerHTML='<div class="web-searching">Preparando resposta...</div>';
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),6000);
@@ -82,7 +94,7 @@
         method:'POST',
         signal:controller.signal,
         headers:{'Content-Type':'application/json','apikey':PUBLISHABLE_KEY},
-        body:JSON.stringify({query:question})
+        body:JSON.stringify({query:question,history})
       });
       const data=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(data?.error||'Falha ao responder');

@@ -4,7 +4,12 @@
 
   const FUNCTION_URL='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/web-search';
   const PUBLISHABLE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
-  const FALLBACK='Ainda não tenho uma resposta para isso. Registrei sua pergunta para o administrador.';
+  const FALLBACKS=new Set([
+    'Ainda não tenho uma resposta para isso. Registrei sua pergunta para o administrador.',
+    'Não consegui acessar a base agora.',
+    'Não consegui acessar a base de conhecimento agora.',
+    'Erro ao acessar a base.'
+  ]);
 
   const style=document.createElement('style');
   style.textContent=`
@@ -61,6 +66,11 @@
     bubble.appendChild(wrap);
   }
 
+  function shouldRescue(text){
+    const t=String(text||'').trim();
+    return FALLBACKS.has(t)||/^Não consegui acessar a base/i.test(t)||/^Erro ao acessar a base/i.test(t);
+  }
+
   async function searchWeb(question,bubble){
     if(!question||bubble.dataset.webSearching==='1')return;
     bubble.dataset.webSearching='1';
@@ -96,7 +106,7 @@
         if(!(node instanceof HTMLElement))continue;
         if(!node.classList.contains('msg')||!node.classList.contains('bot'))continue;
         if(node.dataset.typing==='true')continue;
-        if(node.textContent.trim()!==FALLBACK)continue;
+        if(!shouldRescue(node.textContent))continue;
         const user=previousUser(node);
         if(user)searchWeb(user.textContent.trim(),node);
       }

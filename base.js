@@ -1,9 +1,18 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
 const sbBase=createClient('https://ccsypggvelcxsqszepfs.supabase.co','sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG');
 const $b=id=>document.getElementById(id);
-const escB=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const escB=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
 let baseRows=[],baseCategories=[],baseSearch='',baseCategory='',basePage=0,baseTotal=0,baseUser=null;
 const baseSize=50;
+
+function categoryTotal(){
+  if(baseSearch.trim())return baseRows.length;
+  if(baseCategory){
+    const hit=baseCategories.find(x=>x.category===baseCategory);
+    return Number(hit?.total||0);
+  }
+  return baseCategories.reduce((n,x)=>n+Number(x.total||0),0);
+}
 
 async function refreshBaseUser(){
   const{data:{session}}=await sbBase.auth.getSession();
@@ -17,6 +26,7 @@ async function loadBaseCategories(){
   baseCategories=data||[];
   renderBaseCategories();
 }
+
 function renderBaseCategories(){
   const select=$b('categoryFilter');
   if(!select)return;
@@ -26,7 +36,11 @@ function renderBaseCategories(){
   if(chips){
     chips.innerHTML=`<button class="chip ${!baseCategory?'on':''}" data-base-cat="">Todos</button>`+baseCategories.slice(0,12).map(x=>`<button class="chip ${baseCategory===x.category?'on':''}" data-base-cat="${escB(x.category)}">${escB(x.category)} <span>${Number(x.total).toLocaleString('pt-BR')}</span></button>`).join('');
     chips.querySelectorAll('[data-base-cat]').forEach(btn=>btn.onclick=()=>{
-      baseCategory=btn.dataset.baseCat||'';basePage=0;select.value=baseCategory;renderBaseCategories();loadBasePage();
+      baseCategory=btn.dataset.baseCat||'';
+      basePage=0;
+      select.value=baseCategory;
+      renderBaseCategories();
+      loadBasePage();
     });
   }
   const opts=$b('categoryOptions');
@@ -41,19 +55,25 @@ async function loadBasePage(){
     if(baseSearch.trim()){
       const{data,error}=await sbBase.rpc('search_knowledge_filtered',{p_query:baseSearch.trim(),p_category:baseCategory||null,p_limit:50});
       if(error)throw error;
-      baseRows=data||[];baseTotal=baseRows.length;basePage=0;
+      baseRows=data||[];
+      basePage=0;
     }else{
       const from=basePage*baseSize;
-      let req=sbBase.from('knowledge').select('id,question,keywords,answer,alternatives,created_at,generated,category',{count:'exact'}).order('created_at',{ascending:false}).range(from,from+baseSize-1);
+      let req=sbBase.from('knowledge')
+        .select('id,question,keywords,answer,alternatives,created_at,generated,category')
+        .order('created_at',{ascending:false})
+        .order('id',{ascending:false})
+        .range(from,from+baseSize-1);
       if(baseCategory)req=req.eq('category',baseCategory);
-      const{data,error,count}=await req;
+      const{data,error}=await req;
       if(error)throw error;
-      baseRows=data||[];baseTotal=count||0;
+      baseRows=data||[];
     }
+    baseTotal=categoryTotal();
     renderBaseRows();
   }catch(err){
     console.error('Base:',err);
-    list.innerHTML='<div class="locked">Não foi possível carregar a base. Atualize a página e tente novamente.</div>';
+    list.innerHTML='<div class="locked">Não foi possível carregar a base. Tente novamente.</div>';
   }
 }
 
@@ -75,17 +95,39 @@ function addBaseAlt(value=''){
   row.innerHTML=`<textarea class="altI">${escB(value)}</textarea><button type="button" class="btn danger">×</button>`;
   row.querySelector('button').onclick=()=>row.remove();box.appendChild(row);
 }
+
 function editBaseRow(id){
   if(!baseUser)return;
   const x=baseRows.find(r=>r.id===id);if(!x)return;
-  $b('editId').value=x.id;$b('tq').value=x.question;$b('tc').value=x.category||'manual';$b('tk').value=(x.keywords||[]).join(', ');$b('ta').value=x.answer;$b('alts').innerHTML='';
-  (x.alternatives||[]).forEach(addBaseAlt);if($b('altCount'))$b('altCount').textContent=(x.alternatives||[]).length+' variações';if($b('edTitle'))$b('edTitle').textContent='Editar resposta';
+  $b('editId').value=x.id;
+  $b('tq').value=x.question;
+  $b('tc').value=x.category||'manual';
+  $b('tk').value=(x.keywords||[]).join(', ');
+  $b('ta').value=x.answer;
+  $b('alts').innerHTML='';
+  (x.alternatives||[]).forEach(addBaseAlt);
+  if($b('altCount'))$b('altCount').textContent=(x.alternatives||[]).length+' variações';
+  if($b('edTitle'))$b('edTitle').textContent='Editar resposta';
   const reg=document.querySelector('.nav button[data-v="register"]');if(reg)reg.click();
 }
+
 async function deleteBaseRow(id){
   if(!baseUser||!confirm('Excluir esta resposta?'))return;
-  const{error}=await sbBase.from('knowledge').delete().eq('id',id);if(error){alert(error.message);return}
-  await Promise.all([loadBaseCategories(),loadBasePage()]);
+  const{error}=await sbBase.from('knowledge').delete().eq('id',id);
+  if(error){alert(error.message);return}
+  await loadBaseCategories();
+  await loadBasePage();
+}
+
+function openBaseView(){
+  document.querySelectorAll('.nav button,.view').forEach(x=>x.classList.remove('on'));
+  const btn=document.querySelector('.nav button[data-v="knowledge"]');
+  const view=$b('v-knowledge');
+  if(btn)btn.classList.add('on');
+  if(view)view.classList.add('on');
+  if($b('title'))$b('title').textContent='Base de conhecimento';
+  if($b('sub'))$b('sub').textContent='Explore as respostas por tema ou tag.';
+  loadBaseCategories().then(loadBasePage);
 }
 
 function wireBase(){
@@ -95,7 +137,7 @@ function wireBase(){
   if(filter)filter.onchange=e=>{baseCategory=e.target.value;basePage=0;renderBaseCategories();loadBasePage()};
   if(prev)prev.onclick=()=>{if(basePage>0){basePage--;loadBasePage()}};
   if(next)next.onclick=()=>{if((basePage+1)*baseSize<baseTotal){basePage++;loadBasePage()}};
-  if(baseBtn){const original=baseBtn.onclick;baseBtn.onclick=e=>{if(original)original.call(baseBtn,e);loadBaseCategories();loadBasePage()}}
+  if(baseBtn)baseBtn.onclick=openBaseView;
 }
 
 await refreshBaseUser();

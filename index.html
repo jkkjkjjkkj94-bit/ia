@@ -1,1 +1,110 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BuscaIA</title><link rel="stylesheet" href="style.css"></head><body><div class="app"><aside class="side"><div class="brand">BuscaIA<small>Assistente que você ensina</small></div><nav class="nav"><button class="on" data-v="chat">💬 Conversar</button><button data-v="teach">🧠 Conhecimento</button><button data-v="places">📍 Locais</button><button data-v="pending">❓ Pendentes</button></nav><div class="foot">Supabase conectado</div></aside><main><header class="top"><div><h1 id="title">Conversar</h1><p id="sub">Faça uma pergunta para o assistente.</p></div><div class="row"><span class="status" id="status">● conectando...</span><button class="btn light" id="auth">Entrar admin</button></div></header><section id="v-chat" class="view on"><div class="card chat"><div id="msgs" class="msgs"></div><form id="chatForm" class="send"><input id="q" placeholder="Digite uma mensagem..." autocomplete="off"><button class="btn dark">Enviar</button></form></div></section><section id="v-teach" class="view"><div class="locked gate">Entre como administrador para editar a base.</div><div class="kb admin hide"><div class="card"><div class="head"><div><h3>Base de conhecimento</h3><div class="sub"><span id="kbCount">0</span> cadastradas</div></div><button class="btn dark" id="newK">+ Nova</button></div><input id="kbSearch" placeholder="Buscar na base..."><div class="tools" style="margin:9px 0"><button class="btn light" id="exportK">Exportar minhas</button><label class="btn light" for="importK">Importar CSV</label><input id="importK" type="file" accept=".csv,text/csv" hidden></div><div id="importInfo" class="info hide"></div><div id="kList" class="list scroll"></div><div class="pager"><button class="btn light" id="prevK">←</button><span id="pageInfo">Página 1</span><button class="btn light" id="nextK">→</button></div></div><div class="card"><div class="head"><div><h3 id="edTitle">Nova resposta</h3><div class="sub">Edite pergunta, resposta e variações.</div></div><span id="altCount" class="sub">0 variações</span></div><form id="kForm"><input type="hidden" id="editId"><div class="field"><label>Pergunta</label><input id="tq" required></div><div class="field"><label>Palavras-chave</label><input id="tk" placeholder="separadas por vírgula"></div><div class="field"><label>Resposta principal</label><textarea id="ta" required></textarea></div><div class="field"><label>Variações</label><div id="alts" class="alts"></div><button type="button" class="btn light" id="addAlt" style="margin-top:7px">+ Variação</button></div><div class="row"><button class="btn dark">Salvar</button><button type="button" class="btn light" id="clearEd">Limpar</button></div></form></div></div></section><section id="v-places" class="view"><div class="locked gate">Entre como administrador para cadastrar locais.</div><div class="grid admin hide"><div class="card"><h3>Novo local</h3><form id="placeForm"><div class="field"><label>Nome</label><input id="pn" required></div><div class="field"><label>Categoria</label><input id="pc" required></div><div class="field"><label>Cidade</label><input id="pci" required></div><div class="field"><label>Bairro</label><input id="pb"></div><div class="field"><label>Endereço</label><input id="pa"></div><div class="field"><label>Horário</label><input id="ph"></div><button class="btn dark">Cadastrar</button></form></div><div class="card"><h3>Locais</h3><div id="places" class="list"></div></div></div></section><section id="v-pending" class="view"><div class="locked gate">Entre como administrador para ver pendentes.</div><div class="card admin hide"><h3>Perguntas não respondidas</h3><div id="pending" class="list"></div></div></section></main></div><div class="modal" id="modal"><div class="box"><h3>Administrador</h3><div class="field"><label>E-mail</label><input id="email" type="email"></div><div class="field"><label>Senha</label><input id="pass" type="password"></div><div class="row"><button class="btn dark" id="login">Entrar</button><button class="btn light" id="close">Cancelar</button></div></div></div><div class="toast" id="toast"></div><script type="module" src="app.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BuscaIA</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">BuscaIA<small>Assistente que você ensina</small></div>
+    <nav class="nav">
+      <button class="on" data-v="chat">💬 Conversar</button>
+      <button data-v="knowledge">🗂️ Base</button>
+      <button data-v="register">➕ Cadastrar</button>
+      <button data-v="places">📍 Locais</button>
+      <button data-v="pending">❓ Pendentes</button>
+    </nav>
+    <div class="foot">Supabase conectado</div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div><h1 id="title">Conversar</h1><p id="sub">Faça uma pergunta para o assistente.</p></div>
+      <div class="row"><span class="status" id="status">● conectando...</span><button class="btn light" id="auth">Entrar admin</button></div>
+    </header>
+
+    <section id="v-chat" class="view on">
+      <div class="card chat">
+        <div id="msgs" class="msgs"></div>
+        <form id="chatForm" class="send"><input id="q" placeholder="Digite uma mensagem..." autocomplete="off"><button class="btn dark">Enviar</button></form>
+      </div>
+    </section>
+
+    <section id="v-knowledge" class="view">
+      <div class="locked gate">Entre como administrador para visualizar e gerenciar a base de conhecimento.</div>
+      <div class="admin hide">
+        <div class="card knowledge-card">
+          <div class="head knowledge-head">
+            <div>
+              <h3>Base de conhecimento</h3>
+              <div class="sub"><span id="kbCount">0</span> respostas encontradas</div>
+            </div>
+            <div class="tools">
+              <button class="btn light" id="exportK">Exportar minhas</button>
+              <label class="btn light" for="importK">Importar CSV</label>
+              <input id="importK" type="file" accept=".csv,text/csv" hidden>
+            </div>
+          </div>
+
+          <div class="filter-grid">
+            <div class="field no-margin">
+              <label>Buscar</label>
+              <input id="kbSearch" placeholder="Ex.: soma, porcentagem, bom dia...">
+            </div>
+            <div class="field no-margin">
+              <label>Tema / tag</label>
+              <select id="categoryFilter"><option value="">Todos os temas</option></select>
+            </div>
+          </div>
+
+          <div id="categoryChips" class="chips"></div>
+          <div id="importInfo" class="info hide"></div>
+          <div id="kList" class="list knowledge-list"></div>
+          <div class="pager"><button class="btn light" id="prevK">← Anterior</button><span id="pageInfo">Página 1</span><button class="btn light" id="nextK">Próxima →</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="v-register" class="view">
+      <div class="locked gate">Entre como administrador para cadastrar ou editar respostas.</div>
+      <div class="admin hide">
+        <div class="card register-card">
+          <div class="head">
+            <div><h3 id="edTitle">Cadastrar resposta</h3><div class="sub">Crie uma resposta ou edite uma entrada existente.</div></div>
+            <span id="altCount" class="sub">0 variações</span>
+          </div>
+          <form id="kForm">
+            <input type="hidden" id="editId">
+            <div class="form-grid">
+              <div class="field"><label>Pergunta</label><input id="tq" required placeholder="Ex.: Quanto é 1 + 1?"></div>
+              <div class="field"><label>Tema / tag</label><input id="tc" list="categoryOptions" placeholder="Ex.: matematica_soma" value="manual"><datalist id="categoryOptions"></datalist></div>
+            </div>
+            <div class="field"><label>Palavras-chave</label><input id="tk" placeholder="separadas por vírgula"></div>
+            <div class="field"><label>Resposta principal</label><textarea id="ta" required></textarea></div>
+            <div class="field"><label>Variações de resposta</label><div id="alts" class="alts"></div><button type="button" class="btn light" id="addAlt" style="margin-top:7px">+ Adicionar variação</button></div>
+            <div class="row"><button class="btn dark">Salvar</button><button type="button" class="btn light" id="clearEd">Limpar</button></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="v-places" class="view">
+      <div class="locked gate">Entre como administrador para cadastrar locais.</div>
+      <div class="grid admin hide"><div class="card"><h3>Novo local</h3><form id="placeForm"><div class="field"><label>Nome</label><input id="pn" required></div><div class="field"><label>Categoria</label><input id="pc" required></div><div class="field"><label>Cidade</label><input id="pci" required></div><div class="field"><label>Bairro</label><input id="pb"></div><div class="field"><label>Endereço</label><input id="pa"></div><div class="field"><label>Horário</label><input id="ph"></div><button class="btn dark">Cadastrar</button></form></div><div class="card"><h3>Locais</h3><div id="places" class="list"></div></div></div>
+    </section>
+
+    <section id="v-pending" class="view">
+      <div class="locked gate">Entre como administrador para ver pendentes.</div>
+      <div class="card admin hide"><h3>Perguntas não respondidas</h3><div id="pending" class="list"></div></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="modal"><div class="box"><h3>Administrador</h3><div class="field"><label>E-mail</label><input id="email" type="email"></div><div class="field"><label>Senha</label><input id="pass" type="password"></div><div class="row"><button class="btn dark" id="login">Entrar</button><button class="btn light" id="close">Cancelar</button></div></div></div>
+<div class="toast" id="toast"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

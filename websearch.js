@@ -29,7 +29,7 @@
     .web-sources.on{display:grid}
     .web-sources-title{font-size:9px;text-transform:uppercase;letter-spacing:.12em;font-weight:800;color:#777}
     .web-source{display:flex;align-items:center;gap:10px;text-decoration:none;color:#111;background:#fff;border:1px solid #e2e2df;border-radius:12px;padding:9px 10px;font-size:10px;max-width:100%;transition:.18s ease}
-    .web-source:hover{background:#f5f5f3;border-color:#cececa;transform:translateY(-1px)}
+    a.web-source:hover{background:#f5f5f3;border-color:#cececa;transform:translateY(-1px)}
     .web-source-main{min-width:0;flex:1;display:grid;gap:3px}
     .web-source-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:760}
     .web-source-meta{display:flex;align-items:center;gap:6px;min-width:0;color:#969696;font-size:9px}
@@ -94,6 +94,7 @@
     if(s.quality_label)return s.quality_label;
     const kind=String(s.kind||'').toLowerCase();
     const d=String(s.domain||'').toLowerCase();
+    if(kind==='document')return 'PDF';
     if(kind==='official')return 'Oficial';
     if(/\.gov(\.br)?$/.test(d))return 'Governo';
     if(/\.edu(\.br)?$/.test(d))return 'Universidade';
@@ -104,19 +105,21 @@
   }
 
   function buildSources(bubble,sources){
-    const valid=(sources||[]).map(s=>({...s,u:safeSourceUrl(s.url)})).filter(s=>s.u).slice(0,5);
+    const valid=(sources||[]).map(s=>({...s,u:safeSourceUrl(s.url)})).filter(s=>s.u||s.kind==='document').slice(0,5);
     if(!valid.length)return null;
     const wrap=document.createElement('div');wrap.className='web-sources';
     const title=document.createElement('div');title.className='web-sources-title';title.textContent='Fontes consultadas';wrap.appendChild(title);
     for(const s of valid){
-      const a=document.createElement('a');a.className='web-source';a.href=s.u.href;a.target='_blank';a.rel='noopener noreferrer nofollow';
+      const el=s.u?document.createElement('a'):document.createElement('div');el.className='web-source';
+      if(s.u){el.href=s.u.href;el.target='_blank';el.rel='noopener noreferrer nofollow'}
       const main=document.createElement('div');main.className='web-source-main';
-      const name=document.createElement('div');name.className='web-source-name';name.textContent=s.title||s.u.hostname;
+      const name=document.createElement('div');name.className='web-source-name';name.textContent=s.title||s.document_name||s.u?.hostname||'Documento PDF';
       const metaLine=document.createElement('div');metaLine.className='web-source-meta';
-      const domain=document.createElement('span');domain.className='web-source-domain';domain.textContent=s.u.hostname.replace(/^www\./,'');
+      const domain=document.createElement('span');domain.className='web-source-domain';
+      domain.textContent=s.kind==='document'?`PDF${s.page_number?` • página ${s.page_number}`:''}`:(s.u?.hostname||s.domain||'').replace(/^www\./,'');
       const quality=document.createElement('span');quality.className='source-quality';quality.textContent=sourceQualityLabel(s);
       if(Number.isFinite(Number(s.quality_score)))quality.title=`Qualidade da fonte: ${Number(s.quality_score)}%`;
-      metaLine.append(domain);main.append(name,metaLine);a.append(main,quality);wrap.appendChild(a);
+      metaLine.append(domain);main.append(name,metaLine);el.append(main,quality);wrap.appendChild(el);
     }
     bubble.appendChild(wrap);
     return {wrap,valid};
@@ -147,7 +150,8 @@
     const row=document.createElement('div');row.className='web-meta';
     renderConfidence(row,data);
     if(data.search_provider&&data.search_provider!=='none'){
-      const provider=document.createElement('div');provider.className='web-provider';provider.textContent=data.search_provider==='google'?'Busca: Google':'Busca: web';row.appendChild(provider);
+      const provider=document.createElement('div');provider.className='web-provider';
+      provider.textContent=data.search_provider==='google'?'Busca: Google':data.search_provider==='pdf'?'Fonte: PDF':'Busca: web';row.appendChild(provider);
     }
     if(sourceInfo){
       const toggle=document.createElement('button');toggle.type='button';toggle.className='source-toggle';toggle.textContent=`Ver fontes (${sourceInfo.valid.length})`;
@@ -190,7 +194,7 @@
       bubble.innerHTML='';
       const answer=document.createElement('div');answer.className='web-answer';bubble.appendChild(answer);
       await typeAnswer(answer,data.answer||'Não consegui formular uma resposta clara.');
-      const sourceInfo=data.mode==='web'?buildSources(bubble,data.sources):null;
+      const sourceInfo=(data.mode==='web'||data.mode==='document')?buildSources(bubble,data.sources):null;
       renderControls(bubble,question,data,sourceInfo);
       bubble.dataset.webAnswered='1';
       bubble.dataset.answerMode=data.mode||'direct';

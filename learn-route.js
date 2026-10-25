@@ -1,7 +1,7 @@
 (()=>{
   const originalFetch=window.fetch.bind(window);
   const oldUrl='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/web-search';
-  const newUrl='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/answer-and-learn';
+  const newUrl='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/answer-with-docs';
 
   window.fetch=(input,init)=>{
     try{
@@ -13,7 +13,7 @@
         }
         return originalFetch(newUrl,init);
       }
-    }catch(e){console.error('BuscaIA learning route:',e)}
+    }catch(e){console.error('BuscaIA PDF route:',e)}
     return originalFetch(input,init);
   };
 })();

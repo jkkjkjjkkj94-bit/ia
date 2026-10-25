@@ -1,0 +1,34 @@
+/* BuscaIA — Documentos / conhecimento por PDF */
+.docs-shell{display:grid;gap:14px}
+.docs-upload{border:1px dashed #d4d4d0;border-radius:22px;padding:28px;background:rgba(255,255,255,.62);text-align:center;transition:.18s ease}
+.docs-upload.drag{border-color:#111;background:#f7f7f5}
+.docs-upload-icon{width:52px;height:52px;border-radius:17px;background:#111;color:#fff;display:grid;place-items:center;margin:0 auto 12px;font-size:22px;font-weight:900}
+.docs-upload h3{margin:0 0 6px;font-size:19px;letter-spacing:-.03em}
+.docs-upload p{margin:0 auto 14px;max-width:560px;color:#7c7c78;font-size:12px;line-height:1.55}
+.docs-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.docs-progress{display:none;margin-top:15px;max-width:520px;margin-left:auto;margin-right:auto;text-align:left}
+.docs-progress.on{display:block}
+.docs-progress-line{height:7px;border-radius:99px;background:#ececea;overflow:hidden}
+.docs-progress-line span{display:block;height:100%;width:0;background:#111;border-radius:inherit;transition:width .18s ease}
+.docs-progress-text{margin-top:7px;color:#777;font-size:10px;font-weight:700}
+.docs-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.docs-stat{border:1px solid #e5e5e2;border-radius:16px;padding:13px 14px;background:rgba(255,255,255,.7)}
+.docs-stat strong{display:block;font-size:18px;letter-spacing:-.04em}.docs-stat span{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.09em;font-weight:800}
+.docs-list{display:grid;gap:9px}
+.doc-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;border:1px solid #e4e4e1;border-radius:18px;padding:14px;background:rgba(255,255,255,.78)}
+.doc-main{min-width:0}.doc-name{font-size:13px;font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.doc-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px;color:#888;font-size:9px}
+.doc-badge{border:1px solid #dededb;border-radius:999px;padding:4px 7px;background:#f6f6f4;color:#555;font-size:8px;font-weight:850;text-transform:uppercase;letter-spacing:.05em}
+.doc-badge.ready{background:#111;color:#fff;border-color:#111}.doc-badge.error{background:#f1f1ef;color:#555}
+.doc-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.doc-actions button{white-space:nowrap}
+.docs-empty{border:1px dashed #dededb;border-radius:18px;padding:25px;text-align:center;color:#8a8a86;font-size:11px}
+.docs-note{border:1px solid #e4e4e1;border-radius:15px;padding:11px 13px;background:#fafaf8;color:#747470;font-size:10px;line-height:1.5}
+
+html[data-theme="dark"] .docs-upload,html[data-theme="dark"] .docs-stat,html[data-theme="dark"] .doc-item{background:#171717;border-color:#303030}
+html[data-theme="dark"] .docs-upload.drag{background:#202020;border-color:#777}
+html[data-theme="dark"] .docs-upload-icon{background:#f2f2f0;color:#111}
+html[data-theme="dark"] .docs-upload p,html[data-theme="dark"] .doc-meta,html[data-theme="dark"] .docs-progress-text{color:#858580}
+html[data-theme="dark"] .docs-progress-line{background:#2b2b2b}html[data-theme="dark"] .docs-progress-line span{background:#f2f2f0}
+html[data-theme="dark"] .doc-name{color:#efefec}html[data-theme="dark"] .doc-badge{background:#222;border-color:#373737;color:#aaa}html[data-theme="dark"] .doc-badge.ready{background:#efefec;color:#111;border-color:#efefec}
+html[data-theme="dark"] .docs-empty,html[data-theme="dark"] .docs-note{background:#151515;border-color:#303030;color:#858580}
+
+@media(max-width:760px){.docs-summary{grid-template-columns:1fr}.doc-item{grid-template-columns:1fr}.doc-actions{justify-content:flex-start}.docs-upload{padding:22px 14px}}

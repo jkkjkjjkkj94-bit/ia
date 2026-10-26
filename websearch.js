@@ -182,7 +182,11 @@
     const history=collectHistory(bubble,question);
     bubble.innerHTML='<div class="web-searching">Preparando resposta...</div>';
     const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),6500);
+    const slowTimer=setTimeout(()=>{
+      const status=bubble.querySelector('.web-searching');
+      if(status)status.textContent='Analisando fontes e formulando resposta...';
+    },7000);
+    const timer=setTimeout(()=>controller.abort(),45000);
     try{
       const r=await fetch(FUNCTION_URL,{
         method:'POST',signal:controller.signal,
@@ -204,7 +208,10 @@
       console.error('BuscaIA:',err);
       bubble.textContent=err?.name==='AbortError'?'A resposta demorou mais que o esperado. Tente novamente.':'Não consegui responder agora. Tente novamente em instantes.';
       bubble.dataset.webError='1';bubble.dataset.webSearching='0';
-    }finally{clearTimeout(timer)}
+    }finally{
+      clearTimeout(timer);
+      clearTimeout(slowTimer);
+    }
     msgs.scrollTop=msgs.scrollHeight;
   }
 

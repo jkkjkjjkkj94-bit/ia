@@ -16,7 +16,7 @@
         }
         return originalFetch(newUrl,init);
       }
-    }catch(e){console.error('BuscaIA PDF route:',e)}
+    }catch(e){console.error('BuscaIA hybrid route:',e)}
     return originalFetch(input,init);
   };
 
@@ -93,4 +93,12 @@
     const id=button.getAttribute('data-download');
     if(id)exportPdf(button,id);
   },true);
+
+  if(!document.querySelector('script[data-buscaia-hybrid-route]')){
+    const s=document.createElement('script');
+    s.src='hybrid-route.js';
+    s.dataset.buscaiaHybridRoute='1';
+    document.head.appendChild(s);
+  }
+  import('./semantic-index.js').catch(e=>console.warn('BuscaIA semantic index loader:',e));
 })();

@@ -1,7 +1,7 @@
 (()=>{
   const originalFetch=window.fetch.bind(window);
   const oldUrl='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/web-search';
-  const newUrl='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/answer-with-docs';
+  const newUrl='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/answer-router';
   const SUPABASE_URL='https://ccsypggvelcxsqszepfs.supabase.co';
   const PUBLISHABLE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
   const BUCKET='knowledge-pdfs';
@@ -16,7 +16,7 @@
         }
         return originalFetch(newUrl,init);
       }
-    }catch(e){console.error('BuscaIA hybrid route:',e)}
+    }catch(e){console.error('BuscaIA quality route:',e)}
     return originalFetch(input,init);
   };
 

@@ -82,7 +82,9 @@ if(form&&address&&lat&&lng){
   async function resolveCoordinates(item){
     const query=[item.street,item.district,item.city,item.uf,'Brasil'].filter(Boolean).join(', ');
     try{
-      const res=await fetch(`${API}?resolve=1&q=${encodeURIComponent(query)}`,{headers:{'Accept':'application/json'}});
+      const params=new URLSearchParams({resolve:'1',q:query});
+      if(item.cep)params.set('cep',item.cep);
+      const res=await fetch(`${API}?${params.toString()}`,{headers:{'Accept':'application/json'}});
       if(!res.ok)return null;
       const data=await res.json();
       return data?.resolved||null;

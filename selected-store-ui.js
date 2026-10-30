@@ -1,5 +1,34 @@
 const msgs=document.getElementById('msgs');
 
+if(!document.getElementById('selected-store-ui-style')){
+  const style=document.createElement('style');
+  style.id='selected-store-ui-style';
+  style.textContent=`
+  .selected-store-msg{max-width:100%!important;width:100%;padding:0!important;background:transparent!important}
+  .selected-store-card{border:1px solid #e9e9e9;border-radius:16px;padding:16px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.02)}
+  .selected-store-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+  .selected-store-kicker{font-size:10px;color:#999;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
+  .selected-store-head h3{margin:0;font-size:18px;line-height:1.2;letter-spacing:-.02em}
+  .selected-store-distance{font-size:12px;font-weight:700;background:#f5f5f5;border-radius:999px;padding:6px 9px;white-space:nowrap}
+  .selected-store-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .selected-store-chips span{font-size:10px;padding:5px 8px;border-radius:999px;background:#f6f6f6;color:#555}
+  .selected-store-chips .is-open{background:#eef8f2;color:#16734b}
+  .selected-store-chips .is-closed{background:#faf1f1;color:#954848}
+  .selected-store-info{display:grid;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0}
+  .selected-info-row{display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px;align-items:start;font-size:12px;line-height:1.45}
+  .selected-info-label{color:#999;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
+  .selected-store-card .chat-actions{margin-top:14px;padding-top:12px;border-top:1px solid #f0f0f0;display:flex;gap:7px;flex-wrap:wrap}
+  .selected-store-card .chat-actions button{border-radius:9px;padding:7px 10px;font-size:10px;background:#fff;border:1px solid #e5e5e5}
+  .selected-store-card .chat-actions button:hover{background:#f7f7f7}
+  @media(max-width:680px){
+    .selected-store-card{padding:13px;border-radius:14px}
+    .selected-store-head h3{font-size:16px}
+    .selected-info-row{grid-template-columns:1fr;gap:3px}
+    .selected-info-label{padding-top:0}
+  }`;
+  document.head.appendChild(style);
+}
+
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
 function parseSelectedStore(text){

@@ -8,7 +8,7 @@ const ctx=document.getElementById('ctx');
 
 const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const tagsFrom=s=>[...(s||'').matchAll(/#([\p{L}\p{N}_-]+)/gu)].map(m=>m[1]).filter(t=>t.length<=25).slice(0,5);
-const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const shortTag=t=>t.length>20?t.slice(0,17)+'…':t;
 
 function requestedTags(text){return tagsFrom(text).map(norm).filter(Boolean)}
 function matchingTags(store,wanted){
@@ -45,36 +45,48 @@ function submitText(text){if(!input||!form)return;input.value=text;form.dispatch
 function cardFor(x,index,hours,userPos){
   const s=x.store,d=haversine(userPos,s),open=isOpen(s,hours),tags=allTags(s);
   const card=document.createElement('article');card.className='store-result-card';
-  const top=document.createElement('div');top.className='store-card-top';
-  const titleWrap=document.createElement('div');
+
+  const header=document.createElement('div');header.className='store-card-top';
+  const left=document.createElement('div');
   const title=document.createElement('h3');title.textContent=s.name||'Loja';
-  const sub=document.createElement('div');sub.className='store-card-sub';
-  if(s.category)sub.appendChild(chip(s.category,'category'));
-  sub.appendChild(chip(open?'Aberto agora':'Fechado',open?'open':'closed'));
-  if(d!=null)sub.appendChild(chip(`${d.toFixed(1)} km de você`,'distance'));
-  titleWrap.append(title,sub);
-  const rank=document.createElement('div');rank.className='store-rank';rank.textContent=`#${index+1}`;
-  top.append(titleWrap,rank);card.appendChild(top);
+  const meta=document.createElement('div');meta.className='store-card-meta';
+  if(s.category)meta.appendChild(chip(s.category,'category'));
+  meta.appendChild(chip(open?'Aberto agora':'Fechado',open?'open':'closed'));
+  if(d!=null)meta.appendChild(chip(`${d.toFixed(1)} km`,'distance'));
+  left.append(title,meta);
+  const rank=document.createElement('span');rank.className='store-rank';rank.textContent=String(index+1).padStart(2,'0');
+  header.append(left,rank);card.appendChild(header);
 
-  if(tags.length){const tagBox=document.createElement('div');tagBox.className='store-tags';tags.forEach(t=>tagBox.appendChild(chip(t,'tag')));card.appendChild(tagBox)}
+  if(s.address){
+    const addr=document.createElement('div');addr.className='store-address';addr.textContent=s.address;card.appendChild(addr)
+  }
 
-  if(s.address){const addr=document.createElement('div');addr.className='store-address';addr.textContent=s.address;card.appendChild(addr)}
-  const facts=document.createElement('div');facts.className='store-facts';
-  if(Number(s.rating||0)>0)facts.appendChild(chip(`★ ${Number(s.rating).toFixed(1)}`,'rating'));
-  if(s.delivery)facts.appendChild(chip('Faz entrega','delivery'));
-  if(s.pickup)facts.appendChild(chip('Retirada','pickup'));
-  if(Number(s.delivery_fee||0)===0&&s.delivery)facts.appendChild(chip('Entrega sem taxa','free'));
-  if(facts.children.length)card.appendChild(facts);
+  if(tags.length){
+    const tagBox=document.createElement('div');tagBox.className='store-tags';
+    tags.forEach(t=>tagBox.appendChild(chip(shortTag(t),'tag')));
+    card.appendChild(tagBox)
+  }
+
+  const compact=[];
+  if(Number(s.rating||0)>0)compact.push(`★ ${Number(s.rating).toFixed(1)}`);
+  if(s.delivery)compact.push('Entrega');
+  if(s.pickup)compact.push('Retirada');
+  if(Number(s.delivery_fee||0)===0&&s.delivery)compact.push('Sem taxa');
+  if(compact.length){const facts=document.createElement('div');facts.className='store-facts-text';facts.textContent=compact.join(' · ');card.appendChild(facts)}
 
   const why=document.createElement('div');why.className='store-why';
-  const reasons=[];if(x.tags.length)reasons.push(`combina com ${x.tags.join(' ')}`);if(d!=null)reasons.push(`fica a ${d.toFixed(1)} km`);if(open)reasons.push('está aberta agora');if(s.delivery)reasons.push('faz entrega');
-  why.textContent=index===0?`Minha primeira opção é a ${s.name}${reasons.length?' porque '+reasons.join(', '):''}.`:`Também recomendo a ${s.name}${reasons.length?' porque '+reasons.join(', '):''}.`;
+  const reasons=[];
+  if(x.tags.length)reasons.push('combina com sua busca');
+  if(d!=null)reasons.push(`fica a ${d.toFixed(1)} km`);
+  if(open)reasons.push('está aberta');
+  if(s.delivery)reasons.push('faz entrega');
+  why.textContent=`${index===0?'Boa opção para você':'Outra opção'}${reasons.length?': '+reasons.join(', '):''}.`;
   card.appendChild(why);
 
   const actions=document.createElement('div');actions.className='store-card-actions';
-  const details=document.createElement('button');details.type='button';details.className='store-action primary';details.textContent='Ver detalhes';details.onclick=()=>submitText(s.name);
+  const details=document.createElement('button');details.type='button';details.className='store-action primary';details.textContent='Ver loja';details.onclick=()=>submitText(s.name);
   const products=document.createElement('button');products.type='button';products.className='store-action';products.textContent='Produtos';products.onclick=()=>submitText(`${s.name} produtos`);
-  const route=document.createElement('button');route.type='button';route.className='store-action';route.textContent='Como chegar';route.onclick=()=>window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address||s.name)}`,'_blank','noopener');
+  const route=document.createElement('button');route.type='button';route.className='store-action';route.textContent='Rota';route.onclick=()=>window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address||s.name)}`,'_blank','noopener');
   actions.append(details,products,route);card.appendChild(actions);
   return card;
 }
@@ -91,7 +103,7 @@ form?.addEventListener('submit',async e=>{
   const rows=(data||[]).map(store=>({store,tags:matchingTags(store,wanted)})).filter(x=>x.tags.length);
   if(!rows.length){messageShell(`Não encontrei lojas cadastradas com ${wanted.map(x=>'#'+x).join(' ')}.`);return}
   rows.sort((a,b)=>{const da=haversine(userPos,a.store),db=haversine(userPos,b.store);if(da!=null&&db!=null)return da-db;return Number(b.store.rating||0)-Number(a.store.rating||0)});
-  const shell=messageShell(`Encontrei ${rows.length===1?'1 opção':rows.length+' opções'} que combinam com ${wanted.map(x=>'#'+x).join(' ')}.`);
+  const shell=messageShell(`${rows.length===1?'1 opção encontrada':rows.length+' opções encontradas'} para ${wanted.map(x=>'#'+shortTag(x)).join(' ')}.`);
   const grid=document.createElement('div');grid.className='store-results-grid';rows.slice(0,6).forEach((x,i)=>grid.appendChild(cardFor(x,i,hoursData||[],userPos)));shell.appendChild(grid);
   if(msgs)msgs.scrollTop=msgs.scrollHeight;
 },true);

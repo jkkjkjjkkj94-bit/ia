@@ -33,6 +33,7 @@ if(form&&address&&lat&&lng){
 
   let timer=null,controller=null,selectedLabel='',requestSeq=0;
   const clean=s=>(s||'').trim();
+  const API='https://innziuzgtpfsiywqmies.supabase.co/functions/v1/address-search';
 
   const clearValidation=()=>{
     address.dataset.validated='0';
@@ -104,7 +105,7 @@ if(form&&address&&lat&&lng){
     box.innerHTML='';
     if(!features.length){
       box.style.display='none';
-      status.textContent='Nenhuma sugestão encontrada. Tente digitar cidade, bairro, rua e número.';
+      status.textContent='Nenhuma sugestão encontrada. Tente informar cidade, bairro, rua e número.';
       return;
     }
 
@@ -116,7 +117,13 @@ if(form&&address&&lat&&lng){
       b.style.cssText='display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;padding:11px 12px;background:#fff;cursor:pointer;font:inherit';
       b.onmouseenter=()=>b.style.background='#f7f7f7';
       b.onmouseleave=()=>b.style.background='#fff';
-      b.innerHTML=`<b style="display:block">${label}</b><span class="meta">${typeLabel(feature)} · ${props(feature).country||'Brasil'}</span>`;
+      const strong=document.createElement('b');
+      strong.style.display='block';
+      strong.textContent=label;
+      const meta=document.createElement('span');
+      meta.className='meta';
+      meta.textContent=`${typeLabel(feature)} · ${props(feature).country||'Brasil'}`;
+      b.append(strong,meta);
       b.onclick=()=>choose(feature);
       box.appendChild(b);
     });
@@ -124,7 +131,7 @@ if(form&&address&&lat&&lng){
     const attr=document.createElement('div');
     attr.className='meta';
     attr.style.cssText='padding:7px 10px';
-    attr.textContent='Dados de localização: OpenStreetMap via Photon';
+    attr.textContent='Dados de localização: OpenStreetMap via serviço seguro do Local AI';
     box.appendChild(attr);
     box.style.display='block';
     status.textContent='Escolha uma sugestão ou continue digitando para refinar.';
@@ -144,18 +151,18 @@ if(form&&address&&lat&&lng){
     status.textContent='Buscando locais e endereços...';
 
     try{
-      const params=new URLSearchParams({q,limit:'12',lang:'pt',bbox:'-73.99,-33.75,-34.79,5.27'});
-      const res=await fetch('https://photon.komoot.io/api/?'+params.toString(),{
+      const res=await fetch(`${API}?q=${encodeURIComponent(q)}`,{
         signal:controller.signal,
         headers:{'Accept':'application/json'}
       });
-      if(!res.ok)throw new Error('Falha ao consultar endereços');
+      if(!res.ok)throw new Error(`Falha ao consultar endereços (${res.status})`);
       const data=await res.json();
       if(seq!==requestSeq)return;
       const rows=(data.features||[]).filter(f=>isBrazil(f)&&coords(f).length>=2);
       renderRows(rows);
     }catch(e){
       if(e?.name==='AbortError')return;
+      console.error('[Local AI] address-search:',e);
       box.style.display='none';
       status.textContent='Não foi possível buscar sugestões agora. Tente novamente.';
     }
@@ -164,7 +171,7 @@ if(form&&address&&lat&&lng){
   address.addEventListener('input',()=>{
     if(address.value!==selectedLabel)clearValidation();
     clearTimeout(timer);
-    timer=setTimeout(searchAddress,250);
+    timer=setTimeout(searchAddress,280);
   });
 
   address.addEventListener('focus',()=>{

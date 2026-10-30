@@ -1,32 +1,40 @@
 const form=document.getElementById('chatForm');
 const input=document.getElementById('q');
-let bypass=false;
+const ctx=document.getElementById('ctx');
 const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-const newSearchWords=['comida','pizzaria','pizza','restaurante','lanchonete','hamburgueria','mercado','supermercado','farmacia','drogaria','roupa','roupas','camiseta','camisa','vestido','moda','pet shop','petshop','tecnologia','informatica','celular','computador','beleza','salao','barbearia','servico','servicos','oficina','autopecas','construcao','ferragem'];
-const followupWords=['horario','abre','fecha','pix','pagamento','entrega','endereco','onde fica','distancia','produto','produtos','preco','valor','essa loja','esta loja','ela','dela'];
+
+const commercialWords=['comida','pizzaria','pizza','restaurante','lanchonete','hamburgueria','mercado','supermercado','farmacia','drogaria','roupa','roupas','camiseta','camisa','vestido','moda','boutique','pet shop','petshop','tecnologia','informatica','celular','computador','beleza','salao','barbearia','servico','servicos','oficina','autopecas','construcao','ferragem','padaria','cafeteria'];
+
 function isNewSearch(text){
   const n=norm(text).trim();
   if(!n)return false;
-  const hasCategory=newSearchWords.some(w=>n.includes(w));
-  const looksLikeSearch=/\b(quero|procuro|procurando|preciso|encontre|achar|busco|buscando|tem|onde tem)\b/.test(n)||/\bloja\s+de\b/.test(n);
-  const isFollowup=followupWords.some(w=>n.includes(w))&&!looksLikeSearch;
-  return hasCategory&&looksLikeSearch&&!isFollowup;
+  const hasCommercialIntent=commercialWords.some(w=>n.includes(w));
+  const hasSearchIntent=/\b(quero|procuro|procurando|preciso|busco|buscando|encontre|encontrar|ache|achar)\b/.test(n)||/\bloja\s+(de|para)\b/.test(n);
+  return hasCommercialIntent&&hasSearchIntent;
 }
-form.addEventListener('submit',e=>{
-  if(bypass){bypass=false;return}
-  const original=input.value.trim();
-  if(!isNewSearch(original))return;
-  e.preventDefault();
-  e.stopImmediatePropagation();
-  const before=[...document.querySelectorAll('#msgs .msg')];
-  bypass=true;
-  input.value='limpar filtros';
-  form.requestSubmit();
-  setTimeout(()=>{
-    const after=[...document.querySelectorAll('#msgs .msg')];
-    after.slice(before.length).forEach(x=>x.remove());
-    bypass=true;
-    input.value=original;
-    form.requestSubmit();
-  },0);
-},true);
+
+window.addEventListener('load',()=>{
+  if(!form||!input)return;
+  const originalHandler=form.onsubmit;
+  if(typeof originalHandler!=='function')return;
+
+  form.addEventListener('submit',async e=>{
+    const text=input.value.trim();
+    const hasStoreContext=norm(ctx?.textContent||'').includes('loja:');
+    if(!hasStoreContext||!isNewSearch(text))return;
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    const beforeCount=document.querySelectorAll('#msgs .msg').length;
+
+    input.value='limpar filtros';
+    await originalHandler.call(form,{preventDefault(){}});
+
+    const allAfterReset=[...document.querySelectorAll('#msgs .msg')];
+    allAfterReset.slice(beforeCount).forEach(node=>node.remove());
+
+    input.value=text;
+    await originalHandler.call(form,{preventDefault(){}});
+  },true);
+});

@@ -12,7 +12,7 @@ async function safeImport(path){
 
 // Prioridade: autenticação e painel administrativo.
 await safeImport('./admin-login-fix.js?v=2');
-await safeImport('./admin-pending-v2.js?v=3');
+await safeImport('./admin-pending-v2.js?v=4');
 
 // Recursos do chat carregam depois e não bloqueiam o admin.
 await safeImport('./intelligence-v3.js?v=3');

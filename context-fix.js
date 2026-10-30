@@ -16,7 +16,7 @@ await safeImport('./admin-pending-v2.js?v=4');
 
 // Localização real e validação de endereço da loja.
 await safeImport('./real-location.js?v=1');
-await safeImport('./address-validation.js?v=5');
+await safeImport('./address-validation.js?v=6');
 
 // Hashtags são tratadas antes da busca comum.
 await safeImport('./hashtag-search.js?v=1');

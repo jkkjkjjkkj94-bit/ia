@@ -1,7 +1,17 @@
 const style=document.createElement('link');
 style.rel='stylesheet';
-style.href='./shell-layout.css?v=1';
+style.href='./shell-layout.css?v=2';
+
+let revealed=false;
+const reveal=()=>{
+  if(revealed)return;
+  revealed=true;
+  document.documentElement.classList.remove('shell-loading');
+};
+style.addEventListener('load',()=>requestAnimationFrame(()=>requestAnimationFrame(reveal)),{once:true});
+style.addEventListener('error',reveal,{once:true});
 document.head.appendChild(style);
+setTimeout(reveal,1200);
 
 const body=document.body;
 if(!body.dataset.shellReady){

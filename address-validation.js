@@ -17,124 +17,149 @@ if(form&&address&&lat&&lng){
   lngWrap?.remove();
   if(grid&&grid.children.length===0)grid.remove();
 
+  const API='https://innziuzgtpfsiywqmies.supabase.co/functions/v1/address-search';
   address.autocomplete='off';
-  address.placeholder='Digite cidade, bairro, rua e número';
+  address.placeholder='Digite sua cidade';
+
+  const selected=document.createElement('div');
+  selected.className='meta';
+  selected.style.cssText='display:none;margin:0 0 6px 0;padding:8px 10px;border:1px solid #e5e5e5;border-radius:10px;background:#fafafa';
 
   const box=document.createElement('div');
   box.id='addressSuggestions';
   box.style.cssText='display:none;border:1px solid #ddd;border-radius:12px;margin-top:6px;overflow:hidden;background:#fff;max-height:280px;overflow-y:auto;position:relative;z-index:50;box-shadow:0 10px 28px rgba(0,0,0,.08)';
+
   const status=document.createElement('div');
   status.id='addressValidationStatus';
   status.className='meta';
   status.style.marginTop='6px';
-  status.textContent='Comece digitando cidade, bairro ou rua.';
+  status.textContent='Digite o nome da cidade e selecione uma opção.';
+
+  address.parentElement?.insertBefore(selected,address);
   address.insertAdjacentElement('afterend',box);
   box.insertAdjacentElement('afterend',status);
 
-  let timer=null,controller=null,selectedLabel='',requestSeq=0;
-  const clean=s=>(s||'').trim();
-  const API='https://innziuzgtpfsiywqmies.supabase.co/functions/v1/address-search';
+  let timer=null,controller=null,requestSeq=0;
+  let selectedCity=null;
+  let selectedStreet=null;
+  let finalLabel='';
 
-  const clearValidation=()=>{
+  const clean=s=>(s||'').trim();
+
+  function clearFinal(){
     address.dataset.validated='0';
     lat.value='';
     lng.value='';
-    selectedLabel='';
-  };
+    finalLabel='';
+  }
 
-  const props=f=>f?.properties||{};
-  const coords=f=>f?.geometry?.coordinates||[];
+  function resetCity(){
+    selectedCity=null;
+    selectedStreet=null;
+    clearFinal();
+    selected.style.display='none';
+    selected.textContent='';
+    address.value='';
+    address.placeholder='Digite sua cidade';
+    status.textContent='Digite o nome da cidade e selecione uma opção.';
+  }
 
-  const isBrazil=f=>{
-    const p=props(f);
-    return String(p.countrycode||'').toUpperCase()==='BR'||/brasil|brazil/i.test(p.country||'');
-  };
-
-  const isFinalAddress=f=>{
-    const p=props(f);
-    const c=coords(f);
-    return isBrazil(f)&&c.length>=2&&!!(p.street||p.housenumber||p.osm_value==='house'||p.type==='house');
-  };
-
-  const formatAddress=f=>{
-    const p=props(f);
-    const parts=[];
-    const street=p.street||((p.osm_value==='house'||p.type==='house')?p.name:null);
-    if(street)parts.push(street+(p.housenumber?`, ${p.housenumber}`:''));
-    else if(p.name)parts.push(p.name);
-    if(p.district)parts.push(p.district);
-    if(p.city||p.town||p.village)parts.push(p.city||p.town||p.village);
-    if(p.state)parts.push(p.state);
-    if(p.postcode)parts.push(p.postcode);
-    return [...new Set(parts.filter(Boolean))].join(' - ');
-  };
-
-  function choose(feature){
-    const label=formatAddress(feature);
-    if(!label)return;
-
-    if(!isFinalAddress(feature)){
-      address.value=label;
-      clearValidation();
-      box.style.display='none';
-      status.textContent='Local selecionado. Agora continue digitando a rua e o número.';
-      address.focus();
-      address.setSelectionRange(address.value.length,address.value.length);
-      return;
-    }
-
-    const c=coords(feature);
-    address.value=label;
-    lat.value=String(c[1]);
-    lng.value=String(c[0]);
-    address.dataset.validated='1';
-    selectedLabel=label;
+  function showCity(city){
+    selectedCity=city;
+    selectedStreet=null;
+    clearFinal();
+    selected.style.display='block';
+    selected.innerHTML='Cidade selecionada: <b></b> · <button type="button" style="border:0;background:transparent;text-decoration:underline;cursor:pointer">trocar</button>';
+    selected.querySelector('b').textContent=`${city.city} - ${city.uf}`;
+    selected.querySelector('button').onclick=resetCity;
+    address.value='';
+    address.placeholder='Agora digite a rua ou avenida';
     box.style.display='none';
-    status.textContent='✓ Endereço real selecionado e validado.';
+    status.textContent='Cidade selecionada. Agora digite pelo menos 3 letras da rua.';
+    address.focus();
   }
 
-  function typeLabel(f){
-    const p=props(f);
-    if(isFinalAddress(f))return 'Endereço';
-    if(p.osm_value==='city'||p.type==='city'||p.city===p.name)return 'Cidade';
-    if(p.osm_value==='suburb'||p.osm_value==='neighbourhood'||p.district===p.name)return 'Bairro';
-    return 'Local';
+  async function resolveCoordinates(item){
+    const query=[item.street,item.district,item.city,item.uf,'Brasil'].filter(Boolean).join(', ');
+    try{
+      const res=await fetch(`${API}?resolve=1&q=${encodeURIComponent(query)}`,{headers:{'Accept':'application/json'}});
+      if(!res.ok)return null;
+      const data=await res.json();
+      return data?.resolved||null;
+    }catch{return null}
   }
 
-  function renderRows(features){
-    box.innerHTML='';
-    if(!features.length){
-      box.style.display='none';
-      status.textContent='Nenhuma sugestão encontrada. Tente informar cidade, bairro, rua e número.';
+  async function showStreet(item){
+    selectedStreet=item;
+    clearFinal();
+    box.style.display='none';
+    address.value=item.label||[item.street,item.district,`${item.city} - ${item.uf}`,item.cep].filter(Boolean).join(' · ');
+    status.textContent='Validando localização da rua...';
+    const resolved=await resolveCoordinates(item);
+    if(!resolved?.lat||!resolved?.lng){
+      status.textContent='Rua encontrada, mas não consegui obter as coordenadas. Escolha outra sugestão ou tente novamente.';
       return;
     }
+    lat.value=String(resolved.lat);
+    lng.value=String(resolved.lng);
+    address.dataset.validated='1';
+    finalLabel=address.value;
+    status.textContent='✓ Endereço postal validado. Você pode salvar a loja.';
+  }
 
-    features.slice(0,8).forEach(feature=>{
-      const label=formatAddress(feature);
-      if(!label)return;
-      const b=document.createElement('button');
-      b.type='button';
-      b.style.cssText='display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;padding:11px 12px;background:#fff;cursor:pointer;font:inherit';
-      b.onmouseenter=()=>b.style.background='#f7f7f7';
-      b.onmouseleave=()=>b.style.background='#fff';
-      const strong=document.createElement('b');
-      strong.style.display='block';
-      strong.textContent=label;
-      const meta=document.createElement('span');
-      meta.className='meta';
-      meta.textContent=`${typeLabel(feature)} · ${props(feature).country||'Brasil'}`;
-      b.append(strong,meta);
-      b.onclick=()=>choose(feature);
-      box.appendChild(b);
-    });
+  function makeButton(title,meta,onClick){
+    const b=document.createElement('button');
+    b.type='button';
+    b.style.cssText='display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;padding:11px 12px;background:#fff;cursor:pointer;font:inherit';
+    b.onmouseenter=()=>b.style.background='#f7f7f7';
+    b.onmouseleave=()=>b.style.background='#fff';
+    const strong=document.createElement('b');
+    strong.style.display='block';
+    strong.textContent=title;
+    const small=document.createElement('span');
+    small.className='meta';
+    small.textContent=meta;
+    b.append(strong,small);
+    b.onclick=onClick;
+    return b;
+  }
 
-    const attr=document.createElement('div');
-    attr.className='meta';
-    attr.style.cssText='padding:7px 10px';
-    attr.textContent='Dados de localização: OpenStreetMap via serviço seguro do Local AI';
-    box.appendChild(attr);
+  function renderCities(items){
+    box.innerHTML='';
+    if(!items.length){
+      box.style.display='none';
+      status.textContent='Nenhuma cidade encontrada. Continue digitando o nome do município.';
+      return;
+    }
+    items.slice(0,10).forEach(item=>box.appendChild(makeButton(`${item.city} - ${item.uf}`,`${item.state||'Brasil'} · Município IBGE`,()=>showCity(item))));
+    const foot=document.createElement('div');
+    foot.className='meta';
+    foot.style.cssText='padding:7px 10px';
+    foot.textContent='Municípios: IBGE';
+    box.appendChild(foot);
     box.style.display='block';
-    status.textContent='Escolha uma sugestão ou continue digitando para refinar.';
+    status.textContent='Selecione a cidade correta.';
+  }
+
+  function renderStreets(items){
+    box.innerHTML='';
+    if(!items.length){
+      box.style.display='none';
+      status.textContent='Nenhuma rua encontrada nessa cidade. Tente outra parte do nome.';
+      return;
+    }
+    items.slice(0,12).forEach(item=>{
+      const title=item.street||item.label||'Endereço';
+      const meta=[item.district,`${item.city} - ${item.uf}`,item.cep].filter(Boolean).join(' · ');
+      box.appendChild(makeButton(title,meta,()=>showStreet(item)));
+    });
+    const foot=document.createElement('div');
+    foot.className='meta';
+    foot.style.cssText='padding:7px 10px';
+    foot.textContent='Ruas e CEPs: ViaCEP';
+    box.appendChild(foot);
+    box.style.display='block';
+    status.textContent='Selecione a rua/endereço correto.';
   }
 
   async function searchAddress(){
@@ -142,36 +167,38 @@ if(form&&address&&lat&&lng){
     const seq=++requestSeq;
     if(q.length<3){
       box.style.display='none';
-      status.textContent='Digite pelo menos 3 caracteres para ver sugestões.';
+      status.textContent=selectedCity?'Digite pelo menos 3 letras da rua.':'Digite pelo menos 3 letras da cidade.';
       return;
     }
 
     controller?.abort();
     controller=new AbortController();
-    status.textContent='Buscando locais e endereços...';
+    status.textContent=selectedCity?'Buscando ruas e CEPs...':'Buscando municípios do Brasil...';
 
     try{
-      const res=await fetch(`${API}?q=${encodeURIComponent(q)}`,{
-        signal:controller.signal,
-        headers:{'Accept':'application/json'}
-      });
-      if(!res.ok)throw new Error(`Falha ao consultar endereços (${res.status})`);
+      const params=new URLSearchParams({q});
+      if(selectedCity){
+        params.set('city',selectedCity.city);
+        params.set('uf',selectedCity.uf);
+      }
+      const res=await fetch(`${API}?${params.toString()}`,{signal:controller.signal,headers:{'Accept':'application/json'}});
+      if(!res.ok)throw new Error(`HTTP ${res.status}`);
       const data=await res.json();
       if(seq!==requestSeq)return;
-      const rows=(data.features||[]).filter(f=>isBrazil(f)&&coords(f).length>=2);
-      renderRows(rows);
+      const items=Array.isArray(data?.items)?data.items:[];
+      if(selectedCity)renderStreets(items);else renderCities(items);
     }catch(e){
       if(e?.name==='AbortError')return;
       console.error('[Local AI] address-search:',e);
       box.style.display='none';
-      status.textContent='Não foi possível buscar sugestões agora. Tente novamente.';
+      status.textContent='Não foi possível buscar endereços agora. Tente novamente.';
     }
   }
 
   address.addEventListener('input',()=>{
-    if(address.value!==selectedLabel)clearValidation();
+    if(finalLabel&&address.value!==finalLabel)clearFinal();
     clearTimeout(timer);
-    timer=setTimeout(searchAddress,280);
+    timer=setTimeout(searchAddress,350);
   });
 
   address.addEventListener('focus',()=>{
@@ -179,16 +206,15 @@ if(form&&address&&lat&&lng){
   });
 
   document.addEventListener('click',e=>{
-    if(e.target!==address&&!box.contains(e.target))box.style.display='none';
+    if(e.target!==address&&!box.contains(e.target)&&!selected.contains(e.target))box.style.display='none';
   });
 
   const original=form.onsubmit;
   form.onsubmit=async function(e){
     if(address.dataset.validated!=='1'||!lat.value||!lng.value){
       e?.preventDefault?.();
-      status.textContent='Escolha uma rua/endereço real da lista antes de salvar.';
+      status.textContent=selectedCity?'Selecione uma rua real da lista antes de salvar.':'Primeiro selecione a cidade e depois uma rua real.';
       address.focus();
-      await searchAddress();
       return false;
     }
     return typeof original==='function'?original.call(form,e):undefined;

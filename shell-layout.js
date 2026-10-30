@@ -7,6 +7,7 @@ const reveal=()=>{
   if(revealed)return;
   revealed=true;
   document.documentElement.classList.remove('shell-loading');
+  document.documentElement.classList.add('shell-ready');
 };
 style.addEventListener('load',()=>requestAnimationFrame(()=>requestAnimationFrame(reveal)),{once:true});
 style.addEventListener('error',reveal,{once:true});

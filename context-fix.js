@@ -18,6 +18,9 @@ await safeImport('./admin-pending-v2.js?v=4');
 await safeImport('./real-location.js?v=1');
 await safeImport('./address-validation.js?v=5');
 
+// Hashtags são tratadas antes da busca comum.
+await safeImport('./hashtag-search.js?v=1');
+
 // Recursos do chat carregam depois e não bloqueiam o admin.
 await safeImport('./intelligence-v3.js?v=3');
 await safeImport('./distance-fix.js?v=2');

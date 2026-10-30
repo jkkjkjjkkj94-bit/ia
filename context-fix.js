@@ -16,7 +16,7 @@ await safeImport('./admin-pending-v2.js?v=4');
 
 // Localização real e validação de endereço da loja.
 await safeImport('./real-location.js?v=1');
-await safeImport('./address-validation.js?v=2');
+await safeImport('./address-validation.js?v=3');
 
 // Recursos do chat carregam depois e não bloqueiam o admin.
 await safeImport('./intelligence-v3.js?v=3');

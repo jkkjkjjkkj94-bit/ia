@@ -1,5 +1,6 @@
 await new Promise(resolve=>setTimeout(resolve,150));
 async function safeImport(path){try{await import(path)}catch(error){console.error('[Local AI] Falha ao carregar módulo:',path,error)}}
+await safeImport('./shell-layout.js?v=1');
 await safeImport('./admin-login-fix.js?v=3');
 await safeImport('./admin-pending-v2.js?v=4');
 await safeImport('./real-location.js?v=1');

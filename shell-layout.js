@@ -1,3 +1,8 @@
+const style=document.createElement('link');
+style.rel='stylesheet';
+style.href='./shell-layout.css?v=1';
+document.head.appendChild(style);
+
 const body=document.body;
 if(!body.dataset.shellReady){
   body.dataset.shellReady='1';

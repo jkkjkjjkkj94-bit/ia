@@ -27,7 +27,7 @@ if(form&&address&&lat&&lng){
 
   const details=document.createElement('div');
   details.style.cssText='display:none;margin-top:10px;grid-template-columns:1fr 1fr;gap:10px';
-  details.innerHTML='<div class="field" style="margin:0"><label>Número</label><input id="sNumber" inputmode="numeric" placeholder="Ex.: 119" required></div><div class="field" style="margin:0"><label>Complemento</label><input id="sComplement" placeholder="Ex.: Sala 2, Fundos"></div>';
+  details.innerHTML='<div class="field" style="margin:0"><label>Número</label><input id="sNumber" inputmode="numeric" placeholder="Ex.: 119"></div><div class="field" style="margin:0"><label>Complemento</label><input id="sComplement" placeholder="Ex.: Sala 2, Fundos"></div>';
   const numberInput=details.querySelector('#sNumber');
   const complementInput=details.querySelector('#sComplement');
 
@@ -52,6 +52,7 @@ if(form&&address&&lat&&lng){
   let finalLabel='';
 
   const clean=s=>(s||'').trim();
+  const hasSavedLocation=()=>clean(address.value)&&clean(lat.value)&&clean(lng.value);
 
   function clearFinal(){
     address.dataset.validated='0';
@@ -188,12 +189,32 @@ if(form&&address&&lat&&lng){
 
   const original=form.onsubmit;
   form.onsubmit=async function(e){
+    // Loja já existente: endereço + coordenadas carregados do banco são válidos.
+    if(!selectedStreet&&hasSavedLocation()){
+      address.dataset.validated='1';
+      return typeof original==='function'?original.call(form,e):undefined;
+    }
+
+    // Novo endereço: exige rua selecionada, número e coordenadas resolvidas.
     if(address.dataset.validated!=='1'||!lat.value||!lng.value){
       e?.preventDefault?.();
       if(selectedStreet&&!clean(numberInput.value))status.textContent='Informe o número do imóvel antes de salvar.';
-      else status.textContent=selectedStreet?'Aguarde a validação do endereço completo ou confira o número.':selectedCity?'Selecione uma rua real da lista antes de salvar.':'Primeiro selecione a cidade e depois uma rua real.';
+      else if(selectedStreet)status.textContent='Aguarde a validação do endereço completo ou confira o número.';
+      else if(selectedCity)status.textContent='Selecione uma rua real da lista antes de salvar.';
+      else status.textContent='Primeiro selecione a cidade e depois uma rua real.';
       return false;
     }
     return typeof original==='function'?original.call(form,e):undefined;
   };
+
+  // Quando o app preencher uma loja existente depois deste módulo carregar,
+  // reconhece automaticamente o endereço salvo sem exigir nova seleção.
+  const existingWatcher=setInterval(()=>{
+    if(!selectedCity&&!selectedStreet&&hasSavedLocation()){
+      address.dataset.validated='1';
+      status.textContent='✓ Endereço já salvo. Você pode editar outros dados e salvar normalmente.';
+      clearInterval(existingWatcher);
+    }
+  },300);
+  setTimeout(()=>clearInterval(existingWatcher),10000);
 }

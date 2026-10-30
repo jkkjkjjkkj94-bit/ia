@@ -4,10 +4,9 @@ const form=document.getElementById('loginForm');
 const title=document.getElementById('loginTitle');
 const email=document.getElementById('email');
 const password=document.getElementById('password');
-const loginModal=document.getElementById('loginModal');
 const adminModal=document.getElementById('adminModal');
 const toastEl=document.getElementById('toast');
-function toast(t){if(!toastEl)return;toastEl.textContent=t;toastEl.classList.add('on');clearTimeout(window.__adminLoginToast);window.__adminLoginToast=setTimeout(()=>toastEl.classList.remove('on'),2600)}
+function toast(t){if(!toastEl)return;toastEl.textContent=t;toastEl.classList.add('on');clearTimeout(window.__adminLoginToast);window.__adminLoginToast=setTimeout(()=>toastEl.classList.remove('on'),3200)}
 function closeModals(){document.querySelectorAll('.modal').forEach(x=>x.classList.remove('on'))}
 async function loadAdminPanel(){
  const[s,p]=await Promise.all([
@@ -15,6 +14,7 @@ async function loadAdminPanel(){
   sb.from('local_ai_products').select('id')
  ]);
  if(s.error)throw s.error;
+ if(p.error)throw p.error;
  const stores=s.data||[];
  const products=p.data||[];
  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
@@ -38,8 +38,9 @@ if(form){
   try{
    const{data,error}=await sb.auth.signInWithPassword({email:email.value.trim(),password:password.value});
    if(error)throw error;
-   if(!data.session?.user?.id)throw new Error('Sessão não criada.');
-   const{data:profile,error:profileError}=await sb.from('local_ai_profiles').select('user_id,role,display_name').eq('user_id',data.session.user.id).maybeSingle();
+   const userId=data.session?.user?.id;
+   if(!userId)throw new Error('Sessão não criada.');
+   const{data:profile,error:profileError}=await sb.from('local_ai_profiles').select('user_id,role').eq('user_id',userId).maybeSingle();
    if(profileError)throw profileError;
    if(!profile||profile.role!=='admin'){
     await sb.auth.signOut();
@@ -50,6 +51,7 @@ if(form){
    adminModal?.classList.add('on');
    toast('Administrador conectado.');
   }catch(err){
+   console.error('[Local AI] admin login:',err);
    toast(err?.message||'Não foi possível entrar como administrador.');
   }finally{
    if(btn){btn.disabled=false;btn.textContent='Entrar'}

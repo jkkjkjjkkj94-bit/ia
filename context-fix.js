@@ -4,4 +4,4 @@ await new Promise(resolve=>setTimeout(resolve,250));
 await import('./intelligence-v3.js?v=2');
 await import('./distance-fix.js?v=1');
 await import('./typing-indicator.js?v=1');
-await import('./admin-pending.js?v=1');
+await import('./admin-pending-v2.js?v=2');

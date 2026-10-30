@@ -13,28 +13,40 @@ function isNewSearch(text){
   return hasCommercialIntent&&hasSearchIntent;
 }
 
-window.addEventListener('load',()=>{
-  if(!form||!input)return;
-  const originalHandler=form.onsubmit;
-  if(typeof originalHandler!=='function')return;
+function install(){
+  if(!form||!input)return false;
+  const original=form.onsubmit;
+  if(typeof original!=='function'||original.__contextWrapped)return false;
 
-  form.addEventListener('submit',async e=>{
+  const wrapped=async function(e){
     const text=input.value.trim();
     const hasStoreContext=norm(ctx?.textContent||'').includes('loja:');
-    if(!hasStoreContext||!isNewSearch(text))return;
 
-    e.preventDefault();
-    e.stopImmediatePropagation();
+    if(hasStoreContext&&isNewSearch(text)){
+      e?.preventDefault?.();
+      const beforeCount=document.querySelectorAll('#msgs .msg').length;
 
-    const beforeCount=document.querySelectorAll('#msgs .msg').length;
+      input.value='limpar filtros';
+      await original.call(form,{preventDefault(){}});
 
-    input.value='limpar filtros';
-    await originalHandler.call(form,{preventDefault(){}});
+      const afterReset=[...document.querySelectorAll('#msgs .msg')];
+      afterReset.slice(beforeCount).forEach(node=>node.remove());
 
-    const allAfterReset=[...document.querySelectorAll('#msgs .msg')];
-    allAfterReset.slice(beforeCount).forEach(node=>node.remove());
+      input.value=text;
+      return original.call(form,{preventDefault(){}});
+    }
 
-    input.value=text;
-    await originalHandler.call(form,{preventDefault(){}});
-  },true);
-});
+    return original.call(form,e||{preventDefault(){}});
+  };
+
+  wrapped.__contextWrapped=true;
+  form.onsubmit=wrapped;
+  return true;
+}
+
+if(!install()){
+  const timer=setInterval(()=>{
+    if(install())clearInterval(timer);
+  },50);
+  setTimeout(()=>clearInterval(timer),5000);
+}

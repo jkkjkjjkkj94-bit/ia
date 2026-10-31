@@ -1,0 +1,10 @@
+import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
+const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
+const groups=['','Pizzaria','Hamburgueria','Padaria','Pastelaria','Churrascaria','Japonesa','Marmita','Doceria','Sorveteria','Açaí','Roupas','Farmácia','Mercado','Beleza','Tecnologia','Serviços','Pet shop','Automóveis','Construção'];
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function ensureField(){const cat=document.getElementById('sCat');if(!cat||document.getElementById('sGroup'))return;const wrap=document.createElement('div');wrap.className='field';wrap.innerHTML=`<label>Grupo / subcategoria</label><select id="sGroup">${groups.map(g=>`<option value="${esc(g)}">${esc(g||'Sem grupo')}</option>`).join('')}</select><div class="meta">Use Pizzaria, Hamburgueria, Padaria etc. para a IA filtrar corretamente.</div>`;cat.closest('.field')?.insertAdjacentElement('afterend',wrap)}
+async function loadGroup(){ensureField();const{data:{session}}=await sb.auth.getSession();if(!session)return;const{data}=await sb.from('local_ai_stores').select('id,group').eq('owner_id',session.user.id).maybeSingle();if(data&&document.getElementById('sGroup'))document.getElementById('sGroup').value=data.group||''}
+async function saveGroup(){const group=document.getElementById('sGroup')?.value||null;const{data:{session}}=await sb.auth.getSession();if(!session)return;for(let i=0;i<8;i++){const{data}=await sb.from('local_ai_stores').select('id').eq('owner_id',session.user.id).maybeSingle();if(data){await sb.from('local_ai_stores').update({group}).eq('id',data.id);return}await new Promise(r=>setTimeout(r,250))}}
+ensureField();loadGroup();
+document.getElementById('storeForm')?.addEventListener('submit',()=>{setTimeout(saveGroup,100)},true);
+const obs=new MutationObserver(()=>{ensureField();if(!document.getElementById('loginView')?.classList.contains('hidden'))return;loadGroup()});obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});

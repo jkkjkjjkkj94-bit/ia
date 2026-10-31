@@ -77,3 +77,4 @@ function bind(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,400));else setTimeout(bind,400);
 import('./admin-sync.js?v=1').catch(err=>console.error('[Local AI Sync Loader]',err));
 import('./admin-store-group.js?v=1').catch(err=>console.error('[Store Group Loader]',err));
+import('./admin-pending-core.js?v=1').catch(err=>console.error('[Pending Stores Loader]',err));

@@ -1,5 +1,5 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
-import{taxonomy as baseTaxonomy,functionalWords,mergeSynonymsIntoTaxonomy,analyzeQuery}from'./ai-taxonomy.js?v=3';
+import{taxonomy as baseTaxonomy,functionalWords,mergeSynonymsIntoTaxonomy,analyzeQuery}from'./ai-taxonomy.js?v=4';
 
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const $=id=>document.getElementById(id);

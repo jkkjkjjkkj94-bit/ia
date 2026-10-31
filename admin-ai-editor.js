@@ -78,3 +78,4 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 import('./admin-sync.js?v=1').catch(err=>console.error('[Local AI Sync Loader]',err));
 import('./admin-store-group.js?v=1').catch(err=>console.error('[Store Group Loader]',err));
 import('./admin-pending-core.js?v=1').catch(err=>console.error('[Pending Stores Loader]',err));
+import('./admin-synonym-suggestions.js?v=1').catch(err=>console.error('[Synonym Suggestions Loader]',err));

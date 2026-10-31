@@ -21,12 +21,16 @@ const state={
 };
 
 const defaultIntentMap={
-  Comida:['comida','comer','pizza','pizzaria','restaurante','lanche','hamburguer','hamburgueria','sushi','padaria','cafeteria','almoco','jantar','pastel','acai'],
-  Roupas:['roupa','roupas','camiseta','camisa','calca','vestido','moda','boutique','vestuario'],
-  Farmácia:['farmacia','drogaria','remedio','medicamento'],Mercado:['mercado','supermercado','mercearia','hortifruti'],
-  Beleza:['beleza','salao','barbearia','cabeleireiro','manicure','estetica'],Tecnologia:['tecnologia','informatica','celular','computador','notebook','eletronico','fone'],
-  Serviços:['servico','servicos','assistencia','conserto','manutencao'],'Pet shop':['pet','petshop','pet shop','racao','veterinario'],
-  Automóveis:['carro','automovel','autopecas','oficina','pneu'],Construção:['construcao','ferragem','tinta','material de construcao']
+  Comida:['comida','comer','alimentação','alimento','alimentos','refeição','refeições','lanche','lanches','almoço','jantar','café da manhã','restaurante','restaurantes','lanchonete','lanchonetes','comida pronta','refeição pronta','delivery de comida','entrega de comida','comida caseira','pizza','pizzaria','pizzas','pizzeria','pizzarias','pizza artesanal','pizza delivery','rodízio de pizza','rodizio de pizza','hambúrguer','hamburguer','hambúrgueres','hamburgueres','burger','burguer','x-burguer','x-salada','fast food','padaria','pão','pães','paes','panificadora','panificação','café','salgado','salgados','bolo','bolos','pastelaria','pastel','pastéis','pasteis','pastel frito','pastel de feira','churrascaria','churrasco','carne','carnes','espetinho','espetinhos','grelhados','rodízio','rodizio','japonesa','sushi','sashimi','temaki','yakisoba','comida japonesa','japonês','japones','oriental','marmita','marmitas','marmitex','quentinha','quentinhas','prato feito','pf','prato executivo','doceria','doce','doces','sobremesa','sobremesas','confeitaria','brigadeiro','sorveteria','sorvete','sorvetes','gelato','casquinha','milk shake','milkshake','açaí','açai','acai','açaiteria','acaiteria','açaí na tigela','acai na tigela','cafeteria'],
+  Roupas:['roupa','roupas','camiseta','camisa','calca','vestido','moda','boutique','vestuario','vestuário'],
+  Farmácia:['farmacia','farmácia','drogaria','remedio','remédio','medicamento'],
+  Mercado:['mercado','supermercado','mercearia','hortifruti'],
+  Beleza:['beleza','salao','barbearia','cabeleireiro','manicure','estetica'],
+  Tecnologia:['tecnologia','informatica','celular','computador','notebook','eletronico','fone'],
+  Serviços:['servico','servicos','assistencia','conserto','manutencao'],
+  'Pet shop':['pet','petshop','pet shop','racao','veterinario'],
+  Automóveis:['carro','automovel','autopecas','oficina','pneu'],
+  Construção:['construcao','ferragem','tinta','material de construcao']
 };
 let intentMap=Object.fromEntries(Object.entries(defaultIntentMap).map(([k,v])=>[k,[...v]]));
 let negativeWords=['nao quero','sem','excluir','evitar'];

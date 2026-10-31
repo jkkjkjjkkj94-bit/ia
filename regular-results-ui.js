@@ -2,125 +2,46 @@ const msgs=document.getElementById('msgs');
 const form=document.getElementById('chatForm');
 const input=document.getElementById('q');
 
-function submitNumber(n){
-  if(!form||!input)return;
-  input.value=String(n);
-  form.requestSubmit();
-}
+const CORE_URL='https://ccsypggvelcxsqszepfs.supabase.co';
+const CORE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
+const AI_URL='https://innziuzgtpfsiywqmies.supabase.co';
+const AI_KEY='sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1';
+let detailCache=null;
 
-function parseResultBlock(text){
-  const lines=text.split('\n').map(x=>x.trimEnd());
-  const intro=(lines[0]||'').trim();
-  if(!/opções|opcoes|encontrei|achei/i.test(intro))return null;
-  const items=[];
-  let current=null;
-  for(let i=1;i<lines.length;i++){
-    const line=lines[i].trim();
-    if(!line)continue;
-    if(/pode responder com o número|pode responder com o numero/i.test(line))continue;
-    const m=line.match(/^(\d+)\.\s+(.+?)(?:\s+[—-]\s+(.+))?$/);
-    if(m){
-      current={index:Number(m[1]),name:m[2].trim(),meta:(m[3]||'').trim(),reason:''};
-      items.push(current);
-      continue;
-    }
-    if(current){
-      current.reason=(current.reason+' '+line).trim();
-    }
-  }
-  return items.length?{intro,items}:null;
-}
+function submitNumber(n){if(!form||!input)return;input.value=String(n);form.requestSubmit()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim()}
+function parseResultBlock(text){const lines=text.split('\n').map(x=>x.trimEnd());const intro=(lines[0]||'').trim();if(!/opções|opcoes|encontrei|achei/i.test(intro))return null;const items=[];let current=null;for(let i=1;i<lines.length;i++){const line=lines[i].trim();if(!line)continue;if(/pode responder com o número|pode responder com o numero/i.test(line))continue;const m=line.match(/^(\d+)\.\s+(.+?)(?:\s+[—-]\s+(.+))?$/);if(m){current={index:Number(m[1]),name:m[2].trim(),meta:(m[3]||'').trim(),reason:''};items.push(current);continue}if(current)current.reason=(current.reason+' '+line).trim()}return items.length?{intro,items}:null}
+function makeChip(text,cls=''){const s=document.createElement('span');s.className='store-chip '+cls;s.textContent=text;return s}
+function distanceKm(a,b){if(!a||!Number.isFinite(Number(b?.latitude))||!Number.isFinite(Number(b?.longitude)))return null;const R=6371,rad=x=>x*Math.PI/180,dLat=rad(Number(b.latitude)-a.lat),dLon=rad(Number(b.longitude)-a.lng),q=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(Number(b.latitude)))*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))}
+function cityFromAddress(address=''){const raw=String(address).replace(/·/g,',');const m=[...raw.matchAll(/(?:^|,)\s*([^,]+?)\s*-\s*([A-Z]{2})(?=\s*(?:,|$))/gi)].pop();return m?`${m[1].trim()} - ${m[2].toUpperCase()}`:''}
+function isOpenNow(store,hours){const d=new Date(),h=hours.find(x=>x.store_id===store.id&&Number(x.weekday)===d.getDay());if(!h||h.closed||!h.opens_at||!h.closes_at)return null;const cur=d.getHours()*60+d.getMinutes(),a=Number(String(h.opens_at).slice(0,2))*60+Number(String(h.opens_at).slice(3,5)),b=Number(String(h.closes_at).slice(0,2))*60+Number(String(h.closes_at).slice(3,5));return cur>=a&&cur<=b}
+function avgRating(store,reviews){const rs=reviews.filter(r=>r.store_id===store.id&&Number.isFinite(Number(r.rating)));if(rs.length)return rs.reduce((n,r)=>n+Number(r.rating),0)/rs.length;const own=Number(store.rating);return own>0?own:null}
+async function rest(url,key,path){const r=await fetch(url+'/rest/v1/'+path,{headers:{apikey:key,Authorization:'Bearer '+key,Accept:'application/json'}});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+async function loadDetails(){if(detailCache)return detailCache;try{const[stores,hours,reviews]=await Promise.all([rest(CORE_URL,CORE_KEY,'local_ai_stores?select=*&active=eq.true&status=eq.active'),rest(AI_URL,AI_KEY,'local_ai_store_hours?select=*'),rest(AI_URL,AI_KEY,'local_ai_reviews?select=store_id,rating')]);detailCache={stores,hours,reviews};return detailCache}catch(e){console.warn('[Local AI Cards]',e);return{stores:[],hours:[],reviews:[]}}}
+function storeForItem(item,stores){const n=norm(item.name);return stores.find(s=>norm(s.name)===n)||stores.find(s=>norm(s.name).includes(n)||n.includes(norm(s.name)))||null}
+function cleanReason(text=''){return text.replace(/^Recomendo porque\s*/i,'').replace(/^Minha primeira opção é .*? porque\s*/i,'').replace(/^.*? também é uma boa opção porque\s*/i,'').trim()}
+function routeUrl(store){if(Number.isFinite(Number(store.latitude))&&Number.isFinite(Number(store.longitude)))return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(store.latitude+','+store.longitude)}`;if(store.address)return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(store.address)}`;return''}
+function whatsappUrl(value){const d=String(value||'').replace(/\D/g,'');return d.length>=10?`https://wa.me/${d.startsWith('55')?d:'55'+d}`:''}
+function injectStyles(){if(document.getElementById('smartResultCardStyles'))return;const s=document.createElement('style');s.id='smartResultCardStyles';s.textContent=`
+.store-result-card.smart-card{padding:14px 15px;border-radius:15px;border-color:#e8e8e8;transition:border-color .15s ease,box-shadow .15s ease}.store-result-card.smart-card:hover{border-color:#ddd;box-shadow:0 8px 24px rgba(0,0,0,.035)}.smart-card .store-card-top h3{font-size:15px;margin-bottom:3px}.smart-location{font-size:10.5px;color:#8b8b8b;margin-top:1px}.smart-facts{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.smart-facts .store-chip{padding:4px 7px;font-size:9.5px;background:#f6f6f6;color:#444}.smart-facts .store-chip.good{background:#f0f8f3;color:#16724f}.smart-facts .store-chip.bad{background:#faf3f3;color:#995454}.smart-specialties{margin-top:11px;padding-top:10px;border-top:1px solid #f1f1f1}.smart-specialties b{display:block;font-size:10px;color:#777;margin-bottom:6px}.smart-specialties-list{display:flex;gap:5px;flex-wrap:wrap}.smart-specialty{font-size:9.5px;padding:4px 7px;border-radius:999px;background:#f7f7f7;color:#555}.smart-summary{margin-top:9px;color:#555;font-size:10.5px;line-height:1.5}.smart-why-btn{margin-top:8px;border:0;background:transparent;padding:0;color:#666;font-size:10px;font-weight:650;text-decoration:underline;text-underline-offset:3px}.smart-why-panel{display:none;margin-top:8px;padding:9px 10px;border-radius:9px;background:#fafafa;font-size:9.5px;color:#555;line-height:1.55}.smart-why-panel.on{display:block}.smart-why-panel div::before{content:'✓';margin-right:6px;color:#777}.smart-card .store-card-actions{margin-top:12px;gap:6px}.smart-card .store-action{padding:6px 9px;border-radius:9px;font-size:10px}.smart-card .store-action.link{display:inline-flex;align-items:center;text-decoration:none;border:1px solid #e5e5e5;background:#fff;color:#333;font-weight:600}.smart-card .store-rank{padding-top:2px}.smart-card .store-card-meta{margin-top:5px}@media(max-width:680px){.store-result-card.smart-card{padding:12px}.smart-card .store-card-top h3{font-size:14px}.smart-facts{gap:4px}.smart-card .store-card-actions{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.smart-card .store-card-actions>*{flex:0 0 auto;white-space:nowrap}}
+`;document.head.appendChild(s)}
 
-function makeChip(text){
-  const s=document.createElement('span');
-  s.className='store-chip';
-  s.textContent=text;
-  return s;
-}
+async function enrichCard(card,item){const data=await loadDetails(),store=storeForItem(item,data.stores);if(!store)return;const titleWrap=card.querySelector('.store-card-top>div');const meta=card.querySelector('.store-card-meta');const rank=card.querySelector('.store-rank');
+ const city=cityFromAddress(store.address);if(city&&!titleWrap.querySelector('.smart-location')){const el=document.createElement('div');el.className='smart-location';el.textContent=city;titleWrap.insertBefore(el,meta||null)}
+ const facts=document.createElement('div');facts.className='smart-facts';
+ const r=avgRating(store,data.reviews);if(r!=null)facts.appendChild(makeChip('★ '+r.toFixed(1)));
+ const open=isOpenNow(store,data.hours);if(open===true)facts.appendChild(makeChip('Aberta agora','good'));else if(open===false)facts.appendChild(makeChip('Fechada agora','bad'));
+ const d=distanceKm(window.LocalAIRealLocation,store);if(d!=null)facts.appendChild(makeChip((d<10?d.toFixed(1):Math.round(d))+' km'));
+ if(store.delivery){let t='Entrega';if(Number(store.avg_delivery_minutes)>0)t+=` · ~${Math.round(Number(store.avg_delivery_minutes))} min`;facts.appendChild(makeChip(t));}
+ if(facts.children.length)card.querySelector('.store-card-top').insertAdjacentElement('afterend',facts);
+ const specs=Array.isArray(store.specialties)?store.specialties.filter(Boolean):[];if(specs.length){const sec=document.createElement('div');sec.className='smart-specialties';sec.innerHTML='<b>Especialidades</b>';const list=document.createElement('div');list.className='smart-specialties-list';specs.slice(0,6).forEach(x=>{const sp=document.createElement('span');sp.className='smart-specialty';sp.textContent=x;list.appendChild(sp)});sec.appendChild(list);facts.insertAdjacentElement('afterend',sec)}
+ const reason=cleanReason(item.reason);const oldWhy=card.querySelector('.store-why');if(oldWhy)oldWhy.remove();if(reason){const sm=document.createElement('div');sm.className='smart-summary';sm.textContent=reason;card.querySelector('.store-card-actions')?.insertAdjacentElement('beforebegin',sm)}
+ const why=[];if(item.meta)why.push('Categoria ou grupo corresponde à busca');if(specs.length&&/especialidade/i.test(reason))why.push('Especialidade compatível com o que foi pesquisado');if(store.delivery)why.push('A loja possui entrega cadastrada');if(open===true)why.push('A loja está aberta neste momento');if(r!=null)why.push('Possui avaliação cadastrada');if(d!=null)why.push('Distância calculada usando sua localização autorizada');
+ if(why.length){const b=document.createElement('button');b.type='button';b.className='smart-why-btn';b.textContent='Por que apareceu?';const panel=document.createElement('div');panel.className='smart-why-panel';panel.innerHTML=why.map(x=>`<div>${esc(x)}</div>`).join('');b.onclick=()=>panel.classList.toggle('on');const actions=card.querySelector('.store-card-actions');actions?.insertAdjacentElement('beforebegin',panel);panel.insertAdjacentElement('beforebegin',b)}
+ const actions=card.querySelector('.store-card-actions');const route=routeUrl(store);if(route){const a=document.createElement('a');a.className='store-action link';a.target='_blank';a.rel='noopener noreferrer';a.href=route;a.textContent='Como chegar';actions?.appendChild(a)}const wa=whatsappUrl(store.whatsapp);if(wa){const a=document.createElement('a');a.className='store-action link';a.target='_blank';a.rel='noopener noreferrer';a.href=wa;a.textContent='WhatsApp';actions?.appendChild(a)}
+ if(rank)rank.title='Posição neste resultado';card.classList.add('smart-card')}
 
-function transform(node){
-  if(!node?.classList?.contains('bot')||node.dataset.regularCards==='1')return;
-  const parsed=parseResultBlock(node.textContent||'');
-  if(!parsed)return;
+function transform(node){if(!node?.classList?.contains('bot')||node.dataset.regularCards==='1')return;const parsed=parseResultBlock(node.textContent||'');if(!parsed)return;node.dataset.regularCards='1';node.classList.add('hashtag-result-msg');node.textContent='';const intro=document.createElement('div');intro.className='hashtag-intro';intro.textContent='Encontrei estas opções para você.';node.appendChild(intro);const grid=document.createElement('div');grid.className='store-results-grid';parsed.items.forEach(item=>{const card=document.createElement('article');card.className='store-result-card';const top=document.createElement('div');top.className='store-card-top';const titleWrap=document.createElement('div');const title=document.createElement('h3');title.textContent=item.name;titleWrap.appendChild(title);if(item.meta){const meta=document.createElement('div');meta.className='store-card-meta';item.meta.split('·').map(x=>x.trim()).filter(Boolean).forEach(part=>meta.appendChild(makeChip(part)));titleWrap.appendChild(meta)}const rank=document.createElement('div');rank.className='store-rank';rank.textContent=`#${item.index}`;top.append(titleWrap,rank);card.appendChild(top);if(item.reason){const why=document.createElement('div');why.className='store-why';why.textContent=cleanReason(item.reason);card.appendChild(why)}const actions=document.createElement('div');actions.className='store-card-actions';const view=document.createElement('button');view.type='button';view.className='store-action primary';view.textContent='Ver loja';view.onclick=()=>submitNumber(item.index);const products=document.createElement('button');products.type='button';products.className='store-action';products.textContent='Produtos';products.onclick=()=>{submitNumber(item.index);setTimeout(()=>{if(input&&form){input.value='quais produtos tem?';form.requestSubmit()}},250)};actions.append(view,products);card.appendChild(actions);grid.appendChild(card);enrichCard(card,item)});node.appendChild(grid)}
 
-  node.dataset.regularCards='1';
-  node.classList.add('hashtag-result-msg');
-  node.textContent='';
-
-  const intro=document.createElement('div');
-  intro.className='hashtag-intro';
-  intro.textContent='Encontrei estas opções para você.';
-  node.appendChild(intro);
-
-  const grid=document.createElement('div');
-  grid.className='store-results-grid';
-
-  parsed.items.forEach(item=>{
-    const card=document.createElement('article');
-    card.className='store-result-card';
-
-    const top=document.createElement('div');
-    top.className='store-card-top';
-    const titleWrap=document.createElement('div');
-    const title=document.createElement('h3');
-    title.textContent=item.name;
-    titleWrap.appendChild(title);
-
-    if(item.meta){
-      const meta=document.createElement('div');
-      meta.className='store-card-meta';
-      item.meta.split('·').map(x=>x.trim()).filter(Boolean).forEach(part=>meta.appendChild(makeChip(part)));
-      titleWrap.appendChild(meta);
-    }
-
-    const rank=document.createElement('div');
-    rank.className='store-rank';
-    rank.textContent=`#${item.index}`;
-    top.append(titleWrap,rank);
-    card.appendChild(top);
-
-    if(item.reason){
-      const why=document.createElement('div');
-      why.className='store-why';
-      why.textContent=item.reason.replace(/^Recomendo porque\s*/i,'').replace(/^Minha primeira opção é .*? porque\s*/i,'').replace(/^.*? também é uma boa opção porque\s*/i,'');
-      card.appendChild(why);
-    }
-
-    const actions=document.createElement('div');
-    actions.className='store-card-actions';
-    const view=document.createElement('button');
-    view.type='button';
-    view.className='store-action primary';
-    view.textContent='Ver loja';
-    view.onclick=()=>submitNumber(item.index);
-    const products=document.createElement('button');
-    products.type='button';
-    products.className='store-action';
-    products.textContent='Produtos';
-    products.onclick=()=>{
-      submitNumber(item.index);
-      setTimeout(()=>{
-        if(input&&form){input.value='quais produtos tem?';form.requestSubmit();}
-      },250);
-    };
-    actions.append(view,products);
-    card.appendChild(actions);
-    grid.appendChild(card);
-  });
-
-  node.appendChild(grid);
-}
-
-if(msgs){
-  [...msgs.children].forEach(transform);
-  new MutationObserver(mutations=>{
-    for(const m of mutations){
-      m.addedNodes.forEach(n=>{
-        if(n.nodeType===1){
-          transform(n);
-          n.querySelectorAll?.('.msg.bot').forEach(transform);
-        }
-      });
-    }
-  }).observe(msgs,{childList:true,subtree:true});
-}
+injectStyles();if(msgs){[...msgs.children].forEach(transform);new MutationObserver(mutations=>{for(const m of mutations)m.addedNodes.forEach(n=>{if(n.nodeType===1){transform(n);n.querySelectorAll?.('.msg.bot').forEach(transform)}})}).observe(msgs,{childList:true,subtree:true})}

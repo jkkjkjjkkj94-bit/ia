@@ -13,33 +13,15 @@ export const taxonomy={
     Sorveteria:['sorveteria','sorvete','sorvetes','gelato','casquinha','milk shake','milkshake'],
     Açaí:['açaí','açai','acai','açaiteria','acaiteria','açaí na tigela','acai na tigela']
   },
-  Roupas:{
-    Roupas:['roupa','roupas','camiseta','camisa','calça','calca','vestido','moda','boutique','vestuário','vestuario']
-  },
-  Farmácia:{
-    Farmácia:['farmácia','farmacia','drogaria','remédio','remedio','medicamento']
-  },
-  Mercado:{
-    Mercado:['mercado','supermercado','mercearia','hortifruti']
-  },
-  Beleza:{
-    Beleza:['beleza','salão','salao','barbearia','cabeleireiro','manicure','estética','estetica']
-  },
-  Tecnologia:{
-    Tecnologia:['tecnologia','informática','informatica','celular','computador','notebook','eletrônico','eletronico','fone']
-  },
-  Serviços:{
-    Serviços:['serviço','servico','serviços','servicos','assistência','assistencia','conserto','manutenção','manutencao']
-  },
-  'Pet shop':{
-    'Pet shop':['pet','petshop','pet shop','ração','racao','veterinário','veterinario']
-  },
-  Automóveis:{
-    Automóveis:['carro','automóvel','automovel','autopeças','autopecas','oficina','pneu']
-  },
-  Construção:{
-    Construção:['construção','construcao','ferragem','tinta','material de construção','material de construcao']
-  }
+  Roupas:{Roupas:['roupa','roupas','camiseta','camisa','calça','calca','vestido','moda','boutique','vestuário','vestuario']},
+  Farmácia:{Farmácia:['farmácia','farmacia','drogaria','remédio','remedio','medicamento']},
+  Mercado:{Mercado:['mercado','supermercado','mercearia','hortifruti']},
+  Beleza:{Beleza:['beleza','salão','salao','barbearia','cabeleireiro','manicure','estética','estetica']},
+  Tecnologia:{Tecnologia:['tecnologia','informática','informatica','celular','computador','notebook','eletrônico','eletronico','fone']},
+  Serviços:{Serviços:['serviço','servico','serviços','servicos','assistência','assistencia','conserto','manutenção','manutencao']},
+  'Pet shop':{'Pet shop':['pet','petshop','pet shop','ração','racao','veterinário','veterinario']},
+  Automóveis:{Automóveis:['carro','automóvel','automovel','autopeças','autopecas','oficina','pneu']},
+  Construção:{Construção:['construção','construcao','ferragem','tinta','material de construção','material de construcao']}
 };
 
 const intentPatterns={
@@ -53,6 +35,9 @@ const intentPatterns={
   SELECT_RESULT:/^\d+$|primeira|primeiro|segunda|segundo|terceira|terceiro|última|ultima|último|ultimo|mais barata|mais barato|mais perto|mais próxima|mais proxima|mais próximo|mais proximo/
 };
 
+const weekDays={domingo:0,segunda:1,'segunda feira':1,terca:2,'terca feira':2,quarta:3,'quarta feira':3,quinta:4,'quinta feira':4,sexta:5,'sexta feira':5,sabado:6};
+function detectDay(text){const n=norm(text);for(const[name,num]of Object.entries(weekDays)){const p=name.replace(/ /g,'\\s+');if(new RegExp(`(?:^|\\s)${p}(?:\\s|$)`).test(n))return num}return null}
+
 export function mergeSynonymsIntoTaxonomy(baseTaxonomy,synonyms={}){
   const out=structuredClone(baseTaxonomy);
   if(!synonyms||typeof synonyms!=='object'||Array.isArray(synonyms))return out;
@@ -61,36 +46,21 @@ export function mergeSynonymsIntoTaxonomy(baseTaxonomy,synonyms={}){
     let matched=false;
     for(const[category,groups]of Object.entries(out)){
       for(const[group,terms]of Object.entries(groups)){
-        if(norm(group)===norm(key)){
-          groups[group]=[...new Set([...terms,...all])];
-          matched=true;
-          break;
-        }
+        if(norm(group)===norm(key)){groups[group]=[...new Set([...terms,...all])];matched=true;break}
       }
       if(matched)break;
     }
     if(matched)continue;
     const category=Object.keys(out).find(c=>norm(c)===norm(key));
-    if(category){
-      const group=Object.keys(out[category])[0]||category;
-      out[category][group]=[...new Set([...(out[category][group]||[]),...all])];
-    }
+    if(category){const group=Object.keys(out[category])[0]||category;out[category][group]=[...new Set([...(out[category][group]||[]),...all])]}
   }
   return out;
 }
 
 function detectTaxonomy(text,tax=taxonomy){
-  const n=norm(text);
-  let best=null;
-  for(const[category,groups]of Object.entries(tax)){
-    for(const[group,terms]of Object.entries(groups)){
-      const candidates=[group,...terms].map(x=>({raw:x,n: norm(x)})).filter(x=>x.n);
-      for(const term of candidates){
-        if(n.includes(term.n)&&(!best||term.n.length>best.term.length))best={category,group,term:term.n};
-      }
-    }
-  }
-  return best?{category:best.category,group:best.group}: {category:null,group:null};
+  const n=norm(text);let best=null;
+  for(const[category,groups]of Object.entries(tax))for(const[group,terms]of Object.entries(groups))for(const term of [group,...terms].map(x=>({raw:x,n:norm(x)})).filter(x=>x.n))if(n.includes(term.n)&&(!best||term.n.length>best.term.length))best={category,group,term:term.n};
+  return best?{category:best.category,group:best.group}:{category:null,group:null};
 }
 
 function detectIntent(text,ctx={}){
@@ -98,7 +68,7 @@ function detectIntent(text,ctx={}){
   if(intentPatterns.RESET_ALL.test(n))return'RESET_ALL';
   if(intentPatterns.COMPARE_RESULTS.test(n))return'COMPARE_RESULTS';
   if(intentPatterns.SELECT_RESULT.test(n)&&Array.isArray(ctx.lastResults)&&ctx.lastResults.length)return'SELECT_RESULT';
-  if(intentPatterns.ASK_HOURS.test(n))return'ASK_HOURS';
+  if(intentPatterns.ASK_HOURS.test(n)&&ctx.selectedStore)return'ASK_HOURS';
   if(intentPatterns.ASK_DISTANCE.test(n)&&ctx.selectedStore)return'ASK_DISTANCE';
   if(intentPatterns.ASK_DELIVERY.test(n)&&ctx.selectedStore)return'ASK_DELIVERY';
   if(intentPatterns.ASK_PAYMENT.test(n)&&ctx.selectedStore)return'ASK_PAYMENT';
@@ -107,15 +77,11 @@ function detectIntent(text,ctx={}){
 }
 
 export function analyzeQuery(text,{taxonomy:tax=taxonomy,state={}}={}){
-  const n=norm(text);
-  const taxResult=detectTaxonomy(text,tax);
-  let intent=detectIntent(text,state);
-  if(!intent){
-    const searchWords=/quero|procuro|preciso|achar|encontrar|comprar|loja/.test(n);
-    intent=(taxResult.category||searchWords)?((state.lastResults||[]).length?'REFINE_SEARCH':'SEARCH'):(state.selectedStore?'ASK_STORE':'SEARCH');
-  }
+  const n=norm(text),taxResult=detectTaxonomy(text,tax);let intent=detectIntent(text,state);
+  if(!intent){const searchWords=/quero|procuro|preciso|achar|encontrar|comprar|loja|lugar|local|vende|venda/.test(n);intent=(taxResult.category||searchWords)?((state.lastResults||[]).length?'REFINE_SEARCH':'SEARCH'):(state.selectedStore?'ASK_STORE':'SEARCH')}
   const filters={
     openNow:/abert[oa]s? agora|aberto agora|aberta agora/.test(n),
+    day:detectDay(text),
     delivery:/com entrega|delivery|entrega hoje/.test(n)?true:/sem entrega|nao quero entrega/.test(n)?false:null,
     pickup:/retirada|retirar na loja|buscar na loja/.test(n)?true:null,
     sortBy:/mais perto|mais proxima|mais proximo/.test(n)?'distancia':/mais barata|mais barato|menor preco/.test(n)?'preco':/melhor avaliada|melhor avaliacao|maior nota/.test(n)?'avaliacao':null

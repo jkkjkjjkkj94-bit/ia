@@ -8,96 +8,33 @@ const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'B
 const uniq=a=>[...new Set((a||[]).filter(Boolean))];
 
 let stores=[],products=[],hours=[],reviews=[],knowledge=[],userPos=null,aiConfig={},activeTaxonomy=structuredClone(baseTaxonomy);
-
 const defaultRankingWeights={category:20,group:40,city:25,state:12,neighborhood:10,product:30,open_now:15,delivery:10,rating:2,rating_bonus:8,distance:30,store_name:45};
 let rankingWeights={...defaultRankingWeights};
 let contextRules={};
 let negativeWords=['nao quero','sem','excluir','evitar'];
-
-const state={
-  selectedStore:null,selectedProduct:null,lastResults:[],lastIntent:null,
-  location:{city:null,uf:null,neighborhood:null},
-  category:null,group:null,product:null,color:null,brand:null,size:null,quantity:null,
-  minPrice:null,maxPrice:null,promotionOnly:false,inStockOnly:true,
-  openNow:false,day:null,time:null,delivery:null,pickup:null,
-  maxDeliveryFee:null,maxDeliveryTime:null,paymentMethods:[],minRating:null,maxDistance:null,
-  sortBy:null,excludedCategories:new Set(),excludedStores:new Set(),excludedDelivery:false,term:null
-};
+const state={selectedStore:null,selectedProduct:null,lastResults:[],lastIntent:null,location:{city:null,uf:null,neighborhood:null},category:null,group:null,product:null,color:null,brand:null,size:null,quantity:null,minPrice:null,maxPrice:null,promotionOnly:false,inStockOnly:true,openNow:false,day:null,time:null,delivery:null,pickup:null,maxDeliveryFee:null,maxDeliveryTime:null,paymentMethods:[],minRating:null,maxDistance:null,sortBy:null,excludedCategories:new Set(),excludedStores:new Set(),excludedDelivery:false,term:null};
 
 // AUTO_SYNC_SYNONYMS_START
 const syncedSynonyms={};
 // AUTO_SYNC_SYNONYMS_END
 
 const stateNames={sp:['sp','sao paulo','estado de sao paulo'],rj:['rj','rio de janeiro','estado do rio de janeiro'],mg:['mg','minas gerais'],pr:['pr','parana'],sc:['sc','santa catarina'],rs:['rs','rio grande do sul'],ba:['ba','bahia'],go:['go','goias'],df:['df','distrito federal'],es:['es','espirito santo']};
-
 function flatStrings(v){if(Array.isArray(v))return v.filter(x=>typeof x==='string');if(v&&typeof v==='object')return Object.values(v).flatMap(flatStrings);return typeof v==='string'?[v]:[]}
 function weight(name,fallback){const v=Number(rankingWeights[name]);return Number.isFinite(v)?v:fallback}
-function applyAIConfig(cfg={}){
-  aiConfig=cfg||{};
-  activeTaxonomy=mergeSynonymsIntoTaxonomy(baseTaxonomy,syncedSynonyms);
-  activeTaxonomy=mergeSynonymsIntoTaxonomy(activeTaxonomy,aiConfig.synonyms||{});
-  rankingWeights={...defaultRankingWeights,...(aiConfig.ranking_weights&&typeof aiConfig.ranking_weights==='object'&&!Array.isArray(aiConfig.ranking_weights)?aiConfig.ranking_weights:{})};
-  contextRules=aiConfig.context_rules&&typeof aiConfig.context_rules==='object'&&!Array.isArray(aiConfig.context_rules)?aiConfig.context_rules:{};
-  negativeWords=uniq(['nao quero','sem','excluir','evitar',...flatStrings(aiConfig.negative_words)]);
-  window.LocalAIConfig=aiConfig;
-  window.LocalAITaxonomy.active=activeTaxonomy;
-}
-
-async function load(){
-  const[s,p,h,r,k,cfg]=await Promise.all([
-    sb.from('local_ai_stores').select('*').eq('active',true).eq('status','active'),
-    sb.from('local_ai_products').select('*').eq('active',true).eq('show_in_ai',true),
-    sb.from('local_ai_store_hours').select('*'),
-    sb.from('local_ai_reviews').select('*'),
-    sb.from('local_ai_store_knowledge').select('*').eq('active',true),
-    sb.from('local_ai_ai_config').select('config_key,config_value')
-  ]);
-  stores=s.data||[];products=p.data||[];hours=h.data||[];reviews=r.data||[];knowledge=k.data||[];
-  applyAIConfig(cfg.error?{}:Object.fromEntries((cfg.data||[]).map(x=>[x.config_key,x.config_value])));
-}
-
+function applyAIConfig(cfg={}){aiConfig=cfg||{};activeTaxonomy=mergeSynonymsIntoTaxonomy(baseTaxonomy,syncedSynonyms);activeTaxonomy=mergeSynonymsIntoTaxonomy(activeTaxonomy,aiConfig.synonyms||{});rankingWeights={...defaultRankingWeights,...(aiConfig.ranking_weights&&typeof aiConfig.ranking_weights==='object'&&!Array.isArray(aiConfig.ranking_weights)?aiConfig.ranking_weights:{})};contextRules=aiConfig.context_rules&&typeof aiConfig.context_rules==='object'&&!Array.isArray(aiConfig.context_rules)?aiConfig.context_rules:{};negativeWords=uniq(['nao quero','sem','excluir','evitar',...flatStrings(aiConfig.negative_words)]);window.LocalAIConfig=aiConfig;window.LocalAITaxonomy.active=activeTaxonomy}
+async function load(){const[s,p,h,r,k,cfg]=await Promise.all([sb.from('local_ai_stores').select('*').eq('active',true).eq('status','active'),sb.from('local_ai_products').select('*').eq('active',true).eq('show_in_ai',true),sb.from('local_ai_store_hours').select('*'),sb.from('local_ai_reviews').select('*'),sb.from('local_ai_store_knowledge').select('*').eq('active',true),sb.from('local_ai_ai_config').select('config_key,config_value')]);stores=s.data||[];products=p.data||[];hours=h.data||[];reviews=r.data||[];knowledge=k.data||[];applyAIConfig(cfg.error?{}:Object.fromEntries((cfg.data||[]).map(x=>[x.config_key,x.config_value])))}
 function addMsg(text,user=false){const d=document.createElement('div');d.className='msg '+(user?'user':'bot');d.textContent=text;$('msgs').appendChild(d);$('msgs').scrollTop=$('msgs').scrollHeight;return d}
 function addActions(node){const box=document.createElement('div');box.className='chat-actions';[['Horário','qual o horário?'],['Entrega','faz entrega?'],['Pagamentos','formas de pagamento'],['Produtos','quais produtos tem?'],['Endereço','qual o endereço?']].forEach(([label,q])=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>submitSynthetic(q);box.appendChild(b)});node.appendChild(box)}
-
 function extractLocation(address=''){const raw=String(address).replace(/·/g,',').replace(/\s+/g,' ').trim(),parts=raw.split(',').map(x=>x.trim()).filter(Boolean);let uf=null,city=null,neighborhood=null;const dash=[...raw.matchAll(/(?:^|,)\s*([^,]+?)\s*-\s*([A-Z]{2})(?=\s*(?:,|$))/gi)].pop();if(dash){city=dash[1].trim();uf=dash[2].toUpperCase()}for(let i=0;i<parts.length;i++){if(!uf&&/^[A-Z]{2}$/i.test(parts[i])){uf=parts[i].toUpperCase();city=city||parts[i-1]||null}if(!uf&&norm(parts[i])==='sao paulo'){uf='SP';city=city||parts[i-1]||null}}if(city){const ci=parts.findIndex(x=>norm(x)===norm(city)||norm(x).startsWith(norm(city)+' '));if(ci>0){const cand=parts[ci-1];if(!/\d/.test(cand)&&!/^(rua|r |avenida|av |rodovia)/i.test(cand))neighborhood=cand}}return{city,uf,neighborhood}}
 function detectUF(text){const n=norm(text);for(const[uf,aliases]of Object.entries(stateNames))if(aliases.some(a=>new RegExp(`(?:^|\\s)${norm(a)}(?:\\s|$)`).test(n)))return uf.toUpperCase();return null}
 function detectCity(text){const n=norm(text);let best=null;for(const s of stores){const loc=extractLocation(s.address);if(!loc.city)continue;const c=norm(loc.city);if(c&&n.includes(c)&&(!best||c.length>norm(best.city).length))best=loc}return best}
 function detectNeighborhood(text){const n=norm(text);let best=null;for(const s of stores){const loc=extractLocation(s.address);if(!loc.neighborhood)continue;const b=norm(loc.neighborhood);if(b.length>2&&n.includes(b)&&(!best||b.length>norm(best).length))best=loc.neighborhood}return best}
 function locationFromText(text){const c=detectCity(text),uf=detectUF(text)||c?.uf||null,b=detectNeighborhood(text);return{city:c?.city||null,uf,neighborhood:b||null}}
 function storeMatchesLocation(s,loc){if(!loc?.city&&!loc?.uf&&!loc?.neighborhood)return true;const addr=norm(s.address||''),p=extractLocation(s.address);if(loc.city&&!addr.includes(norm(loc.city))&&norm(p.city)!==norm(loc.city))return false;if(loc.neighborhood&&!addr.includes(norm(loc.neighborhood))&&norm(p.neighborhood)!==norm(loc.neighborhood))return false;if(loc.uf){const uf=norm(loc.uf),aliases=stateNames[uf]||[];if(norm(p.uf)!==uf&&!aliases.some(x=>addr.includes(norm(x)))&&!new RegExp(`(?:^|\\s)${uf}(?:\\s|$)`).test(addr))return false}return true}
-
 function clearSpecific(){state.product=null;state.color=null;state.brand=null;state.size=null;state.quantity=null;state.minPrice=null;state.maxPrice=null;state.promotionOnly=false;state.term=null;state.selectedProduct=null}
-function applyAnalysis(a){
-  if(a.category&&a.category!==state.category){clearSpecific();state.category=a.category;state.group=null;state.selectedStore=null;state.lastResults=[]}
-  if(a.group)state.group=a.group;
-  if(a.filters.openNow)state.openNow=true;
-  if(a.filters.delivery!==null){state.delivery=a.filters.delivery;state.excludedDelivery=a.filters.delivery===false}
-  if(a.filters.pickup!==null)state.pickup=a.filters.pickup;
-  if(a.filters.sortBy)state.sortBy=a.filters.sortBy;
-}
-function parseEntities(t,a){
-  const n=norm(t),loc=locationFromText(t);applyAnalysis(a);
-  if(loc.city)state.location.city=loc.city;if(loc.uf)state.location.uf=loc.uf;if(loc.neighborhood)state.location.neighborhood=loc.neighborhood;
-  const range=n.match(/entre\s*r?\$?\s*(\d+(?:[.,]\d+)?)\s*(?:e|a)\s*r?\$?\s*(\d+(?:[.,]\d+)?)/);if(range){state.minPrice=Number(range[1].replace(',','.'));state.maxPrice=Number(range[2].replace(',','.'))}else{const mx=n.match(/(?:ate|menos de|maximo|max)\s*r?\$?\s*(\d+(?:[.,]\d+)?)/);if(mx)state.maxPrice=Number(mx[1].replace(',','.'));const mn=n.match(/(?:acima de|mais de|a partir de)\s*r?\$?\s*(\d+(?:[.,]\d+)?)/);if(mn)state.minPrice=Number(mn[1].replace(',','.'))}
-  const sz=n.match(/(?:tamanho|tam)\s*(pp|p|m|g|gg|xg)\b/);if(sz)state.size=sz[1].toUpperCase();
-  const qty=n.match(/(?:quero|preciso de|quantidade)\s*(\d+)\b/);if(qty)state.quantity=Number(qty[1]);
-  const km=n.match(/(?:ate|no maximo|maximo)\s*(\d+(?:[.,]\d+)?)\s*km/);if(km)state.maxDistance=Number(km[1].replace(',','.'));
-  const rt=n.match(/(?:nota|avaliacao).*?(\d(?:[.,]\d)?)/);if(rt)state.minRating=Number(rt[1].replace(',','.'));
-  const colors=['preta','preto','branca','branco','azul','vermelha','vermelho','verde','amarela','amarelo','rosa','roxa','roxo','cinza','bege','marrom'];const color=colors.find(c=>n.includes(c));if(color)state.color=color;
-  if(/promocao|promoção|em oferta|com desconto/.test(t.toLowerCase()))state.promotionOnly=true;
-  const pays=[['Pix','pix'],['Dinheiro','dinheiro'],['Crédito','credito'],['Débito','debito'],['Cartão','cartao']];for(const[label,key]of pays)if(n.includes(key)&&!state.paymentMethods.includes(label))state.paymentMethods.push(label);
-  for(const s of stores)if(new RegExp(`(?:nao quero|nao mostre|excluir|evitar)\\s+.*${norm(s.name)}`).test(n))state.excludedStores.add(s.id);
-  const stop=new Set(['quero','preciso','procuro','onde','achar','encontrar','comprar','loja','uma','um','com','sem','ate','agora','perto','mais','tamanho','entrega','nao','em','de','da','do','das','dos','estado','cidade','bairro','pagamento','retirada','promocao','oferta','desconto']);
-  const categoryTerms=state.category?Object.values(activeTaxonomy[state.category]||{}).flat().map(norm):[];
-  const groupTerms=state.group?(activeTaxonomy[state.category]?.[state.group]||[]).map(norm):[];
-  const geo=[state.location.city,state.location.uf,state.location.neighborhood].filter(Boolean).flatMap(x=>norm(x).split(' '));
-  const words=n.split(' ').filter(w=>w.length>3&&!stop.has(w)&&!geo.includes(w)&&!categoryTerms.includes(w)&&!groupTerms.includes(w));
-  const candidate=words.join(' ');if(candidate){state.term=candidate;if(!state.product)state.product=candidate}
-  renderContext();
-}
-
+function applyAnalysis(a){if(a.category&&a.category!==state.category){clearSpecific();state.category=a.category;state.group=null;state.selectedStore=null;state.lastResults=[]}if(a.group)state.group=a.group;if(a.filters.openNow)state.openNow=true;if(a.filters.delivery!==null){state.delivery=a.filters.delivery;state.excludedDelivery=a.filters.delivery===false}if(a.filters.pickup!==null)state.pickup=a.filters.pickup;if(a.filters.sortBy)state.sortBy=a.filters.sortBy}
+function parseEntities(t,a){const n=norm(t),loc=locationFromText(t);applyAnalysis(a);if(loc.city)state.location.city=loc.city;if(loc.uf)state.location.uf=loc.uf;if(loc.neighborhood)state.location.neighborhood=loc.neighborhood;const range=n.match(/entre\s*r?\$?\s*(\d+(?:[.,]\d+)?)\s*(?:e|a)\s*r?\$?\s*(\d+(?:[.,]\d+)?)/);if(range){state.minPrice=Number(range[1].replace(',','.'));state.maxPrice=Number(range[2].replace(',','.'))}else{const mx=n.match(/(?:ate|menos de|maximo|max)\s*r?\$?\s*(\d+(?:[.,]\d+)?)/);if(mx)state.maxPrice=Number(mx[1].replace(',','.'));const mn=n.match(/(?:acima de|mais de|a partir de)\s*r?\$?\s*(\d+(?:[.,]\d+)?)/);if(mn)state.minPrice=Number(mn[1].replace(',','.'))}const sz=n.match(/(?:tamanho|tam)\s*(pp|p|m|g|gg|xg)\b/);if(sz)state.size=sz[1].toUpperCase();const qty=n.match(/(?:quero|preciso de|quantidade)\s*(\d+)\b/);if(qty)state.quantity=Number(qty[1]);const km=n.match(/(?:ate|no maximo|maximo)\s*(\d+(?:[.,]\d+)?)\s*km/);if(km)state.maxDistance=Number(km[1].replace(',','.'));const rt=n.match(/(?:nota|avaliacao).*?(\d(?:[.,]\d)?)/);if(rt)state.minRating=Number(rt[1].replace(',','.'));const colors=['preta','preto','branca','branco','azul','vermelha','vermelho','verde','amarela','amarelo','rosa','roxa','roxo','cinza','bege','marrom'];const color=colors.find(c=>n.includes(c));if(color)state.color=color;if(/promocao|promoção|em oferta|com desconto/.test(t.toLowerCase()))state.promotionOnly=true;const pays=[['Pix','pix'],['Dinheiro','dinheiro'],['Crédito','credito'],['Débito','debito'],['Cartão','cartao']];for(const[label,key]of pays)if(n.includes(key)&&!state.paymentMethods.includes(label))state.paymentMethods.push(label);for(const s of stores)if(new RegExp(`(?:nao quero|nao mostre|excluir|evitar)\\s+.*${norm(s.name)}`).test(n))state.excludedStores.add(s.id);const stop=new Set(['quero','preciso','procuro','onde','achar','encontrar','comprar','loja','uma','um','com','sem','ate','agora','perto','mais','tamanho','entrega','nao','em','de','da','do','das','dos','estado','cidade','bairro','pagamento','retirada','promocao','oferta','desconto']);const categoryTerms=state.category?Object.values(activeTaxonomy[state.category]||{}).flat().map(norm):[];const groupTerms=state.group?(activeTaxonomy[state.category]?.[state.group]||[]).map(norm):[];const geo=[state.location.city,state.location.uf,state.location.neighborhood].filter(Boolean).flatMap(x=>norm(x).split(' '));const words=n.split(' ').filter(w=>w.length>3&&!stop.has(w)&&!geo.includes(w)&&!categoryTerms.includes(w)&&!groupTerms.includes(w));const candidate=words.join(' ');if(candidate){state.term=candidate;if(!state.product)state.product=candidate}renderContext()}
 function renderContext(){const a=[];if(state.selectedStore)a.push('Loja: '+state.selectedStore.name);if(state.location.city)a.push('Cidade: '+state.location.city);if(state.location.uf)a.push('Estado: '+state.location.uf);if(state.category)a.push('Categoria: '+state.category);if(state.group)a.push('Grupo: '+state.group);if(state.product)a.push('Produto: '+state.product);if(state.maxPrice!=null)a.push('até '+money(state.maxPrice));if(state.openNow)a.push('abertas agora');if(state.delivery===true)a.push('com entrega');if(state.delivery===false)a.push('sem entrega');if(state.sortBy)a.push('Ordenar: '+state.sortBy);$('ctx').textContent=a.length?'Contexto: '+a.join(' · '):''}
-
 function isOpen(s){const d=new Date(),h=hours.find(x=>x.store_id===s.id&&x.weekday===d.getDay());if(!h||h.closed||!h.opens_at||!h.closes_at)return false;const cur=d.getHours()*60+d.getMinutes(),a=+String(h.opens_at).slice(0,2)*60+ +String(h.opens_at).slice(3,5),b=+String(h.closes_at).slice(0,2)*60+ +String(h.closes_at).slice(3,5);return cur>=a&&cur<=b}
 function rating(s){const a=reviews.filter(r=>r.store_id===s.id);return a.length?a.reduce((z,x)=>z+Number(x.rating),0)/a.length:Number(s.rating||0)}
 function distance(s){if(!userPos||s.latitude==null||s.longitude==null)return null;const R=6371,rad=x=>x*Math.PI/180,dLat=rad(s.latitude-userPos.lat),dLon=rad(s.longitude-userPos.lng),q=Math.sin(dLat/2)**2+Math.cos(rad(userPos.lat))*Math.cos(rad(s.latitude))*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))}
@@ -105,51 +42,12 @@ function price(p){const now=Date.now(),promo=p.promo_price&&(!p.promo_start||+ne
 function storeProducts(s){return products.filter(p=>p.store_id===s.id&&(!state.inStockOnly||Number(p.stock)>0))}
 function productMatches(p){if(state.maxPrice!=null&&price(p)>state.maxPrice)return false;if(state.minPrice!=null&&price(p)<state.minPrice)return false;if(state.size&&!(p.sizes||[]).map(norm).includes(norm(state.size)))return false;if(state.color&&!norm([p.color,p.name,p.description].join(' ')).includes(norm(state.color)))return false;if(state.quantity&&Number(p.stock)<state.quantity)return false;const q=norm(state.term||state.product||'');if(!q)return true;const hay=norm([p.name,p.description,p.category,p.color,p.brand,(p.sizes||[]).join(' ')].join(' '));return q.split(' ').filter(x=>x.length>3).every(w=>hay.includes(w))}
 async function ensureLocation(){if(userPos)return true;return new Promise(resolve=>{if(!navigator.geolocation)return resolve(false);navigator.geolocation.getCurrentPosition(p=>{userPos={lat:p.coords.latitude,lng:p.coords.longitude};resolve(true)},()=>resolve(false),{enableHighAccuracy:true,timeout:7000})})}
-
-function scoreStore(s,t){
-  if(state.excludedStores.has(s.id))return null;
-  if(state.category&&norm(s.category)!==norm(state.category))return null;
-  if(!storeMatchesLocation(s,state.location))return null;
-  if(state.delivery===true&&!s.delivery)return null;if(state.excludedDelivery&&s.delivery)return null;
-  if(state.openNow&&!isOpen(s))return null;
-  const d=distance(s);if(state.maxDistance!=null&&d!=null&&d>state.maxDistance)return null;
-  const r=rating(s);if(state.minRating!=null&&r<state.minRating)return null;
-  const ps=storeProducts(s).filter(productMatches);if((state.product||state.term||state.maxPrice!=null||state.size||state.color)&&!ps.length)return null;
-  let pts=0,reasons=[];
-  if(state.category){pts+=weight('category',20);reasons.push('categoria correta')}
-  if(state.group){pts+=weight('group',40);reasons.push('é do grupo '+state.group)}
-  if(state.location.city){pts+=weight('city',25);reasons.push('fica em '+state.location.city)}
-  if(ps.length){pts+=weight('product',30);reasons.push('tem produto compatível em estoque')}
-  if(isOpen(s)){pts+=weight('open_now',15);reasons.push('está aberta agora')}
-  if(s.delivery){pts+=weight('delivery',10);reasons.push('faz entrega')}
-  pts+=Math.min(r*weight('rating',2),10);if(r>=4)pts+=weight('rating_bonus',8);
-  if(d!=null){pts+=Math.max(0,weight('distance',30)-d*4);reasons.unshift(`fica a ${d.toFixed(1)} km de você`)}
-  if(norm(t).includes(norm(s.name))){pts+=weight('store_name',45);reasons.unshift('você citou essa loja')}
-  return{store:s,score:pts,reasons:[...new Set(reasons)],distance:d,rating:r,products:ps}
-}
+function scoreStore(s,t){if(state.excludedStores.has(s.id))return null;if(state.category&&norm(s.category)!==norm(state.category))return null;if(state.group&&norm(s.group||'')!==norm(state.group))return null;if(!storeMatchesLocation(s,state.location))return null;if(state.delivery===true&&!s.delivery)return null;if(state.excludedDelivery&&s.delivery)return null;if(state.openNow&&!isOpen(s))return null;const d=distance(s);if(state.maxDistance!=null&&d!=null&&d>state.maxDistance)return null;const r=rating(s);if(state.minRating!=null&&r<state.minRating)return null;const ps=storeProducts(s).filter(productMatches);if((state.minPrice!=null||state.maxPrice!=null||state.size||state.color||state.product||state.term||state.promotionOnly||state.quantity)&&!ps.length)return null;let pts=0,reasons=[];if(state.category){pts+=weight('category',20);reasons.push('categoria correta')}if(state.group){pts+=weight('group',40);reasons.push('é do grupo '+state.group)}if(state.location.city){pts+=weight('city',25);reasons.push('fica em '+state.location.city)}else if(state.location.uf){pts+=weight('state',12);reasons.push('fica no estado '+state.location.uf)}if(ps.length){pts+=weight('product',30);reasons.push('tem produto compatível em estoque')}if(isOpen(s)){pts+=weight('open_now',15);reasons.push('está aberta agora')}if(s.delivery){pts+=weight('delivery',10);reasons.push('faz entrega')}pts+=Math.min(r*weight('rating',2),10);if(r>=4){pts+=weight('rating_bonus',8);reasons.push('tem boa avaliação')}if(d!=null){pts+=Math.max(0,weight('distance',30)-d*4);reasons.unshift(`fica a ${d.toFixed(1)} km de você`)}if(norm(t).includes(norm(s.name))){pts+=weight('store_name',45);reasons.unshift('você citou essa loja')}return{store:s,score:pts,reasons:[...new Set(reasons)],distance:d,rating:r,products:ps}}
 function search(t){const a=stores.map(s=>scoreStore(s,t)).filter(Boolean);a.sort((x,y)=>{if(state.sortBy==='distancia')return(x.distance??Infinity)-(y.distance??Infinity);if(state.sortBy==='preco'){const xp=Math.min(...(x.products.length?x.products.map(price):[Infinity])),yp=Math.min(...(y.products.length?y.products.map(price):[Infinity]));return xp-yp}if(state.sortBy==='avaliacao')return y.rating-x.rating;return y.score-x.score});return a.slice(0,6)}
 function selectByReference(t){const n=norm(t),a=state.lastResults;if(!a.length)return null;const digit=n.match(/^([1-9])$/);if(digit)return a[Number(digit[1])-1]||null;if(/primeira|primeiro/.test(n))return a[0]||null;if(/segunda|segundo/.test(n))return a[1]||null;if(/terceira|terceiro/.test(n))return a[2]||null;if(/ultima|ultimo/.test(n))return a.at(-1)||null;if(/mais barata|mais barato/.test(n))return[...a].sort((x,y)=>Math.min(...(x.products.length?x.products.map(price):[Infinity]))-Math.min(...(y.products.length?y.products.map(price):[Infinity])))[0]||null;if(/mais perto|mais proxima|mais proximo/.test(n))return[...a].filter(x=>x.distance!=null).sort((x,y)=>x.distance-y.distance)[0]||a[0];return null}
-function summary(s){const d=distance(s),r=rating(s),h=hours.find(x=>x.store_id===s.id&&x.weekday===new Date().getDay()),parts=[`${s.name}`,`${s.category}${r?` · ★ ${r.toFixed(1)}`:''}${d!=null?` · ${d.toFixed(1)} km de você`:''}`];if(h)parts.push(h.closed?'Hoje está fechada.':`Hoje funciona das ${String(h.opens_at).slice(0,5)} às ${String(h.closes_at).slice(0,5)}.`);if(s.address)parts.push(`Endereço: ${s.address}`);return parts.join('\n\n')}
-function answerStore(t,s,intent){if(intent==='ASK_HOURS'){const h=hours.find(x=>x.store_id===s.id&&x.weekday===new Date().getDay());return !h?'O horário de hoje ainda não foi informado.':h.closed?`Hoje a ${s.name} está fechada.`:`Hoje a ${s.name} funciona das ${String(h.opens_at).slice(0,5)} às ${String(h.closes_at).slice(0,5)}.`}if(intent==='ASK_DISTANCE'){const d=distance(s);return d==null?'Ative sua localização para eu calcular a distância real.':`A ${s.name} fica a aproximadamente ${d.toFixed(1).replace('.',',')} km de você.`}if(intent==='ASK_DELIVERY')return s.delivery?`Sim. A ${s.name} faz entrega.`:`A ${s.name} não informou entrega disponível.`;if(intent==='ASK_PAYMENT'){const p=s.payment_methods||[];return p.length?`A ${s.name} aceita ${p.join(', ')}.`:'As formas de pagamento ainda não foram informadas.'}if(intent==='ASK_PRODUCTS'){const ps=storeProducts(s).filter(productMatches);return ps.length?`Na ${s.name} encontrei:\n`+ps.slice(0,8).map(p=>`• ${p.name} — ${money(price(p))}`).join('\n'):`Não encontrei produto compatível em estoque na ${s.name}.`}const k=knowledge.find(x=>x.store_id===s.id&&[x.question,...(x.variations||[])].some(q=>norm(t).includes(norm(q))||norm(q).includes(norm(t))));return k?.answer||null}
-
+function summary(s){const d=distance(s),r=rating(s),parts=[`${s.name}`,`${s.category}${s.group?` · ${s.group}`:''}${r?` · ★ ${r.toFixed(1)}`:''}${d!=null?` · ${d.toFixed(1)} km de você`:''}`];if(s.address)parts.push(`Endereço: ${s.address}`);parts.push(s.delivery?`Entrega disponível${Number(s.delivery_fee)>0?' por '+money(s.delivery_fee):''}.`:'Entrega não informada.');return parts.join('\n\n')}
+function answerStore(t,s,intent){if(intent==='ASK_HOURS'){const h=hours.find(x=>x.store_id===s.id&&x.weekday===new Date().getDay());return !h?'O horário de hoje ainda não foi informado.':h.closed?`Hoje a ${s.name} está fechada.`:`Hoje a ${s.name} funciona das ${String(h.opens_at).slice(0,5)} às ${String(h.closes_at).slice(0,5)}.`}if(intent==='ASK_DISTANCE'){const d=distance(s);return d==null?'Ative sua localização para eu calcular a distância real.':`A ${s.name} fica a aproximadamente ${d.toFixed(1).replace('.',',')} km de você.`}if(intent==='ASK_DELIVERY')return s.delivery?`Sim. A ${s.name} faz entrega${Number(s.delivery_fee)>0?' por '+money(s.delivery_fee):''}.`:`A ${s.name} não informou entrega disponível.`;if(intent==='ASK_PAYMENT'){const p=s.payment_methods||[];return p.length?`A ${s.name} aceita ${p.join(', ')}.`:'As formas de pagamento ainda não foram informadas.'}if(intent==='ASK_PRODUCTS'){const ps=storeProducts(s).filter(productMatches);return ps.length?`Na ${s.name} encontrei:\n`+ps.slice(0,8).map(p=>`• ${p.name} — ${money(price(p))}`).join('\n'):`Não encontrei produto compatível em estoque na ${s.name}.`}const k=knowledge.find(x=>x.store_id===s.id&&[x.question,...(x.variations||[])].some(q=>norm(t).includes(norm(q))||norm(q).includes(norm(t))));return k?.answer||null}
 function reset(){Object.assign(state,{selectedStore:null,selectedProduct:null,lastResults:[],lastIntent:'RESET_ALL',location:{city:null,uf:null,neighborhood:null},category:null,group:null,product:null,color:null,brand:null,size:null,quantity:null,minPrice:null,maxPrice:null,promotionOnly:false,inStockOnly:true,openNow:false,day:null,time:null,delivery:null,pickup:null,maxDeliveryFee:null,maxDeliveryTime:null,paymentMethods:[],minRating:null,maxDistance:null,sortBy:null,excludedDelivery:false,term:null});state.excludedCategories=new Set();state.excludedStores=new Set();renderContext()}
-
-async function handle(t){
-  const analysis=analyzeQuery(t,{taxonomy:activeTaxonomy,state});
-  state.lastIntent=analysis.intent;
-  if(analysis.intent==='RESET_ALL'){reset();return addMsg('Pronto. Limpei o contexto. O que você quer procurar agora?')}
-  if(analysis.intent==='SELECT_RESULT'){const x=selectByReference(t);if(x){state.selectedStore=x.store;state.selectedProduct=x.products?.[0]||null;renderContext();const d=addMsg(summary(x.store));addActions(d);return}}
-  if(state.selectedStore&&['ASK_HOURS','ASK_DISTANCE','ASK_DELIVERY','ASK_PAYMENT','ASK_PRODUCTS','ASK_STORE'].includes(analysis.intent)){if(analysis.intent==='ASK_DISTANCE'&&!userPos)await ensureLocation();const ans=answerStore(t,state.selectedStore,analysis.intent);if(ans){const d=addMsg(ans);addActions(d);return}}
-  parseEntities(t,analysis);
-  if(/perto|distancia|proxima|proximo/.test(norm(t))&&!userPos)await ensureLocation();
-  const results=search(t);if(!results.length)return addMsg('Não encontrei uma opção cadastrada com todos esses critérios. Tente remover um filtro ou mudar o tipo de estabelecimento.');
-  state.lastResults=results;
-  const list=results.map((x,i)=>`${i+1}. ${x.store.name} — ${x.store.category}${state.group?` · ${state.group}`:''}${x.distance!=null?` · ${x.distance.toFixed(1)} km`:''}${x.rating?` · ★ ${x.rating.toFixed(1)}`:''}\n   ${x.reasons.slice(0,3).join(', ')}.`).join('\n\n');
-  addMsg(`Encontrei estas opções para você:\n\n${list}\n\nVocê pode dizer “a segunda”, “a mais barata”, “a mais perto” ou continuar refinando a busca.`)
-}
-
+async function handle(t){const analysis=analyzeQuery(t,{taxonomy:activeTaxonomy,state});const intent=analysis.intent;state.lastIntent=intent;if(intent==='RESET_ALL'){reset();return addMsg('Pronto. Limpei o contexto. O que você quer procurar agora?')}if(intent==='SELECT_RESULT'){const x=selectByReference(t);if(x){state.selectedStore=x.store;state.selectedProduct=x.products?.[0]||null;renderContext();const d=addMsg(summary(x.store));addActions(d);return}}if(state.selectedStore&&['ASK_HOURS','ASK_DISTANCE','ASK_DELIVERY','ASK_PAYMENT','ASK_PRODUCTS','ASK_STORE'].includes(intent)){if(intent==='ASK_DISTANCE'&&!userPos)await ensureLocation();const ans=answerStore(t,state.selectedStore,intent);if(ans){const d=addMsg(ans);addActions(d);return}}parseEntities(t,analysis);if(/perto|distancia|proxima|proximo/.test(norm(t))&&!userPos)await ensureLocation();const results=search(t);if(!results.length)return addMsg(state.group?`Não encontrei nenhuma loja cadastrada no grupo ${state.group} com esses critérios.`:'Não encontrei uma opção cadastrada com esses critérios.');state.lastResults=results;const list=results.map((x,i)=>`${i+1}. ${x.store.name} — ${x.store.category}${x.store.group?` · ${x.store.group}`:''}${x.distance!=null?` · ${x.distance.toFixed(1)} km`:''}${x.rating?` · ★ ${x.rating.toFixed(1)}`:''}\n   ${x.reasons.slice(0,3).join(', ')}.`).join('\n\n');addMsg(`Encontrei estas opções para você:\n\n${list}\n\nVocê pode dizer “a segunda”, “a mais barata”, “a mais perto” ou continuar refinando a busca.`)}
 function submitSynthetic(q){$('q').value=q;$('chatForm').requestSubmit()}
-await load();
-const form=$('chatForm');
-form.onsubmit=async e=>{e.preventDefault();const t=$('q').value.trim();if(!t)return;addMsg(t,true);$('q').value='';await handle(t)};
-window.LocalAIEngine={reset,handle,state,analyzeQuery:text=>analyzeQuery(text,{taxonomy:activeTaxonomy,state}),getConfig:()=>aiConfig,getTaxonomy:()=>activeTaxonomy,reloadConfig:async()=>{const{data}=await sb.from('local_ai_ai_config').select('config_key,config_value');applyAIConfig(Object.fromEntries((data||[]).map(x=>[x.config_key,x.config_value])));return aiConfig}};
+await load();const form=$('chatForm');form.onsubmit=async e=>{e.preventDefault();const t=$('q').value.trim();if(!t)return;addMsg(t,true);$('q').value='';await handle(t)};window.LocalAIEngine={reset,handle,state,analyzeQuery:text=>analyzeQuery(text,{taxonomy:activeTaxonomy,state}),getConfig:()=>aiConfig,getTaxonomy:()=>activeTaxonomy,reloadConfig:async()=>{const{data}=await sb.from('local_ai_ai_config').select('config_key,config_value');applyAIConfig(Object.fromEntries((data||[]).map(x=>[x.config_key,x.config_value])));return aiConfig}};

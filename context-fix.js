@@ -20,11 +20,8 @@ if(msgs)new MutationObserver(syncChatState).observe(msgs,{childList:true,subtree
 
 async function safeImport(path){try{await import(path)}catch(error){console.error('[Local AI] Falha ao carregar módulo:',path,error)}}
 
-// Inteligência centralizada: busca, filtros, distância, contexto e seleção de loja
-await safeImport('./ai-engine.js?v=2');
-
-// Mais de 100 formas de limpar/reiniciar filtros, busca, chat e conversa
-await safeImport('./reset-intents.js?v=1');
+// Motor central: intenções, memória, cidade, referências, filtros, distância e ranking
+await safeImport('./ai-engine.js?v=3');
 
 // Conta, administração e recursos auxiliares
 await safeImport('./admin-login-fix.js?v=3');
@@ -34,5 +31,4 @@ await safeImport('./address-validation.js?v=6');
 await safeImport('./hashtag-manager.js?v=1');
 await safeImport('./hashtag-search.js?v=3');
 await safeImport('./regular-results-ui.js?v=1');
-await safeImport('./city-context.js?v=1');
 await safeImport('./typing-indicator.js?v=2');

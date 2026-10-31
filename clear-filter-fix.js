@@ -13,6 +13,24 @@ function wantsClearFilters(text){
   return /(?:quero|desejo|pode|favor|vamos)?\s*(?:eliminar|remover|tirar|limpar|apagar|zerar|resetar)\s+(?:o\s+|os\s+|meus\s+)?filtros?/.test(n);
 }
 
+const clearReplies=[
+  'Pronto. Removi os filtros anteriores. O que você quer buscar agora?',
+  'Filtros limpos. Pode me dizer o que deseja encontrar agora.',
+  'Busca reiniciada. Me diga o que você está procurando.',
+  'Tudo limpo. Podemos começar de novo. O que você precisa?',
+  'Os filtros foram removidos. O que deseja pesquisar agora?',
+  'Certo. Zerei os filtros da busca. O que você procura desta vez?',
+  'Feito. Agora a busca está sem restrições. O que deseja encontrar?'
+];
+let lastClearReply='';
+function nextClearReply(){
+  let options=clearReplies.filter(x=>x!==lastClearReply);
+  if(!options.length)options=clearReplies;
+  const reply=options[Math.floor(Math.random()*options.length)];
+  lastClearReply=reply;
+  return reply;
+}
+
 function botMessage(text){
   const msgs=document.getElementById('msgs');
   if(!msgs)return;
@@ -34,7 +52,8 @@ form?.addEventListener('submit',e=>{
 
   document.getElementById('resetBtn')?.click();
   if(input)input.value='';
-  botMessage('Filtros removidos. A busca foi reiniciada e agora está sem restrições. O que você procura?');
+  botMessage(nextClearReply());
 },true);
 
 window.LocalAIWantsClearFilters=wantsClearFilters;
+window.LocalAINextClearReply=nextClearReply;

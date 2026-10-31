@@ -1,0 +1,10 @@
+import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
+const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
+const CORE_URL='https://ccsypggvelcxsqszepfs.supabase.co';
+const CORE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
+
+async function getStore(ownerId){const r=await fetch(`${CORE_URL}/rest/v1/local_ai_stores?select=id&owner_id=eq.${encodeURIComponent(ownerId)}`,{headers:{apikey:CORE_KEY,Authorization:`Bearer ${CORE_KEY}`}});if(!r.ok)return null;const rows=await r.json();return rows[0]||null}
+function ensureCard(){let card=document.getElementById('mReviewStat');if(card)return card;const cards=document.querySelector('#overview .cards');if(!cards)return null;card=document.createElement('div');card.className='stat';card.id='mReviewStat';card.innerHTML='<span>Avaliações</span><b id="mReviewCount">0</b><small id="mReviewAverage" style="display:block;margin-top:4px;color:#777;font-size:11px">Sem avaliações</small>';cards.appendChild(card);return card}
+async function refresh(){const{data:{session}}=await sb.auth.getSession();if(!session)return;const store=await getStore(session.user.id);if(!store)return;const{data}=await sb.from('local_ai_reviews').select('rating').eq('store_id',store.id);const rows=data||[],avg=rows.length?rows.reduce((a,r)=>a+Number(r.rating||0),0)/rows.length:0;ensureCard();const count=document.getElementById('mReviewCount'),average=document.getElementById('mReviewAverage'),reviewAvg=document.getElementById('reviewAvg');if(count)count.textContent=String(rows.length);if(average)average.textContent=rows.length?`Média ${avg.toFixed(1)} de 5`:'Sem avaliações';if(reviewAvg)reviewAvg.textContent=rows.length?`★ ${avg.toFixed(1)} · ${rows.length} ${rows.length===1?'avaliação':'avaliações'}`:'—'}
+async function boot(){for(let i=0;i<20;i++){if(document.getElementById('overview'))break;await new Promise(r=>setTimeout(r,200))}ensureCard();await refresh();setInterval(refresh,15000)}
+boot();

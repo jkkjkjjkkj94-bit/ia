@@ -34,16 +34,16 @@ const defaultIntentMap={
 };
 
 const defaultGroupMap={
-  Pizzaria:{parent:'Comida',terms:['pizzaria','pizza','pizzas','pizzeria','pizzarias','pizza artesanal','pizza delivery','rodízio de pizza','rodizio de pizza']},
-  Hamburgueria:{parent:'Comida',terms:['hamburgueria','hambúrguer','hamburguer','hambúrgueres','hamburgueres','burger','burguer','x-burguer','x-salada','fast food']},
-  Padaria:{parent:'Comida',terms:['padaria','pão','pães','paes','panificadora','panificação','café','salgado','salgados','bolo','bolos']},
-  Pastelaria:{parent:'Comida',terms:['pastelaria','pastel','pastéis','pasteis','pastel frito','pastel de feira']},
-  Churrascaria:{parent:'Comida',terms:['churrascaria','churrasco','carne','carnes','espetinho','espetinhos','grelhados','rodízio','rodizio']},
-  Japonesa:{parent:'Comida',terms:['japonesa','sushi','sashimi','temaki','yakisoba','comida japonesa','japonês','japones','oriental']},
-  Marmita:{parent:'Comida',terms:['marmita','marmitas','marmitex','quentinha','quentinhas','prato feito','pf','prato executivo','refeição pronta']},
-  Doceria:{parent:'Comida',terms:['doceria','doce','doces','sobremesa','sobremesas','confeitaria','bolo','bolos','brigadeiro']},
-  Sorveteria:{parent:'Comida',terms:['sorveteria','sorvete','sorvetes','gelato','casquinha','milk shake','milkshake']},
-  Açaí:{parent:'Comida',terms:['açaí','açai','acai','açaiteria','acaiteria','açaí na tigela','acai na tigela']}
+  Pizzaria:{parent:'Pizzaria',terms:['pizzaria','pizza','pizzas','pizzeria','pizzarias','pizza artesanal','pizza delivery','rodízio de pizza','rodizio de pizza']},
+  Hamburgueria:{parent:'Hamburgueria',terms:['hamburgueria','hambúrguer','hamburguer','hambúrgueres','hamburgueres','burger','burguer','x-burguer','x-salada','fast food']},
+  Padaria:{parent:'Padaria',terms:['padaria','pão','pães','paes','panificadora','panificação','café','salgado','salgados','bolo','bolos']},
+  Pastelaria:{parent:'Pastelaria',terms:['pastelaria','pastel','pastéis','pasteis','pastel frito','pastel de feira']},
+  Churrascaria:{parent:'Churrascaria',terms:['churrascaria','churrasco','carne','carnes','espetinho','espetinhos','grelhados','rodízio','rodizio']},
+  Japonesa:{parent:'Japonesa',terms:['japonesa','sushi','sashimi','temaki','yakisoba','comida japonesa','japonês','japones','oriental']},
+  Marmita:{parent:'Marmita',terms:['marmita','marmitas','marmitex','quentinha','quentinhas','prato feito','pf','prato executivo','refeição pronta']},
+  Doceria:{parent:'Doceria',terms:['doceria','doce','doces','sobremesa','sobremesas','confeitaria','bolo','bolos','brigadeiro']},
+  Sorveteria:{parent:'Sorveteria',terms:['sorveteria','sorvete','sorvetes','gelato','casquinha','milk shake','milkshake']},
+  Açaí:{parent:'Açaí',terms:['açaí','açai','acai','açaiteria','acaiteria','açaí na tigela','acai na tigela']}
 };
 
 // AUTO_SYNC_SYNONYMS_START

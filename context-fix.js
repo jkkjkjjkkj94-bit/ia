@@ -11,15 +11,13 @@ const syncChatState=()=>body.classList.toggle('chat-started',!!msgs?.querySelect
 syncChatState();
 if(msgs)new MutationObserver(syncChatState).observe(msgs,{childList:true,subtree:true});
 async function safeImport(path){try{await import(path)}catch(error){console.error('[Local AI] Falha ao carregar módulo:',path,error)}}
-await safeImport('./core-data-router.js?v=1');
-await safeImport('./ai-engine.js?v=7');
+await safeImport('./core-data-router.js?v=2');
+await safeImport('./ai-engine.js?v=8');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');
 await safeImport('./regular-results-ui.js?v=1');
 await safeImport('./typing-indicator.js?v=2');
 
-// Quando uma busca anterior não encontrou resultados e o usuário refaz a busca
-// sem repetir um filtro restritivo, não carregamos esse filtro escondido adiante.
 form?.addEventListener('submit',()=>{
   const engine=window.LocalAIEngine;
   const state=engine?.state;

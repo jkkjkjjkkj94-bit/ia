@@ -20,11 +20,11 @@ window.fetch=async(input,init={})=>{
   headers.set('apikey',CORE_KEY);
   const auth=headers.get('authorization');
   if(!auth||auth.toLowerCase().startsWith('bearer sb_publishable_'))headers.set('authorization','Bearer '+CORE_KEY);
-  const next={...init,headers};
-  return originalFetch(newUrl.toString(),next);
+  return originalFetch(newUrl.toString(),{...init,headers});
 };
 
 window.LocalAIDataSources={
-  core:{url:CORE_URL,tables:[...CORE_TABLES]},
-  ai:{url:'https://'+AI_HOST}
+  core:{url:CORE_URL,tables:[...CORE_TABLES],mode:'direct-route'},
+  ai:{url:'https://'+AI_HOST,mode:'direct'},
+  ready:true
 };

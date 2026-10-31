@@ -75,3 +75,4 @@ function bind(){
   let last=ta?.value||'';setInterval(()=>{if(!ta)return;if(ta.value!==last){last=ta.value;renderEditor()}},600);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,400));else setTimeout(bind,400);
+import('./admin-sync.js?v=1').catch(err=>console.error('[Local AI Sync Loader]',err));

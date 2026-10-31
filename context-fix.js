@@ -12,8 +12,8 @@ syncChatState();
 if(msgs)new MutationObserver(syncChatState).observe(msgs,{childList:true,subtree:true});
 async function safeImport(path){try{await import(path)}catch(error){console.error('[Local AI] Falha ao carregar módulo:',path,error)}}
 await safeImport('./core-data-router.js?v=3');
-await safeImport('./ai-engine.js?v=13');
-await safeImport('./category-context-fix.js?v=2');
+await safeImport('./ai-engine.js?v=14');
+await safeImport('./category-context-fix.js?v=3');
 await safeImport('./ai-conversation-enhancements.js?v=2');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');

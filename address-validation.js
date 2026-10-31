@@ -4,217 +4,95 @@ const lat=document.getElementById('sLat');
 const lng=document.getElementById('sLng');
 
 if(form&&address&&lat&&lng){
-  const latWrap=lat.closest('.field');
-  const lngWrap=lng.closest('.field');
-  const grid=latWrap?.parentElement;
+  const API='https://innziuzgtpfsiywqmies.supabase.co/functions/v1/address-search';
+  const clean=s=>String(s||'').trim();
+  const norm=s=>clean(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+  // Os dados técnicos continuam no formulário, mas nunca aparecem para o lojista.
+  address.type='hidden';
   lat.type='hidden';
   lng.type='hidden';
   lat.removeAttribute('required');
   lng.removeAttribute('required');
-  form.appendChild(lat);
-  form.appendChild(lng);
+  address.removeAttribute('required');
+
+  const addressWrap=address.closest('.field');
+  const latWrap=lat.closest('.field');
+  const lngWrap=lng.closest('.field');
+  const coordGrid=latWrap?.parentElement;
+  form.append(address,lat,lng);
+  addressWrap?.remove();
   latWrap?.remove();
   lngWrap?.remove();
-  if(grid&&grid.children.length===0)grid.remove();
+  if(coordGrid&&coordGrid.children.length===0)coordGrid.remove();
 
-  const API='https://innziuzgtpfsiywqmies.supabase.co/functions/v1/address-search';
-  address.autocomplete='off';
-  address.placeholder='Digite sua cidade';
+  const anchor=document.getElementById('sWhatsapp')?.closest('.field')||form.querySelector('.card');
+  const block=document.createElement('div');
+  block.id='guidedAddress';
+  block.innerHTML=`
+    <div class="field"><label>Endereço</label><div id="savedAddress" class="meta" style="display:none;padding:10px 12px;border:1px solid #e5e5e5;border-radius:10px;background:#fafafa;margin-bottom:8px"></div></div>
+    <div class="field"><label>Cidade</label><input id="addrCity" autocomplete="off" placeholder="Digite a cidade"><div id="citySuggestions"></div></div>
+    <div class="field"><label>Bairro</label><input id="addrDistrict" autocomplete="off" placeholder="Digite o bairro" disabled></div>
+    <div class="field"><label>Rua / Avenida</label><input id="addrStreet" autocomplete="off" placeholder="Digite a rua ou avenida" disabled><div id="streetSuggestions"></div></div>
+    <div class="grid"><div class="field"><label>Número</label><input id="addrNumber" inputmode="numeric" placeholder="Ex.: 119" disabled></div><div class="field"><label>Complemento</label><input id="addrComplement" placeholder="Ex.: Sala 2, Fundos" disabled></div></div>
+    <div id="addressValidationStatus" class="meta" style="margin-top:6px">Digite a cidade e escolha uma opção da lista.</div>`;
+  anchor?.insertAdjacentElement('afterend',block);
 
-  const selected=document.createElement('div');
-  selected.className='meta';
-  selected.style.cssText='display:none;margin:0 0 6px 0;padding:8px 10px;border:1px solid #e5e5e5;border-radius:10px;background:#fafafa';
+  const city=document.getElementById('addrCity');
+  const district=document.getElementById('addrDistrict');
+  const street=document.getElementById('addrStreet');
+  const number=document.getElementById('addrNumber');
+  const complement=document.getElementById('addrComplement');
+  const cityBox=document.getElementById('citySuggestions');
+  const streetBox=document.getElementById('streetSuggestions');
+  const saved=document.getElementById('savedAddress');
+  const status=document.getElementById('addressValidationStatus');
 
-  const details=document.createElement('div');
-  details.style.cssText='display:none;margin-top:10px;grid-template-columns:1fr 1fr;gap:10px';
-  details.innerHTML='<div class="field" style="margin:0"><label>Número</label><input id="sNumber" inputmode="numeric" placeholder="Ex.: 119"></div><div class="field" style="margin:0"><label>Complemento</label><input id="sComplement" placeholder="Ex.: Sala 2, Fundos"></div>';
-  const numberInput=details.querySelector('#sNumber');
-  const complementInput=details.querySelector('#sComplement');
+  const styleBox=box=>box.style.cssText='display:none;border:1px solid #ddd;border-radius:12px;margin-top:6px;overflow:hidden;background:#fff;max-height:260px;overflow-y:auto;position:relative;z-index:50;box-shadow:0 10px 28px rgba(0,0,0,.08)';
+  styleBox(cityBox);styleBox(streetBox);
 
-  const box=document.createElement('div');
-  box.id='addressSuggestions';
-  box.style.cssText='display:none;border:1px solid #ddd;border-radius:12px;margin-top:6px;overflow:hidden;background:#fff;max-height:280px;overflow-y:auto;position:relative;z-index:50;box-shadow:0 10px 28px rgba(0,0,0,.08)';
+  let selectedCity=null,selectedStreet=null,timer=null,controller=null,seq=0;
+  let existingLoaded=false;
 
-  const status=document.createElement('div');
-  status.id='addressValidationStatus';
-  status.className='meta';
-  status.style.marginTop='6px';
-  status.textContent='Digite o nome da cidade e selecione uma opção.';
+  function button(title,meta,fn){const b=document.createElement('button');b.type='button';b.style.cssText='display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;padding:11px 12px;background:#fff;cursor:pointer;font:inherit';b.innerHTML=`<b style="display:block">${esc(title)}</b><span class="meta">${esc(meta)}</span>`;b.onmouseenter=()=>b.style.background='#f7f7f7';b.onmouseleave=()=>b.style.background='#fff';b.onclick=fn;return b}
+  function clearCoords(){lat.value='';lng.value='';address.dataset.validated='0'}
+  function clearFromCity(){selectedCity=null;selectedStreet=null;clearCoords();district.value='';street.value='';number.value='';complement.value='';district.disabled=true;street.disabled=true;number.disabled=true;complement.disabled=true;streetBox.style.display='none';status.textContent='Digite a cidade e escolha uma opção da lista.'}
+  function clearFromDistrict(){selectedStreet=null;clearCoords();street.value='';number.value='';complement.value='';street.disabled=false;number.disabled=true;complement.disabled=true;streetBox.style.display='none';status.textContent='Agora digite a rua ou avenida.'}
+  function clearFromStreet(){selectedStreet=null;clearCoords();number.value='';complement.value='';number.disabled=true;complement.disabled=true;status.textContent='Escolha uma rua da lista.'}
 
-  address.parentElement?.insertBefore(selected,address);
-  address.insertAdjacentElement('afterend',box);
-  box.insertAdjacentElement('afterend',details);
-  details.insertAdjacentElement('afterend',status);
+  async function fetchItems(params){controller?.abort();controller=new AbortController();const my=++seq;const r=await fetch(`${API}?${new URLSearchParams(params)}`,{signal:controller.signal,headers:{Accept:'application/json'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);const data=await r.json();if(my!==seq)return[];return Array.isArray(data?.items)?data.items:[]}
 
-  let timer=null,controller=null,requestSeq=0;
-  let selectedCity=null;
-  let selectedStreet=null;
-  let finalLabel='';
+  async function searchCities(){const q=clean(city.value);if(q.length<3){cityBox.style.display='none';return}status.textContent='Buscando cidades...';try{const items=await fetchItems({q});cityBox.innerHTML='';items.slice(0,10).forEach(item=>cityBox.appendChild(button(`${item.city} - ${item.uf}`,item.state||'Brasil',()=>selectCity(item))));cityBox.style.display=items.length?'block':'none';status.textContent=items.length?'Escolha a cidade correta.':'Nenhuma cidade encontrada.'}catch(e){if(e?.name!=='AbortError')status.textContent='Não foi possível buscar cidades agora.'}}
+  function selectCity(item){selectedCity=item;city.value=`${item.city} - ${item.uf}`;city.readOnly=true;cityBox.style.display='none';district.disabled=false;street.disabled=true;number.disabled=true;complement.disabled=true;status.textContent='Cidade selecionada. Digite o bairro.';district.focus()}
 
-  const clean=s=>(s||'').trim();
-  const hasSavedLocation=()=>clean(address.value)&&clean(lat.value)&&clean(lng.value);
+  async function searchStreets(){if(!selectedCity)return;const q=clean(street.value);if(q.length<3){streetBox.style.display='none';return}status.textContent='Buscando ruas...';try{let items=await fetchItems({q,city:selectedCity.city,uf:selectedCity.uf});const d=norm(district.value);if(d)items=items.filter(x=>!x.district||norm(x.district).includes(d)||d.includes(norm(x.district)));streetBox.innerHTML='';items.slice(0,12).forEach(item=>streetBox.appendChild(button(item.street||item.label,[item.district,`${item.city} - ${item.uf}`,item.cep].filter(Boolean).join(' · '),()=>selectStreet(item))));streetBox.style.display=items.length?'block':'none';status.textContent=items.length?'Escolha a rua correta.':'Nenhuma rua encontrada nesse bairro. Confira o bairro ou tente outro trecho da rua.'}catch(e){if(e?.name!=='AbortError')status.textContent='Não foi possível buscar ruas agora.'}}
+  function selectStreet(item){selectedStreet=item;street.value=item.street||item.label;street.readOnly=true;streetBox.style.display='none';if(!district.value&&item.district)district.value=item.district;number.disabled=false;complement.disabled=false;status.textContent='Rua selecionada. Informe o número do imóvel.';number.focus()}
 
-  function clearFinal(){
-    address.dataset.validated='0';
-    lat.value='';
-    lng.value='';
-    finalLabel='';
-  }
+  async function validateNumber(){if(!selectedStreet)return;const n=clean(number.value);if(!n){clearCoords();status.textContent='Informe o número do imóvel.';return}clearCoords();status.textContent='Validando endereço e localização...';const query=[`${selectedStreet.street}, ${n}`,clean(district.value)||selectedStreet.district,selectedStreet.city,selectedStreet.uf,selectedStreet.cep,'Brasil'].filter(Boolean).join(', ');try{const params={resolve:'1',q:query,number:n};if(selectedStreet.cep)params.cep=selectedStreet.cep;const r=await fetch(`${API}?${new URLSearchParams(params)}`,{headers:{Accept:'application/json'}});if(!r.ok)throw new Error();const data=await r.json(),resolved=data?.resolved;if(!resolved?.lat||!resolved?.lng){status.textContent='Não consegui localizar esse número. Confira os dados.';return}lat.value=String(resolved.lat);lng.value=String(resolved.lng);const final=[`${selectedStreet.street}, ${n}`,clean(complement.value),clean(district.value)||selectedStreet.district,`${selectedStreet.city} - ${selectedStreet.uf}`,selectedStreet.cep].filter(Boolean).join(' · ');address.value=final;address.dataset.validated='1';saved.style.display='block';saved.textContent=final;status.textContent=resolved.accuracy==='exact'?'✓ Endereço validado com localização exata.':'✓ Endereço validado. A localização foi salva automaticamente.'}catch{status.textContent='Não foi possível validar o endereço agora.'}}
 
-  function resetCity(){
-    selectedCity=null;
-    selectedStreet=null;
-    clearFinal();
-    selected.style.display='none';
-    selected.textContent='';
-    details.style.display='none';
-    numberInput.value='';
-    complementInput.value='';
-    address.value='';
-    address.readOnly=false;
-    address.placeholder='Digite sua cidade';
-    status.textContent='Digite o nome da cidade e selecione uma opção.';
-  }
-
-  function showCity(city){
-    selectedCity=city;
-    selectedStreet=null;
-    clearFinal();
-    selected.style.display='block';
-    selected.innerHTML='Cidade selecionada: <b></b> · <button type="button" style="border:0;background:transparent;text-decoration:underline;cursor:pointer">trocar</button>';
-    selected.querySelector('b').textContent=`${city.city} - ${city.uf}`;
-    selected.querySelector('button').onclick=resetCity;
-    details.style.display='none';
-    numberInput.value='';
-    complementInput.value='';
-    address.readOnly=false;
-    address.value='';
-    address.placeholder='Agora digite a rua ou avenida';
-    box.style.display='none';
-    status.textContent='Cidade selecionada. Agora digite pelo menos 3 letras da rua.';
-    address.focus();
-  }
-
-  async function resolveCoordinates(item){
-    const number=clean(numberInput.value);
-    if(!number)return null;
-    const query=[`${item.street}, ${number}`,item.district,item.city,item.uf,item.cep,'Brasil'].filter(Boolean).join(', ');
-    try{
-      const params=new URLSearchParams({resolve:'1',q:query,number});
-      if(item.cep)params.set('cep',item.cep);
-      const res=await fetch(`${API}?${params.toString()}`,{headers:{Accept:'application/json'}});
-      if(!res.ok)return null;
-      const data=await res.json();
-      return data?.resolved||null;
-    }catch{return null}
-  }
-
-  async function validateFullAddress(){
-    if(!selectedStreet)return;
-    const number=clean(numberInput.value);
-    if(!number){clearFinal();status.textContent='Informe o número do imóvel para validar a localização.';return}
-    clearFinal();
-    status.textContent='Validando endereço completo e coordenadas...';
-    const resolved=await resolveCoordinates(selectedStreet);
-    if(!resolved?.lat||!resolved?.lng){
-      status.textContent='Não consegui localizar esse número. Confira o número ou escolha outra rua.';
-      return;
-    }
-    lat.value=String(resolved.lat);
-    lng.value=String(resolved.lng);
-    const complement=clean(complementInput.value);
-    finalLabel=[`${selectedStreet.street}, ${number}`,complement,selectedStreet.district,`${selectedStreet.city} - ${selectedStreet.uf}`,selectedStreet.cep].filter(Boolean).join(' · ');
-    address.value=finalLabel;
-    address.dataset.validated='1';
-    if(resolved.accuracy==='exact')status.textContent='✓ Endereço e número localizados com coordenadas exatas.';
-    else if(resolved.accuracy==='street')status.textContent='✓ Endereço validado. Coordenada aproximada da rua; o número foi salvo no endereço.';
-    else status.textContent='✓ Endereço validado. Coordenada aproximada pelo CEP; o número foi salvo no endereço.';
-  }
-
-  function showStreet(item){
-    selectedStreet=item;
-    clearFinal();
-    box.style.display='none';
-    address.value=item.label||[item.street,item.district,`${item.city} - ${item.uf}`,item.cep].filter(Boolean).join(' · ');
-    address.readOnly=true;
-    details.style.display='grid';
-    numberInput.value='';
-    complementInput.value='';
-    status.textContent='Rua selecionada. Agora informe o número do imóvel.';
-    numberInput.focus();
-  }
-
-  function makeButton(title,meta,onClick){
-    const b=document.createElement('button');
-    b.type='button';
-    b.style.cssText='display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;padding:11px 12px;background:#fff;cursor:pointer;font:inherit';
-    b.onmouseenter=()=>b.style.background='#f7f7f7';
-    b.onmouseleave=()=>b.style.background='#fff';
-    const strong=document.createElement('b');strong.style.display='block';strong.textContent=title;
-    const small=document.createElement('span');small.className='meta';small.textContent=meta;
-    b.append(strong,small);b.onclick=onClick;return b;
-  }
-
-  function renderCities(items){
-    box.innerHTML='';
-    if(!items.length){box.style.display='none';status.textContent='Nenhuma cidade encontrada. Continue digitando o nome do município.';return}
-    items.slice(0,10).forEach(item=>box.appendChild(makeButton(`${item.city} - ${item.uf}`,`${item.state||'Brasil'} · Município IBGE`,()=>showCity(item))));
-    const foot=document.createElement('div');foot.className='meta';foot.style.cssText='padding:7px 10px';foot.textContent='Municípios: IBGE';box.appendChild(foot);box.style.display='block';status.textContent='Selecione a cidade correta.';
-  }
-
-  function renderStreets(items){
-    box.innerHTML='';
-    if(!items.length){box.style.display='none';status.textContent='Nenhuma rua encontrada nessa cidade. Tente outra parte do nome.';return}
-    items.slice(0,12).forEach(item=>{const title=item.street||item.label||'Endereço';const meta=[item.district,`${item.city} - ${item.uf}`,item.cep].filter(Boolean).join(' · ');box.appendChild(makeButton(title,meta,()=>showStreet(item)))});
-    const foot=document.createElement('div');foot.className='meta';foot.style.cssText='padding:7px 10px';foot.textContent='Ruas e CEPs: ViaCEP';box.appendChild(foot);box.style.display='block';status.textContent='Selecione a rua correta.';
-  }
-
-  async function searchAddress(){
-    if(selectedStreet)return;
-    const q=clean(address.value),seq=++requestSeq;
-    if(q.length<3){box.style.display='none';status.textContent=selectedCity?'Digite pelo menos 3 letras da rua.':'Digite pelo menos 3 letras da cidade.';return}
-    controller?.abort();controller=new AbortController();status.textContent=selectedCity?'Buscando ruas e CEPs...':'Buscando municípios do Brasil...';
-    try{
-      const params=new URLSearchParams({q});if(selectedCity){params.set('city',selectedCity.city);params.set('uf',selectedCity.uf)}
-      const res=await fetch(`${API}?${params.toString()}`,{signal:controller.signal,headers:{Accept:'application/json'}});if(!res.ok)throw new Error(`HTTP ${res.status}`);
-      const data=await res.json();if(seq!==requestSeq)return;const items=Array.isArray(data?.items)?data.items:[];if(selectedCity)renderStreets(items);else renderCities(items);
-    }catch(e){if(e?.name==='AbortError')return;console.error('[Local AI] address-search:',e);box.style.display='none';status.textContent='Não foi possível buscar endereços agora. Tente novamente.'}
-  }
-
-  address.addEventListener('input',()=>{if(selectedStreet)return;if(finalLabel&&address.value!==finalLabel)clearFinal();clearTimeout(timer);timer=setTimeout(searchAddress,350)});
-  numberInput.addEventListener('input',()=>{clearFinal();clearTimeout(timer);timer=setTimeout(validateFullAddress,650)});
-  complementInput.addEventListener('input',()=>{if(address.dataset.validated==='1')validateFullAddress()});
-  address.addEventListener('focus',()=>{if(box.children.length&&address.value.length>=3&&!selectedStreet)box.style.display='block'});
-  document.addEventListener('click',e=>{if(e.target!==address&&!box.contains(e.target)&&!selected.contains(e.target)&&!details.contains(e.target))box.style.display='none'});
+  city.addEventListener('input',()=>{if(city.readOnly)return;clearFromCity();city.disabled=false;clearTimeout(timer);timer=setTimeout(searchCities,300)});
+  city.addEventListener('dblclick',()=>{city.readOnly=false;city.value='';clearFromCity();city.focus()});
+  district.addEventListener('input',()=>{clearFromDistrict();street.disabled=false});
+  street.addEventListener('input',()=>{if(street.readOnly)return;clearFromStreet();clearTimeout(timer);timer=setTimeout(searchStreets,300)});
+  street.addEventListener('dblclick',()=>{street.readOnly=false;street.value='';clearFromStreet();street.focus()});
+  number.addEventListener('input',()=>{clearCoords();clearTimeout(timer);timer=setTimeout(validateNumber,650)});
+  complement.addEventListener('input',()=>{if(address.dataset.validated==='1')validateNumber()});
 
   const original=form.onsubmit;
   form.onsubmit=async function(e){
-    // Loja já existente: endereço + coordenadas carregados do banco são válidos.
-    if(!selectedStreet&&hasSavedLocation()){
-      address.dataset.validated='1';
-      return typeof original==='function'?original.call(form,e):undefined;
+    if(!address.value||!lat.value||!lng.value||address.dataset.validated!=='1'){
+      e?.preventDefault?.();status.textContent='Escolha cidade, bairro e rua, informe o número e aguarde a validação antes de salvar.';return false
     }
-
-    // Novo endereço: exige rua selecionada, número e coordenadas resolvidas.
-    if(address.dataset.validated!=='1'||!lat.value||!lng.value){
-      e?.preventDefault?.();
-      if(selectedStreet&&!clean(numberInput.value))status.textContent='Informe o número do imóvel antes de salvar.';
-      else if(selectedStreet)status.textContent='Aguarde a validação do endereço completo ou confira o número.';
-      else if(selectedCity)status.textContent='Selecione uma rua real da lista antes de salvar.';
-      else status.textContent='Primeiro selecione a cidade e depois uma rua real.';
-      return false;
-    }
-    return typeof original==='function'?original.call(form,e):undefined;
+    return typeof original==='function'?original.call(form,e):undefined
   };
 
-  // Quando o app preencher uma loja existente depois deste módulo carregar,
-  // reconhece automaticamente o endereço salvo sem exigir nova seleção.
-  const existingWatcher=setInterval(()=>{
-    if(!selectedCity&&!selectedStreet&&hasSavedLocation()){
-      address.dataset.validated='1';
-      status.textContent='✓ Endereço já salvo. Você pode editar outros dados e salvar normalmente.';
-      clearInterval(existingWatcher);
+  // Reconhece loja já cadastrada sem expor coordenadas.
+  const watcher=setInterval(()=>{
+    if(existingLoaded)return;
+    if(clean(address.value)&&clean(lat.value)&&clean(lng.value)){
+      existingLoaded=true;address.dataset.validated='1';saved.style.display='block';saved.innerHTML=`<b>Endereço salvo</b><br>${esc(address.value)}<br><button id="changeSavedAddress" type="button" class="btn sm" style="margin-top:8px">Alterar endereço</button>`;city.disabled=true;district.disabled=true;street.disabled=true;number.disabled=true;complement.disabled=true;status.textContent='✓ Endereço salvo. Latitude e longitude ficam ocultas e são usadas automaticamente.';saved.querySelector('#changeSavedAddress').onclick=()=>{address.value='';clearCoords();saved.style.display='none';city.disabled=false;city.readOnly=false;city.value='';clearFromCity();city.focus()};clearInterval(watcher)
     }
-  },300);
-  setTimeout(()=>clearInterval(existingWatcher),10000);
+  },250);
+  setTimeout(()=>clearInterval(watcher),10000);
 }

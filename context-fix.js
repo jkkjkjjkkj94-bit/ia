@@ -16,6 +16,7 @@ await safeImport('./ai-engine.js?v=11');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');
 await safeImport('./regular-results-ui.js?v=3');
+await safeImport('./card-standardizer.js?v=1');
 await safeImport('./typing-indicator.js?v=2');
 document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{if(!q||!form)return;q.value=b.dataset.q||'';form.requestSubmit()}));
 document.getElementById('resetBtn')?.addEventListener('click',()=>{window.LocalAIEngine?.reset?.();if(msgs){const d=document.createElement('div');d.className='msg bot';d.textContent='Pronto. Limpei o contexto da busca. O que você procura agora?';msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight}});

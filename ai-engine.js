@@ -46,6 +46,138 @@ const defaultGroupMap={
   Açaí:{parent:'Comida',terms:['açaí','açai','acai','açaiteria','acaiteria','açaí na tigela','acai na tigela']}
 };
 
+// AUTO_SYNC_SYNONYMS_START
+const syncedSynonyms={
+  "Açaí": [
+    "açai",
+    "acai",
+    "açaiteria",
+    "acaiteria",
+    "açaí na tigela",
+    "acai na tigela"
+  ],
+  "Comida": [
+    "alimentação",
+    "alimento",
+    "alimentos",
+    "refeição",
+    "refeições",
+    "comer",
+    "lanche",
+    "lanches",
+    "almoço",
+    "jantar",
+    "café da manhã",
+    "restaurante",
+    "restaurantes",
+    "lanchonete",
+    "lanchonetes",
+    "comida pronta",
+    "refeição pronta",
+    "delivery de comida",
+    "entrega de comida",
+    "comida caseira"
+  ],
+  "roupas": [
+    "moda",
+    "vestuário"
+  ],
+  "Doceria": [
+    "doce",
+    "doces",
+    "sobremesa",
+    "sobremesas",
+    "confeitaria",
+    "bolo",
+    "bolos",
+    "brigadeiro"
+  ],
+  "Marmita": [
+    "marmitas",
+    "marmitex",
+    "quentinha",
+    "quentinhas",
+    "prato feito",
+    "pf",
+    "prato executivo",
+    "refeição pronta"
+  ],
+  "Padaria": [
+    "pão",
+    "pães",
+    "paes",
+    "panificadora",
+    "panificação",
+    "café",
+    "salgado",
+    "salgados",
+    "bolo",
+    "bolos"
+  ],
+  "Japonesa": [
+    "sushi",
+    "sashimi",
+    "temaki",
+    "yakisoba",
+    "comida japonesa",
+    "japonês",
+    "japones",
+    "oriental"
+  ],
+  "pizzaria": [
+    "pizza",
+    "pizzas",
+    "pizzeria",
+    "pizzarias",
+    "pizza artesanal",
+    "pizza delivery",
+    "rodízio de pizza",
+    "rodizio de pizza"
+  ],
+  "farmácia": [
+    "drogaria",
+    "remédio"
+  ],
+  "Pastelaria": [
+    "pastel",
+    "pastéis",
+    "pasteis",
+    "pastel frito",
+    "pastel de feira"
+  ],
+  "Sorveteria": [
+    "sorvete",
+    "sorvetes",
+    "gelato",
+    "casquinha",
+    "milk shake",
+    "milkshake"
+  ],
+  "hambúrguer": [
+    "hambúrguer",
+    "hamburguer",
+    "hambúrgueres",
+    "hamburgueres",
+    "burger",
+    "burguer",
+    "lanche",
+    "x-burguer",
+    "x-salada",
+    "fast food"
+  ],
+  "Churrascaria": [
+    "churrasco",
+    "carne",
+    "carnes",
+    "espetinho",
+    "espetinhos",
+    "grelhados",
+    "rodízio",
+    "rodizio"
+  ]
+};
+// AUTO_SYNC_SYNONYMS_END
+
 let intentMap=Object.fromEntries(Object.entries(defaultIntentMap).map(([k,v])=>[k,[...v]]));
 let groupMap=Object.fromEntries(Object.entries(defaultGroupMap).map(([k,v])=>[k,{parent:v.parent,terms:[...v.terms]}]));
 let negativeWords=['nao quero','sem','excluir','evitar'];
@@ -71,6 +203,7 @@ function applyAIConfig(cfg={}){
   groupMap=Object.fromEntries(Object.entries(defaultGroupMap).map(([k,v])=>[k,{parent:v.parent,terms:[...v.terms]}]));
   const cats=Array.isArray(aiConfig.categories)?aiConfig.categories:[];
   for(const c of cats){const label=String(c).trim();if(label&&!intentMap[label])intentMap[label]=[label]}
+  mergeSynonymsIntoIntentMap(syncedSynonyms);
   mergeSynonymsIntoIntentMap(aiConfig.synonyms);
   configuredIntents=aiConfig.intents&&typeof aiConfig.intents==='object'&&!Array.isArray(aiConfig.intents)?aiConfig.intents:{};
   const neg=flatConfig(aiConfig.negative_words);if(neg.length)negativeWords=uniq(['nao quero','sem','excluir','evitar',...neg]);

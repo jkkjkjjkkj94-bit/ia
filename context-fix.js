@@ -21,7 +21,7 @@ if(msgs)new MutationObserver(syncChatState).observe(msgs,{childList:true,subtree
 async function safeImport(path){try{await import(path)}catch(error){console.error('[Local AI] Falha ao carregar módulo:',path,error)}}
 
 // Motor central: intenções, memória, cidade, referências, filtros, distância e ranking
-await safeImport('./ai-engine.js?v=3');
+await safeImport('./ai-engine.js?v=4');
 
 // Conta, administração e recursos auxiliares
 await safeImport('./admin-login-fix.js?v=3');

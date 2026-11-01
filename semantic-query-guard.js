@@ -1,6 +1,7 @@
 const form=document.getElementById('chatForm');
 const input=document.getElementById('q');
 const msgs=document.getElementById('msgs');
+const ctx=document.getElementById('ctx');
 
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 
@@ -14,6 +15,18 @@ const semanticRules=[
   {re:/\bcomida caseira\b|\bprato feito\b|\bcomida pronta\b/,canonical:'marmita'}
 ];
 
+const genericCategoryRules=[
+  {re:/\b(loja|lugar|local|estabelecimento)( de)? comida\b|^comida$/,category:'Comida',canonical:'comida'},
+  {re:/\b(loja|lugar|local|estabelecimento)( de)? roupa(s)?\b|^roupas?$/,category:'Roupas',canonical:'roupas'},
+  {re:/\b(loja|lugar|local|estabelecimento)( de)? tecnologia\b|^tecnologia$/,category:'Tecnologia',canonical:'tecnologia'}
+];
+
+const falseProducts=new Set([
+  'comer','comendo','comida','tomar','bebendo','procurar','procurando','achar','encontrar','comprar','querer','quero','queria',
+  'loja','lojas','lugar','lugares','local','locais','estabelecimento','estabelecimentos','aberto','aberta','abertos','abertas',
+  'venda','vende','vendem','vender','produto','produtos','opcao','opcoes','opção','opções'
+]);
+
 function userMsg(text){
   if(!msgs)return;
   const d=document.createElement('div');
@@ -23,10 +36,36 @@ function userMsg(text){
   msgs.scrollTop=msgs.scrollHeight;
 }
 
-function cleanFalseProduct(state){
+function cleanFalseProduct(state,force=false){
   if(!state)return;
-  const bad=new Set(['comer','comendo','comida','tomar','procurar','achar','encontrar','comprar','querer']);
-  if(bad.has(norm(state.product))||bad.has(norm(state.term))){state.product=null;state.term=null;state.specialty=null;state.selectedProduct=null;}
+  const p=norm(state.product),t=norm(state.term);
+  const falseValue=force||falseProducts.has(p)||falseProducts.has(t)||(/^com(er|ida|endo)?$/.test(p))||(/^com(er|ida|endo)?$/.test(t));
+  if(falseValue){state.product=null;state.term=null;state.specialty=null;state.selectedProduct=null;}
+}
+
+function hideProductFromContext(){
+  if(!ctx)return;
+  const txt=ctx.textContent||'';
+  if(!txt.includes('Produto:'))return;
+  ctx.textContent=txt
+    .replace(/\s*·\s*Produto:\s*[^·]+(?=\s*·|$)/g,'')
+    .replace(/Contexto:\s*Produto:\s*[^·]+\s*·?\s*/g,'Contexto: ')
+    .replace(/\s*·\s*$/,'')
+    .replace(/Contexto:\s*$/,'');
+}
+
+async function runCanonical(original,canonical,{category=null,clearGroup=false}={}){
+  const engine=window.LocalAIEngine;
+  if(!engine)return;
+  const state=engine.state;
+  cleanFalseProduct(state,true);
+  if(category)state.category=category;
+  if(clearGroup){state.group=null;state.selectedStore=null;state.lastResults=[];}
+  userMsg(original);
+  input.value='';
+  await engine.handle(canonical);
+  cleanFalseProduct(state);
+  hideProductFromContext();
 }
 
 form?.addEventListener('submit',async e=>{
@@ -35,15 +74,25 @@ form?.addEventListener('submit',async e=>{
   const original=input.value.trim();
   if(!original)return;
   const n=norm(original);
-  const rule=semanticRules.find(r=>r.re.test(n));
-  if(!rule){cleanFalseProduct(engine.state);return;}
-  e.preventDefault();
-  e.stopImmediatePropagation();
-  cleanFalseProduct(engine.state);
-  userMsg(original);
-  input.value='';
-  await engine.handle(rule.canonical);
+
+  const semantic=semanticRules.find(r=>r.re.test(n));
+  if(semantic){
+    e.preventDefault();e.stopImmediatePropagation();
+    await runCanonical(original,semantic.canonical);
+    return;
+  }
+
+  const generic=genericCategoryRules.find(r=>r.re.test(n));
+  if(generic){
+    e.preventDefault();e.stopImmediatePropagation();
+    await runCanonical(original,generic.canonical,{category:generic.category,clearGroup:true});
+    return;
+  }
+
   cleanFalseProduct(engine.state);
 },true);
 
-window.LocalAISemanticGuard={normalize:norm,rules:semanticRules};
+if(ctx)new MutationObserver(()=>hideProductFromContext()).observe(ctx,{childList:true,characterData:true,subtree:true});
+if(msgs)new MutationObserver(()=>{cleanFalseProduct(window.LocalAIEngine?.state);hideProductFromContext()}).observe(msgs,{childList:true,subtree:true});
+
+window.LocalAISemanticGuard={normalize:norm,rules:semanticRules,cleanFalseProduct,hideProductFromContext};

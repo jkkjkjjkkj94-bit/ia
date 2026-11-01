@@ -16,9 +16,9 @@ const semanticRules=[
 ];
 
 const genericCategoryRules=[
-  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*comida\s*$/,category:'Comida',canonical:'comida'},
-  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*roupas?\s*$/,category:'Roupas',canonical:'roupas'},
-  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*tecnologia\s*$/,category:'Tecnologia',canonical:'tecnologia'}
+  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*comida\s*$/,category:'Comida'},
+  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*roupas?\s*$/,category:'Roupas'},
+  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*tecnologia\s*$/,category:'Tecnologia'}
 ];
 
 const falseProducts=new Set([
@@ -54,17 +54,35 @@ function hideProductFromContext(){
     .replace(/Contexto:\s*$/,'');
 }
 
-async function runCanonical(original,canonical,{category=null,clearGroup=false}={}){
+async function runCanonical(original,canonical,{category=null,clearGroup=false,genericCategory=false}={}){
   const engine=window.LocalAIEngine;
   if(!engine)return;
   const state=engine.state;
   cleanFalseProduct(state,true);
-  if(category)state.category=category;
-  if(clearGroup){state.group=null;state.selectedStore=null;state.lastResults=[];}
+  if(genericCategory){
+    state.category=category;
+    state.group=null;
+    state.product=null;
+    state.specialty=null;
+    state.term=null;
+    state.selectedProduct=null;
+    state.selectedStore=null;
+    state.lastResults=[];
+  }else{
+    if(category)state.category=category;
+    if(clearGroup){state.group=null;state.selectedStore=null;state.lastResults=[];}
+  }
   userMsg(original);
   input.value='';
-  await engine.handle(canonical);
-  cleanFalseProduct(state);
+  await engine.handle(genericCategory?'lojas':canonical);
+  if(genericCategory){
+    state.category=category;
+    state.group=null;
+    state.product=null;
+    state.specialty=null;
+    state.term=null;
+    state.selectedProduct=null;
+  }else cleanFalseProduct(state);
   hideProductFromContext();
 }
 
@@ -85,7 +103,7 @@ form?.addEventListener('submit',async e=>{
   const generic=genericCategoryRules.find(r=>r.re.test(n));
   if(generic){
     e.preventDefault();e.stopImmediatePropagation();
-    await runCanonical(original,generic.canonical,{category:generic.category,clearGroup:true});
+    await runCanonical(original,'lojas',{category:generic.category,clearGroup:true,genericCategory:true});
     return;
   }
 

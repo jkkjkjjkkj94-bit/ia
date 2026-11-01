@@ -2,6 +2,12 @@ const CORE_URL='https://ccsypggvelcxsqszepfs.supabase.co';
 const CORE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
 const AI_HOST='innziuzgtpfsiywqmies.supabase.co';
 const CORE_TABLES=['local_ai_stores','local_ai_products'];
+const AUTHORITATIVE_SOURCE={
+  local_ai_stores:'core',
+  local_ai_products:'core',
+  local_ai_profiles:'hibrid',
+  local_ai_accounts:'hibrid'
+};
 const MERCHANT_EDGE=CORE_URL+'/functions/v1/merchant-core';
 const originalFetch=window.fetch.bind(window);
 const isMerchantPage=/\/lojista\.html(?:$|[?#])/i.test(window.location.pathname+window.location.search);
@@ -105,5 +111,6 @@ window.fetch=async(input,init={})=>{
 window.LocalAIDataSources={
   core:{url:CORE_URL,tables:[...CORE_TABLES],mode:isMerchantPage?'merchant-secure-bridge':'direct-route'},
   ai:{url:'https://'+AI_HOST,mode:'direct'},
+  authoritative:{...AUTHORITATIVE_SOURCE},
   ready:true
 };

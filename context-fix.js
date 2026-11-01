@@ -20,7 +20,6 @@ await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');
 await safeImport('./regular-results-ui.js?v=3');
 await safeImport('./card-standardizer.js?v=3');
-await safeImport('./card-rating.js?v=1');
 await safeImport('./zero-result-responses.js?v=2');
 await safeImport('./typing-indicator.js?v=3');
 
@@ -87,28 +86,36 @@ function ensureCompactCardStyles(){
 ensureCompactCardStyles();
 
 function compactCards(root=document){
-  root.querySelectorAll?.('.store-result-card').forEach(card=>{
+  const cards=[];
+  if(root.matches?.('.store-result-card'))cards.push(root);
+  root.querySelectorAll?.('.store-result-card').forEach(card=>cards.push(card));
+  cards.forEach(card=>{
     // A nota principal já aparece na linha de status; remove a cópia da categoria/meta.
     card.querySelectorAll('.store-card-meta .store-chip').forEach(chip=>{
       if(/^★\s*\d/i.test(chip.textContent.trim()))chip.remove();
     });
-    // A avaliação detalhada fica fora da listagem principal.
-    card.querySelectorAll('.card-rating').forEach(el=>el.remove());
     // Garante que o antigo botão de rota continue removido.
     card.querySelectorAll('.store-card-actions a').forEach(a=>{
       if(a.textContent.trim().toLowerCase()==='como chegar')a.remove();
     });
   });
-  root.querySelectorAll?.('.hashtag-result-msg').forEach(msg=>{
-    const cards=msg.querySelectorAll('.store-result-card').length;
+
+  const resultMessages=[];
+  if(root.matches?.('.hashtag-result-msg'))resultMessages.push(root);
+  root.querySelectorAll?.('.hashtag-result-msg').forEach(msg=>resultMessages.push(msg));
+  resultMessages.forEach(msg=>{
+    const count=msg.querySelectorAll('.store-result-card').length;
     const intro=msg.querySelector('.hashtag-intro');
-    if(intro&&cards>0)intro.textContent=`${cards} ${cards===1?'opção encontrada':'opções encontradas'} · Melhor correspondência primeiro`;
+    if(intro&&count>0)intro.textContent=`${count} ${count===1?'opção encontrada':'opções encontradas'} · Melhor correspondência primeiro`;
   });
 }
 compactCards();
 if(msgs)new MutationObserver(mutations=>{
-  for(const m of mutations)m.addedNodes.forEach(n=>{if(n.nodeType===1)compactCards(n)});
-  compactCards(msgs);
+  for(const m of mutations){
+    m.addedNodes.forEach(n=>{
+      if(n.nodeType===1)compactCards(n);
+    });
+  }
 }).observe(msgs,{childList:true,subtree:true});
 
 document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{if(!q||!form)return;q.value=b.dataset.q||'';form.requestSubmit()}));

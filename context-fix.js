@@ -40,10 +40,23 @@ function ensureNoCoverStyles(){
 .store-result-card .store-cover{
   display:none!important;
 }
+.store-result-card .store-card-actions a[href*="google.com/maps"]{
+  display:none!important;
+}
 `;
   document.head.appendChild(style);
 }
 ensureNoCoverStyles();
+
+function removeDirectionsButtons(root=document){
+  root.querySelectorAll?.('.store-result-card .store-card-actions a').forEach(a=>{
+    if(a.textContent.trim().toLowerCase()==='como chegar')a.remove();
+  });
+}
+removeDirectionsButtons();
+if(msgs)new MutationObserver(mutations=>{
+  for(const m of mutations)m.addedNodes.forEach(n=>{if(n.nodeType===1)removeDirectionsButtons(n)});
+}).observe(msgs,{childList:true,subtree:true});
 
 document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{if(!q||!form)return;q.value=b.dataset.q||'';form.requestSubmit()}));
 document.getElementById('resetBtn')?.addEventListener('click',()=>{window.LocalAIEngine?.reset?.();if(msgs){const d=document.createElement('div');d.className='msg bot';d.textContent='Pronto. Limpei o contexto da busca. O que você procura agora?';msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight}});

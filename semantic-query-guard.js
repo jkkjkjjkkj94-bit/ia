@@ -6,19 +6,19 @@ const ctx=document.getElementById('ctx');
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 
 const semanticRules=[
-  {re:/\b(algo|coisa) doce\b|\bcomer (um |uma )?doce\b|\bvontade de doce\b|\bquero comer.*doce\b/,canonical:'doceria'},
-  {re:/\bcomer pizza\b|\bvontade de pizza\b|\bquero.*pizza\b/,canonical:'pizzaria'},
-  {re:/\b(comer|quero) (um )?(hamburguer|burger|lanche)\b|\bvontade de (hamburguer|lanche)\b/,canonical:'hamburgueria'},
-  {re:/\b(comer|quero) (algo )?(japones|oriental)\b|\bcomida oriental\b/,canonical:'japonesa'},
-  {re:/\b(tomar|quero) (um )?sorvete\b|\balgo gelado\b/,canonical:'sorveteria'},
-  {re:/\b(tomar|quero) (um )?acai\b|\bvontade de acai\b/,canonical:'acai'},
+  {re:/\b(loja|lugar|local|restaurante|estabelecimento)?\s*(de )?comida japonesa\b|\bcomida japonesa\b|\b(japonesa|japones|oriental)\b/,canonical:'japonesa'},
+  {re:/\b(algo|coisa) doce\b|\bcomer (um |uma )?doce\b|\bvontade de doce\b|\bquero comer.*doce\b|\bloja de doce(s)?\b/,canonical:'doceria'},
+  {re:/\bcomer pizza\b|\bvontade de pizza\b|\bquero.*pizza\b|\bloja de pizza(s)?\b/,canonical:'pizzaria'},
+  {re:/\b(comer|quero) (um )?(hamburguer|burger|lanche)\b|\bvontade de (hamburguer|lanche)\b|\bloja de hamburguer(es)?\b/,canonical:'hamburgueria'},
+  {re:/\b(tomar|quero) (um )?sorvete\b|\balgo gelado\b|\bloja de sorvete(s)?\b/,canonical:'sorveteria'},
+  {re:/\b(tomar|quero) (um )?acai\b|\bvontade de acai\b|\bloja de acai\b/,canonical:'acai'},
   {re:/\bcomida caseira\b|\bprato feito\b|\bcomida pronta\b/,canonical:'marmita'}
 ];
 
 const genericCategoryRules=[
-  {re:/\b(loja|lugar|local|estabelecimento)( de)? comida\b|^comida$/,category:'Comida',canonical:'comida'},
-  {re:/\b(loja|lugar|local|estabelecimento)( de)? roupa(s)?\b|^roupas?$/,category:'Roupas',canonical:'roupas'},
-  {re:/\b(loja|lugar|local|estabelecimento)( de)? tecnologia\b|^tecnologia$/,category:'Tecnologia',canonical:'tecnologia'}
+  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*comida\s*$/,category:'Comida',canonical:'comida'},
+  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*roupas?\s*$/,category:'Roupas',canonical:'roupas'},
+  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*tecnologia\s*$/,category:'Tecnologia',canonical:'tecnologia'}
 ];
 
 const falseProducts=new Set([

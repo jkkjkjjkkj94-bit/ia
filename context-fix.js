@@ -48,14 +48,67 @@ function ensureNoCoverStyles(){
 }
 ensureNoCoverStyles();
 
-function removeDirectionsButtons(root=document){
-  root.querySelectorAll?.('.store-result-card .store-card-actions a').forEach(a=>{
-    if(a.textContent.trim().toLowerCase()==='como chegar')a.remove();
+// Cards compactos para listas de até 5 comércios.
+function ensureCompactCardStyles(){
+  if(document.getElementById('localAiCompactCardStyles'))return;
+  const style=document.createElement('style');
+  style.id='localAiCompactCardStyles';
+  style.textContent=`
+.store-results-grid{gap:10px!important}
+.store-result-card.smart-card{padding:11px 13px!important;border-radius:14px!important}
+.store-result-card .smart-store-logo{width:42px!important;height:42px!important;flex-basis:42px!important}
+.store-result-card .store-card-top{gap:9px!important}
+.store-result-card .store-card-top h3{font-size:14px!important;margin-bottom:2px!important}
+.store-result-card .smart-location{font-size:10px!important;margin-top:0!important}
+.store-result-card .store-card-meta{margin-top:3px!important}
+.store-result-card .smart-facts{margin-top:6px!important;gap:4px!important}
+.store-result-card .smart-facts .store-chip,
+.store-result-card .store-card-meta .store-chip{padding:3px 6px!important;font-size:9px!important}
+.store-result-card .smart-specialties{margin-top:7px!important;padding-top:7px!important}
+.store-result-card .smart-specialties b{margin-bottom:4px!important;font-size:9.5px!important}
+.store-result-card .smart-specialties-list{gap:4px!important}
+.store-result-card .smart-specialty{padding:3px 6px!important;font-size:9px!important}
+.store-result-card .smart-specialty:nth-child(n+4){display:none!important}
+.store-result-card .smart-summary{margin-top:7px!important;font-size:10px!important;line-height:1.35!important;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.store-result-card .smart-why-btn{margin-top:6px!important;font-size:9.5px!important}
+.store-result-card .smart-why-panel{margin-top:6px!important;padding:7px 8px!important}
+.store-result-card .store-card-actions{margin-top:8px!important;gap:5px!important}
+.store-result-card .store-action,
+.store-result-card .smart-link{padding:6px 9px!important;font-size:9.5px!important}
+.store-result-card .card-rating{display:none!important}
+.hashtag-intro{margin-bottom:8px!important}
+@media(max-width:680px){
+  .store-result-card.smart-card{padding:10px 11px!important}
+  .store-result-card .smart-store-logo{width:38px!important;height:38px!important;flex-basis:38px!important}
+}
+`;
+  document.head.appendChild(style);
+}
+ensureCompactCardStyles();
+
+function compactCards(root=document){
+  root.querySelectorAll?.('.store-result-card').forEach(card=>{
+    // A nota principal já aparece na linha de status; remove a cópia da categoria/meta.
+    card.querySelectorAll('.store-card-meta .store-chip').forEach(chip=>{
+      if(/^★\s*\d/i.test(chip.textContent.trim()))chip.remove();
+    });
+    // A avaliação detalhada fica fora da listagem principal.
+    card.querySelectorAll('.card-rating').forEach(el=>el.remove());
+    // Garante que o antigo botão de rota continue removido.
+    card.querySelectorAll('.store-card-actions a').forEach(a=>{
+      if(a.textContent.trim().toLowerCase()==='como chegar')a.remove();
+    });
+  });
+  root.querySelectorAll?.('.hashtag-result-msg').forEach(msg=>{
+    const cards=msg.querySelectorAll('.store-result-card').length;
+    const intro=msg.querySelector('.hashtag-intro');
+    if(intro&&cards>0)intro.textContent=`${cards} ${cards===1?'opção encontrada':'opções encontradas'} · Melhor correspondência primeiro`;
   });
 }
-removeDirectionsButtons();
+compactCards();
 if(msgs)new MutationObserver(mutations=>{
-  for(const m of mutations)m.addedNodes.forEach(n=>{if(n.nodeType===1)removeDirectionsButtons(n)});
+  for(const m of mutations)m.addedNodes.forEach(n=>{if(n.nodeType===1)compactCards(n)});
+  compactCards(msgs);
 }).observe(msgs,{childList:true,subtree:true});
 
 document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{if(!q||!form)return;q.value=b.dataset.q||'';form.requestSubmit()}));

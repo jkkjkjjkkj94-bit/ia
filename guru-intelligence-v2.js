@@ -12,6 +12,7 @@ const stop=new Set('quero queria preciso procuro procurar loja lojas lugar lugar
 let lastQuery='';
 let lastTelemetryKey='';
 let fallbackBusy=false;
+let postTimer=null;
 
 function engine(){return window.LocalAIEngine}
 function state(){return engine()?.state}
@@ -160,14 +161,20 @@ function improveWhy(root=document){
 }
 async function telemetry(){
   const s=state();if(!lastQuery||!s)return;
-  const count=msgs?.querySelectorAll('.store-result-card').length||0;
-  const key=[lastQuery,s.category,s.group,s.day,count].join('|');if(key===lastTelemetryKey)return;lastTelemetryKey=key;
   const lastBot=[...msgs.querySelectorAll('.msg.bot')].at(-1);
+  const count=lastBot?.querySelectorAll('.store-result-card').length||0;
+  const key=[lastQuery,s.category,s.group,s.day,count].join('|');if(key===lastTelemetryKey)return;lastTelemetryKey=key;
   const failure=count===0?(lastBot?.textContent?.slice(0,220)||'sem resultado'):null;
   const body={query:lastQuery,normalized_query:norm(lastQuery),category:s.category||null,group_name:s.group||null,day:s.day??null,time_period:s.timePeriod||null,result_count:count,matched:count>0,confidence:Number(s.confidence?.overall??s.confidence??0)||null,failure_reason:failure};
   try{await fetch(AI_URL+'/rest/v1/local_ai_quality_events',{method:'POST',headers:{apikey:AI_KEY,Authorization:'Bearer '+AI_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(body)})}catch{}
 }
-function schedulePostProcessing(){setTimeout(()=>{snapshot();sanitizeTaxonomy();improveWhy();hybridFallback().then(()=>{setTimeout(()=>{improveWhy();telemetry()},350)})},650)}
+function schedulePostProcessing(){
+  clearTimeout(postTimer);
+  postTimer=setTimeout(()=>{
+    snapshot();sanitizeTaxonomy();improveWhy();
+    hybridFallback().then(()=>{setTimeout(()=>{improveWhy();telemetry()},300)});
+  },650);
+}
 form?.addEventListener('submit',()=>{const q=input?.value?.trim();if(!q)return;lastQuery=q;protectContext(q);sanitizeTaxonomy();schedulePostProcessing()},true);
 if(msgs)new MutationObserver(ms=>{for(const m of ms)m.addedNodes.forEach(n=>{if(n.nodeType===1)improveWhy(n)});schedulePostProcessing()}).observe(msgs,{childList:true,subtree:true});
 sanitizeTaxonomy();

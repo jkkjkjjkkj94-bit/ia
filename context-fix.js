@@ -13,7 +13,7 @@ if(msgs)new MutationObserver(syncChatState).observe(msgs,{childList:true,subtree
 async function safeImport(path){try{await import(path)}catch(error){console.error('[GURU] Falha ao carregar módulo:',path,error)}}
 await safeImport('./core-data-router.js?v=3');
 await safeImport('./ai-engine.js?v=15');
-await safeImport('./guru-intelligence-v2.js?v=1');
+await safeImport('./guru-intelligence-v2.js?v=2');
 
 function sanitizeCategorySynonyms(){
   const tax=window.LocalAITaxonomy?.active;

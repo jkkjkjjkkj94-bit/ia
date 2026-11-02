@@ -15,10 +15,6 @@ const semanticRules=[
   {re:/\bcomida caseira\b|\bprato feito\b|\bcomida pronta\b/,canonical:'marmita'}
 ];
 
-// Categorias genericas podem vir acompanhadas de filtros como dia, horario,
-// entrega e distancia. Como as regras especificas acima rodam primeiro,
-// "comida japonesa" continua sendo Japonesa, enquanto "comida no sabado"
-// fica apenas na categoria Comida.
 const genericCategoryRules=[
   {re:/\bcomida\b/,category:'Comida'},
   {re:/\broupas?\b/,category:'Roupas'},
@@ -30,6 +26,8 @@ const falseProducts=new Set([
   'loja','lojas','lugar','lugares','local','locais','estabelecimento','estabelecimentos','aberto','aberta','abertos','abertas',
   'venda','vende','vendem','vender','produto','produtos','opcao','opcoes','opção','opções'
 ]);
+
+const weekDays={domingo:0,segunda:1,'segunda feira':1,terca:2,'terca feira':2,quarta:3,'quarta feira':3,quinta:4,'quinta feira':4,sexta:5,'sexta feira':5,sabado:6};
 
 function userMsg(text){
   if(!msgs)return;
@@ -45,6 +43,39 @@ function cleanFalseProduct(state,force=false){
   const p=norm(state.product),t=norm(state.term);
   const falseValue=force||falseProducts.has(p)||falseProducts.has(t)||(/^com(er|ida|endo)?$/.test(p))||(/^com(er|ida|endo)?$/.test(t));
   if(falseValue){state.product=null;state.term=null;state.specialty=null;state.selectedProduct=null;}
+}
+
+function applyGenericFilters(original,state){
+  const n=norm(original);
+  let foundDay=null;
+  if(/\bhoje\b/.test(n))foundDay=new Date().getDay();
+  else if(/\bamanha\b/.test(n))foundDay=(new Date().getDay()+1)%7;
+  else{
+    for(const[name,num]of Object.entries(weekDays)){
+      const re=new RegExp(`(?:^|\\s)${name.replace(/ /g,'\\s+')}(?:\\s|$)`);
+      if(re.test(n)){foundDay=num;break;}
+    }
+  }
+  if(foundDay!==null){state.day=foundDay;state.openNow=false;}
+  if(/abert[oa]s? agora|aberto agora|aberta agora/.test(n)){state.openNow=true;state.day=null;}
+  if(/com entrega|delivery|entrega hoje/.test(n))state.delivery=true;
+  else if(/sem entrega|nao quero entrega/.test(n))state.delivery=false;
+}
+
+function renderGenericContext(state){
+  if(!ctx)return;
+  const parts=[];
+  if(state.location?.city)parts.push('Cidade: '+state.location.city);
+  if(state.location?.uf)parts.push('Estado: '+state.location.uf);
+  if(state.category)parts.push('Categoria: '+state.category);
+  if(state.day!==null&&state.day!==undefined){
+    const days=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    parts.push('Dia: '+days[state.day]);
+  }
+  if(state.openNow)parts.push('abertas agora');
+  if(state.delivery===true)parts.push('com entrega');
+  if(state.delivery===false)parts.push('sem entrega');
+  ctx.textContent=parts.length?'Contexto: '+parts.join(' · '):'';
 }
 
 function hideProductFromContext(){
@@ -72,16 +103,19 @@ async function runCanonical(original,canonical,{category=null,clearGroup=false,g
     state.selectedProduct=null;
     state.selectedStore=null;
     state.lastResults=[];
+    applyGenericFilters(original,state);
   }else{
     if(category)state.category=category;
     if(clearGroup){state.group=null;state.selectedStore=null;state.lastResults=[];}
   }
   userMsg(original);
   input.value='';
-  // Usa a frase original para preservar dia, horario, entrega, distancia etc.
-  // No caso de categoria generica, o grupo e zerado antes e depois do handle.
-  const queryForEngine=genericCategory?original:`${canonical} ${original}`;
+
+  // Para categoria generica, nao reenvia "Comida" ao analisador antigo.
+  // O estado ja contem Categoria=Comida e Grupo=null, entao "lojas" apenas executa a busca.
+  const queryForEngine=genericCategory?'lojas':`${canonical} ${original}`;
   await engine.handle(queryForEngine);
+
   if(genericCategory){
     state.category=category;
     state.group=null;
@@ -89,22 +123,7 @@ async function runCanonical(original,canonical,{category=null,clearGroup=false,g
     state.specialty=null;
     state.term=null;
     state.selectedProduct=null;
-    // Atualiza o contexto visual depois de neutralizar qualquer grupo herdado.
-    if(ctx){
-      const parts=[];
-      if(state.location?.city)parts.push('Cidade: '+state.location.city);
-      if(state.location?.uf)parts.push('Estado: '+state.location.uf);
-      if(state.category)parts.push('Categoria: '+state.category);
-      if(state.day!==null&&state.day!==undefined){
-        const days=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
-        parts.push('Dia: '+days[state.day]);
-      }
-      if(state.timePeriod)parts.push('Período: '+state.timePeriod);
-      if(state.openNow)parts.push('abertas agora');
-      if(state.delivery===true)parts.push('com entrega');
-      if(state.delivery===false)parts.push('sem entrega');
-      ctx.textContent=parts.length?'Contexto: '+parts.join(' · '):'';
-    }
+    renderGenericContext(state);
   }else cleanFalseProduct(state);
   hideProductFromContext();
 }

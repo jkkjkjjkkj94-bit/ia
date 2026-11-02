@@ -74,7 +74,10 @@ async function runCanonical(original,canonical,{category=null,clearGroup=false,g
   }
   userMsg(original);
   input.value='';
-  await engine.handle(genericCategory?'lojas':canonical);
+  // Mantem a consulta original para preservar filtros como dia, horario,
+  // entrega, distancia e ordenacao. O termo canonico apenas reforca a categoria.
+  const queryForEngine=genericCategory?'lojas':`${canonical} ${original}`;
+  await engine.handle(queryForEngine);
   if(genericCategory){
     state.category=category;
     state.group=null;

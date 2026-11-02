@@ -15,10 +15,14 @@ const semanticRules=[
   {re:/\bcomida caseira\b|\bprato feito\b|\bcomida pronta\b/,canonical:'marmita'}
 ];
 
+// Categorias genericas podem vir acompanhadas de filtros como dia, horario,
+// entrega e distancia. Como as regras especificas acima rodam primeiro,
+// "comida japonesa" continua sendo Japonesa, enquanto "comida no sabado"
+// fica apenas na categoria Comida.
 const genericCategoryRules=[
-  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*comida\s*$/,category:'Comida'},
-  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*roupas?\s*$/,category:'Roupas'},
-  {re:/^(?:(?:quero|procuro|preciso de)\s+)?(?:uma?\s+)?(?:loja|lugar|local|estabelecimento)?(?:\s+de)?\s*tecnologia\s*$/,category:'Tecnologia'}
+  {re:/\bcomida\b/,category:'Comida'},
+  {re:/\broupas?\b/,category:'Roupas'},
+  {re:/\btecnologia\b/,category:'Tecnologia'}
 ];
 
 const falseProducts=new Set([
@@ -74,9 +78,9 @@ async function runCanonical(original,canonical,{category=null,clearGroup=false,g
   }
   userMsg(original);
   input.value='';
-  // Mantem a consulta original para preservar filtros como dia, horario,
-  // entrega, distancia e ordenacao. O termo canonico apenas reforca a categoria.
-  const queryForEngine=genericCategory?'lojas':`${canonical} ${original}`;
+  // Usa a frase original para preservar dia, horario, entrega, distancia etc.
+  // No caso de categoria generica, o grupo e zerado antes e depois do handle.
+  const queryForEngine=genericCategory?original:`${canonical} ${original}`;
   await engine.handle(queryForEngine);
   if(genericCategory){
     state.category=category;
@@ -85,6 +89,22 @@ async function runCanonical(original,canonical,{category=null,clearGroup=false,g
     state.specialty=null;
     state.term=null;
     state.selectedProduct=null;
+    // Atualiza o contexto visual depois de neutralizar qualquer grupo herdado.
+    if(ctx){
+      const parts=[];
+      if(state.location?.city)parts.push('Cidade: '+state.location.city);
+      if(state.location?.uf)parts.push('Estado: '+state.location.uf);
+      if(state.category)parts.push('Categoria: '+state.category);
+      if(state.day!==null&&state.day!==undefined){
+        const days=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+        parts.push('Dia: '+days[state.day]);
+      }
+      if(state.timePeriod)parts.push('Período: '+state.timePeriod);
+      if(state.openNow)parts.push('abertas agora');
+      if(state.delivery===true)parts.push('com entrega');
+      if(state.delivery===false)parts.push('sem entrega');
+      ctx.textContent=parts.length?'Contexto: '+parts.join(' · '):'';
+    }
   }else cleanFalseProduct(state);
   hideProductFromContext();
 }

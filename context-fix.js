@@ -12,7 +12,25 @@ syncChatState();
 if(msgs)new MutationObserver(syncChatState).observe(msgs,{childList:true,subtree:true});
 async function safeImport(path){try{await import(path)}catch(error){console.error('[GURU] Falha ao carregar módulo:',path,error)}}
 await safeImport('./core-data-router.js?v=3');
-await safeImport('./ai-engine.js?v=14');
+await safeImport('./ai-engine.js?v=15');
+
+// Evita que um nome exato de categoria (ex.: "Comida") seja cadastrado
+// como sinônimo de um grupo interno (ex.: Pizzaria) e restrinja a busca.
+function sanitizeCategorySynonyms(){
+  const tax=window.LocalAITaxonomy?.active;
+  if(!tax)return;
+  const normalize=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  for(const[category,groups]of Object.entries(tax)){
+    const categoryNorm=normalize(category);
+    for(const[group,terms]of Object.entries(groups||{})){
+      if(!Array.isArray(terms))continue;
+      groups[group]=terms.filter(term=>normalize(term)!==categoryNorm);
+    }
+  }
+}
+sanitizeCategorySynonyms();
+setTimeout(sanitizeCategorySynonyms,250);
+
 await safeImport('./category-context-fix.js?v=3');
 await safeImport('./semantic-query-guard.js?v=6');
 await safeImport('./ai-conversation-enhancements.js?v=2');

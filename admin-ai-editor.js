@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
 let editor=null;
 
 function parseCurrent(){
@@ -79,3 +79,4 @@ import('./admin-sync.js?v=1').catch(err=>console.error('[Local AI Sync Loader]',
 import('./admin-store-group.js?v=1').catch(err=>console.error('[Store Group Loader]',err));
 import('./admin-pending-core.js?v=1').catch(err=>console.error('[Pending Stores Loader]',err));
 import('./admin-synonym-suggestions.js?v=1').catch(err=>console.error('[Synonym Suggestions Loader]',err));
+import('./guru-quality-admin.js?v=1').catch(err=>console.error('[GURU Quality Loader]',err));

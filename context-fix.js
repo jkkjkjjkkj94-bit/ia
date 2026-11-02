@@ -14,8 +14,6 @@ async function safeImport(path){try{await import(path)}catch(error){console.erro
 await safeImport('./core-data-router.js?v=3');
 await safeImport('./ai-engine.js?v=15');
 
-// Evita que um nome exato de categoria (ex.: "Comida") seja cadastrado
-// como sinônimo de um grupo interno (ex.: Pizzaria) e restrinja a busca.
 function sanitizeCategorySynonyms(){
   const tax=window.LocalAITaxonomy?.active;
   if(!tax)return;
@@ -32,7 +30,7 @@ sanitizeCategorySynonyms();
 setTimeout(sanitizeCategorySynonyms,250);
 
 await safeImport('./category-context-fix.js?v=3');
-await safeImport('./semantic-query-guard.js?v=6');
+await safeImport('./semantic-query-guard.js?v=7');
 await safeImport('./ai-conversation-enhancements.js?v=2');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');

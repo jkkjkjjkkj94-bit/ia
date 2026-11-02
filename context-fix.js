@@ -10,11 +10,11 @@ sidebar?.querySelector('.sidebar-collapse')?.addEventListener('click',()=>body.c
 const syncChatState=()=>body.classList.toggle('chat-started',!!msgs?.querySelector('.msg.user'));
 syncChatState();
 if(msgs)new MutationObserver(syncChatState).observe(msgs,{childList:true,subtree:true});
-async function safeImport(path){try{await import(path)}catch(error){console.error('[Local AI] Falha ao carregar módulo:',path,error)}}
+async function safeImport(path){try{await import(path)}catch(error){console.error('[GURU] Falha ao carregar módulo:',path,error)}}
 await safeImport('./core-data-router.js?v=3');
 await safeImport('./ai-engine.js?v=14');
 await safeImport('./category-context-fix.js?v=3');
-await safeImport('./semantic-query-guard.js?v=4');
+await safeImport('./semantic-query-guard.js?v=5');
 await safeImport('./ai-conversation-enhancements.js?v=2');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');
@@ -23,8 +23,6 @@ await safeImport('./card-standardizer.js?v=3');
 await safeImport('./zero-result-responses.js?v=2');
 await safeImport('./typing-indicator.js?v=3');
 
-// Garante que capas/banners antigos não apareçam nos cards.
-// A foto de perfil é renderizada somente pelo card-standardizer.js.
 function ensureNoCoverStyles(){
   if(document.getElementById('localAiNoCoverStyles'))return;
   const style=document.createElement('style');
@@ -36,18 +34,13 @@ function ensureNoCoverStyles(){
 .store-result-card .smart-banner,
 .store-result-card .smart-hero,
 .store-result-card .card-cover,
-.store-result-card .store-cover{
-  display:none!important;
-}
-.store-result-card .store-card-actions a[href*="google.com/maps"]{
-  display:none!important;
-}
+.store-result-card .store-cover{display:none!important}
+.store-result-card .store-card-actions a[href*="google.com/maps"]{display:none!important}
 `;
   document.head.appendChild(style);
 }
 ensureNoCoverStyles();
 
-// Cards compactos para listas de até 5 comércios.
 function ensureCompactCardStyles(){
   if(document.getElementById('localAiCompactCardStyles'))return;
   const style=document.createElement('style');
@@ -61,8 +54,7 @@ function ensureCompactCardStyles(){
 .store-result-card .smart-location{font-size:10px!important;margin-top:0!important}
 .store-result-card .store-card-meta{margin-top:3px!important}
 .store-result-card .smart-facts{margin-top:6px!important;gap:4px!important}
-.store-result-card .smart-facts .store-chip,
-.store-result-card .store-card-meta .store-chip{padding:3px 6px!important;font-size:9px!important}
+.store-result-card .smart-facts .store-chip,.store-result-card .store-card-meta .store-chip{padding:3px 6px!important;font-size:9px!important}
 .store-result-card .smart-specialties{margin-top:7px!important;padding-top:7px!important}
 .store-result-card .smart-specialties b{margin-bottom:4px!important;font-size:9.5px!important}
 .store-result-card .smart-specialties-list{gap:4px!important}
@@ -72,14 +64,10 @@ function ensureCompactCardStyles(){
 .store-result-card .smart-why-btn{margin-top:6px!important;font-size:9.5px!important}
 .store-result-card .smart-why-panel{margin-top:6px!important;padding:7px 8px!important}
 .store-result-card .store-card-actions{margin-top:8px!important;gap:5px!important}
-.store-result-card .store-action,
-.store-result-card .smart-link{padding:6px 9px!important;font-size:9.5px!important}
+.store-result-card .store-action,.store-result-card .smart-link{padding:6px 9px!important;font-size:9.5px!important}
 .store-result-card .card-rating{display:none!important}
 .hashtag-intro{margin-bottom:8px!important}
-@media(max-width:680px){
-  .store-result-card.smart-card{padding:10px 11px!important}
-  .store-result-card .smart-store-logo{width:38px!important;height:38px!important;flex-basis:38px!important}
-}
+@media(max-width:680px){.store-result-card.smart-card{padding:10px 11px!important}.store-result-card .smart-store-logo{width:38px!important;height:38px!important;flex-basis:38px!important}}
 `;
   document.head.appendChild(style);
 }
@@ -90,16 +78,9 @@ function compactCards(root=document){
   if(root.matches?.('.store-result-card'))cards.push(root);
   root.querySelectorAll?.('.store-result-card').forEach(card=>cards.push(card));
   cards.forEach(card=>{
-    // A nota principal já aparece na linha de status; remove a cópia da categoria/meta.
-    card.querySelectorAll('.store-card-meta .store-chip').forEach(chip=>{
-      if(/^★\s*\d/i.test(chip.textContent.trim()))chip.remove();
-    });
-    // Garante que o antigo botão de rota continue removido.
-    card.querySelectorAll('.store-card-actions a').forEach(a=>{
-      if(a.textContent.trim().toLowerCase()==='como chegar')a.remove();
-    });
+    card.querySelectorAll('.store-card-meta .store-chip').forEach(chip=>{if(/^★\s*\d/i.test(chip.textContent.trim()))chip.remove()});
+    card.querySelectorAll('.store-card-actions a').forEach(a=>{if(a.textContent.trim().toLowerCase()==='como chegar')a.remove()});
   });
-
   const resultMessages=[];
   if(root.matches?.('.hashtag-result-msg'))resultMessages.push(root);
   root.querySelectorAll?.('.hashtag-result-msg').forEach(msg=>resultMessages.push(msg));
@@ -110,13 +91,7 @@ function compactCards(root=document){
   });
 }
 compactCards();
-if(msgs)new MutationObserver(mutations=>{
-  for(const m of mutations){
-    m.addedNodes.forEach(n=>{
-      if(n.nodeType===1)compactCards(n);
-    });
-  }
-}).observe(msgs,{childList:true,subtree:true});
+if(msgs)new MutationObserver(mutations=>{for(const m of mutations)m.addedNodes.forEach(n=>{if(n.nodeType===1)compactCards(n)})}).observe(msgs,{childList:true,subtree:true});
 
 document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{if(!q||!form)return;q.value=b.dataset.q||'';form.requestSubmit()}));
 document.getElementById('resetBtn')?.addEventListener('click',()=>{window.LocalAIEngine?.reset?.();if(msgs){const d=document.createElement('div');d.className='msg bot';d.textContent='Pronto. Limpei o contexto da busca. O que você procura agora?';msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight}});

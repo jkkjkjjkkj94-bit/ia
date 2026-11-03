@@ -98,3 +98,27 @@ test('avaliação usa valores reais sem nota fictícia',()=>{
  assert.deepEqual(search('pizzaria nota acima de 4').map(x=>x.store.id),['a']);
  assert.deepEqual(search('pizzaria nota acima de 4.9').map(x=>x.store.id),[]);
 });
+
+test('busca por doceria aberta no sábado ignora verbos de ligação sem descartar horário',()=>{
+ const sweet=shop('sweet','Comida','Doceria',{name:'Doceria Exemplo'});
+ const samples={
+  stores:[sweet],products:[],reviews:[],knowledge:[],
+  hours:[{store_id:'sweet',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false}]
+ };
+ for(const q of [
+  'quero uma doceria que fique aberta no sábado',
+  'quero uma doceria que esteja aberta no sábado',
+  'encontre uma doceria que funciona no sábado'
+ ]){
+  const p=plan(q);
+  assert.equal(p.kind,'search',q);
+  assert.equal(p.taxon?.group,'Doceria',q);
+  assert.equal(p.filters.day,6,q);
+  assert.deepEqual(p.semanticTerms,[],q);
+  const matched=searchStores(samples,nextState(emptyState(),p),null,{now:new Date('2026-11-03T15:00:00')});
+  assert.deepEqual(matched.map(x=>x.store.id),['sweet'],q);
+ }
+ samples.hours[0].closed=true;
+ const p=plan('quero uma doceria que fique aberta no sábado');
+ assert.deepEqual(searchStores(samples,nextState(emptyState(),p)).map(x=>x.store.id),[]);
+});

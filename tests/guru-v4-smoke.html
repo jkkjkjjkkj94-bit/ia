@@ -41,10 +41,28 @@ async function smoke(){
  if(document.querySelector('.store-result-card'))throw Error('Resultados apareceram antes da digitação terminar');
  await sleep(150);
  if(!document.querySelector('.guru-typing'))throw Error('Indicador desapareceu cedo demais');
+ // Assim que os três pontos somem, o texto deve aparecer progressivamente.
+ // O resultado em cards não pode aparecer antes de o texto introdutório terminar.
+ let writing=null;
+ for(let i=0;i<35&&!writing;i++){writing=document.querySelector('.guru-typewriter-caret');if(!writing)await sleep(35)}
+ if(!writing)throw Error('Efeito de escrita gradual não começou');
+ const intro=writing.closest('.hashtag-intro');
+ if(!intro)throw Error('Introdução dos resultados não está sendo escrita');
+ const firstChars=intro.textContent;
+ const grid=intro.parentElement.querySelector('.store-results-grid');
+ if(!grid||getComputedStyle(grid).display!=='none')throw Error('Cards apareceram antes da introdução terminar');
+ await sleep(120);
+ if(intro.textContent.length<=firstChars.length)throw Error('O texto não está aparecendo letra por letra');
  await firstRequest;
  if(document.querySelector('.guru-typing'))throw Error('Indicador não foi removido ao finalizar');
+ if(document.querySelector('.guru-typewriter-caret'))throw Error('Cursor não desapareceu ao terminar');
+ if(getComputedStyle(grid).display==='none')throw Error('Cards não foram exibidos após a escrita');
  if(!document.querySelector('.store-result-card h3')?.textContent?.includes('Sushi Teste'))throw Error('busca japonesa falhou');
- await guru.submitText('loja de comida japonesa');
+ const blockedRequest=guru.submitText('loja de comida japonesa');
+ let writingReply=null;
+ for(let i=0;i<40&&!writingReply;i++){writingReply=document.querySelector('.guru-typewriter-caret');if(!writingReply)await sleep(40)}
+ if(!writingReply||writingReply.classList.contains('hashtag-intro'))throw Error('Resposta textual não recebeu escrita gradual');
+ await blockedRequest;
  if(!document.getElementById('msgs').textContent.includes('não entram na categoria Comida'))throw Error('restrição de varejo falhou');
  await guru.submitText('pizzaria com entrega em promoção até R$ 40');
  const cards=[...document.querySelectorAll('.store-result-card')];

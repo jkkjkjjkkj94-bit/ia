@@ -1,12 +1,12 @@
 /* GURU v4: componentes visuais próprios; sem UI antiga ou re-renderizadores concorrentes */
 .msg.bot.hashtag-result-msg{white-space:normal;line-height:1.45}
 .hashtag-result-msg .hashtag-intro{margin:0 0 10px;font-size:12px;font-weight:600;color:#515151}
-.store-results-grid{display:grid;gap:10px}
-.store-result-card.smart-card{border:1px solid #e8e8e8;border-radius:15px;background:#fff;padding:13px 15px;box-shadow:none;min-width:0}
+.store-results-grid{display:grid;gap:9px;justify-items:start}
+.store-result-card.smart-card{width:min(610px,100%);max-width:100%;border:1px solid #e9e9eb;border-radius:16px;background:#fff;padding:12px 14px;box-shadow:0 5px 18px rgba(0,0,0,.025);min-width:0}
 .store-result-card.smart-card:hover{border-color:#d6d6d6}
 .store-result-card.smart-card .store-card-top{display:flex;align-items:flex-start;justify-content:flex-start;gap:11px}
 .store-result-card.smart-card .store-card-top>div:not(.store-media){flex:1;min-width:0}
-.store-result-card.smart-card .store-card-top h3{font-size:14px;font-weight:700;color:#222;letter-spacing:-.01em;margin:0 0 5px}
+.store-result-card.smart-card .store-card-top h3{font-size:14px;font-weight:700;color:#222;letter-spacing:-.01em;margin:0 0 4px}
 .store-result-card.smart-card .store-media{position:relative;width:42px;height:42px;flex:0 0 42px;min-width:42px}
 .store-result-card.smart-card .smart-store-logo{display:block;width:100%;height:100%;object-fit:cover;background:#fafafa;border:1px solid #eee;border-radius:10px}
 .store-result-card.smart-card .store-image-verified{position:absolute;right:-5px;bottom:-5px;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border:2px solid #fff;border-radius:50%;background:#1d9bf0;box-sizing:border-box}
@@ -15,7 +15,7 @@
 .store-result-card.smart-card .store-card-meta{display:flex;flex-wrap:wrap;gap:5px}
 .store-result-card.smart-card .store-chip{font-size:9.5px;padding:4px 7px;border-radius:999px;background:#f5f5f5;color:#555}
 .store-result-card.smart-card .store-address{font-size:10.5px;color:#888;margin:8px 0 0}
-.store-result-card.smart-card .smart-specialties{border-top:1px solid #f0f0f0;margin-top:9px;padding-top:8px}
+.store-result-card.smart-card .smart-specialties{border-top:1px solid #f0f0f0;margin-top:8px;padding-top:7px}
 .store-result-card.smart-card .smart-specialties b{font-size:10px;color:#888;font-weight:600}
 .store-result-card.smart-card .smart-specialties-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
 .store-result-card.smart-card .smart-specialty{font-size:10px;background:#f8f8f8;color:#555;padding:4px 7px;border-radius:7px}
@@ -24,15 +24,15 @@
 .store-result-card.smart-card .smart-why-panel{display:none;border:1px solid #eee;background:#fbfbfb;padding:9px 10px;border-radius:10px;margin-top:8px;font-size:10px;color:#555}
 .store-result-card.smart-card .smart-why-panel.on{display:grid;gap:4px}
 .store-result-card.smart-card .smart-why-panel div::before{content:'✓';color:#777;margin-right:7px}
-.store-result-card.smart-card .store-card-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.store-result-card.smart-card .store-action{border:1px solid #e5e5e5;border-radius:9px;background:#fff;color:#333;font-size:10px;font-weight:600;padding:7px 10px;line-height:1.2;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.store-result-card.smart-card .store-card-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.store-result-card.smart-card .store-action{border:1px solid #e5e5e5;border-radius:8px;background:#fff;color:#333;font-size:10px;font-weight:600;padding:6px 10px;line-height:1.2;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 .store-result-card.smart-card .store-action.primary{background:#191919;color:#fff;border-color:#191919}
 .store-result-card.smart-card .store-action:hover{opacity:.83}
 .msg.bot:has(.chat-actions){white-space:pre-line}
 .msg.bot:has(.chat-actions) .chat-actions{display:flex;gap:6px;margin-top:12px}
 .msg.bot:has(.chat-actions) .chat-actions button{font-size:10px;border:1px solid #e9e9e9;background:#fafafa;color:#333}
 @media(max-width:680px){
- .store-result-card.smart-card{padding:11px 12px;border-radius:12px}
+ .store-result-card.smart-card{width:100%;padding:11px 12px;border-radius:14px}
  .store-result-card.smart-card .store-card-top h3{font-size:13px}
  .store-result-card.smart-card .store-media{width:38px;height:38px;min-width:38px;flex-basis:38px}
  .store-result-card.smart-card .store-image-verified{width:17px;height:17px;right:-4px;bottom:-4px}

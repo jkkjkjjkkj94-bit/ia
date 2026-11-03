@@ -6,6 +6,8 @@ on:
       - '**/*.js'
       - '**/*.mjs'
       - 'index.html'
+      - 'admin.html'
+      - 'lojista.html'
       - 'tests/guru-v4-smoke.html'
       - 'tests/admin-ui-smoke.html'
       - '.github/workflows/js-syntax-check.yml'
@@ -34,7 +36,7 @@ jobs:
           echo "Checked $count JavaScript files."
           exit "$failed"
       - name: Verify semantic search regression tests
-        run: node --test tests/semantic-regression.mjs tests/guru-engine-v4.test.mjs
+        run: node --test tests/semantic-regression.mjs tests/guru-engine-v4.test.mjs tests/module-integration.test.mjs
 
       - name: Headless browser smoke test for GURU v4
         shell: bash

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><title>GURU V4 Smoke</title></head>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>GURU V4 Smoke</title><link rel="stylesheet" href="../guru-engine-v4.css?v=2"></head>
 <body data-smoke="RUNNING">
 <aside class="app-sidebar"><button type="button" class="sidebar-collapse">Menu</button><button data-shell-action="new">Nova busca</button><button data-shell-action="location">Localização</button></aside>
 <section class="hero"><h1>GURU</h1></section>
@@ -26,14 +26,23 @@ window.fetch=async url=>{
  return new Response(JSON.stringify(values[table]||[]),{status:200,headers:{'Content-Type':'application/json'}});
 };
 </script>
-<script type="module" src="../guru-engine-v4.js?v=3"></script>
+<script type="module" src="../guru-engine-v4.js?v=4"></script>
 <script type="module">
 async function smoke(){
  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  for(let i=0;i<100&&!window.GuruEngineV4;i++)await sleep(50);
  if(!window.GuruEngineV4)throw Error('motor não inicializou');
  const guru=window.GuruEngineV4;
- await guru.submitText('negócio de comida japonesa');
+ const firstRequest=guru.submitText('negócio de comida japonesa');
+ const typing=document.querySelector('.guru-typing');
+ if(!typing)throw Error('Indicador de digitação não apareceu');
+ if(typing.querySelectorAll('.guru-typing-dot').length!==3)throw Error('Indicador deve ter três pontos');
+ if(typing.getAttribute('role')!=='status')throw Error('Indicador não acessível');
+ if(document.querySelector('.store-result-card'))throw Error('Resultados apareceram antes da digitação terminar');
+ await sleep(150);
+ if(!document.querySelector('.guru-typing'))throw Error('Indicador desapareceu cedo demais');
+ await firstRequest;
+ if(document.querySelector('.guru-typing'))throw Error('Indicador não foi removido ao finalizar');
  if(!document.querySelector('.store-result-card h3')?.textContent?.includes('Sushi Teste'))throw Error('busca japonesa falhou');
  await guru.submitText('loja de comida japonesa');
  if(!document.getElementById('msgs').textContent.includes('não entram na categoria Comida'))throw Error('restrição de varejo falhou');

@@ -81,3 +81,5 @@ import('./admin-synonym-suggestions.js?v=1').catch(err=>console.error('[Synonym 
 import('./guru-quality-admin.js?v=2').catch(err=>console.error('[GURU Quality Loader]',err));
 import('./admin-delete-controls.js?v=1').catch(err=>console.error('[Admin Delete Loader]',err));
 import('./admin-merchant-enhancements.js?v=1').catch(err=>console.error('[Merchant Enhancements Loader]',err));
+import('./admin-merchant-details.js?v=1').catch(err=>console.error('[Merchant Details Loader]',err));
+import('./admin-taxonomy-db.js?v=1').catch(err=>console.error('[Taxonomy DB Loader]',err));

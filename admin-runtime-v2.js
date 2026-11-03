@@ -1,7 +1,7 @@
 const load=async(path,label)=>{try{return await import(path)}catch(err){console.error(`[GURU Admin] ${label}`,err);return null}};
 await load('./admin-ai-editor.js?v=3','AI Editor');
 await load('./admin-sync.js?v=1','Sync');
-await load('./admin-store-group.js?v=2','Store Group');
+await load('./admin-store-group.js?v=3','Store Group');
 await load('./admin-pending-core.js?v=1','Pending Stores');
 await load('./admin-synonym-suggestions.js?v=2','Synonym Suggestions');
 await load('./guru-quality-admin.js?v=2','Quality');
@@ -9,5 +9,5 @@ await load('./admin-delete-controls.js?v=1','Delete Controls');
 await load('./admin-merchant-enhancements.js?v=2','Merchant Enhancements');
 await load('./admin-merchant-details.js?v=1','Merchant Details');
 await load('./admin-taxonomy-db.js?v=2','Taxonomy');
-await load('./admin-ui.js?v=1','Admin Interface');
+await load('./admin-ui.js?v=2','Admin Interface');
 window.GuruAdminRuntimeV2={ready:true};

@@ -11,7 +11,7 @@ async function boot(sessionOverride=null){
   const{data:profile,error:profileError}=await sb.from('local_ai_profiles').select('role').eq('user_id',session.user.id).maybeSingle();if(profileError)throw profileError;if(profile?.role!=='admin')return;
   if(nav){nav.style.visibility='hidden';nav.style.opacity='0';nav.style.pointerEvents='none'}
   document.body.classList.add('admin-menu-booting');
-  await import('./admin-runtime-v2.js?v=5');
+  await import('./admin-runtime-v2.js?v=6');
   window.dispatchEvent(new CustomEvent('guru-admin-modules-ready'));
   await wait(60);
   if(nav){nav.style.visibility='visible';nav.style.opacity='1';nav.style.pointerEvents='auto'}

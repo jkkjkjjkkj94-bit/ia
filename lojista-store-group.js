@@ -1,72 +1,13 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
+import{taxonomy}from'./ai-taxonomy.js?v=5';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
-const groupsByCategory={
-  Comida:['Pizzaria','Hamburgueria','Padaria','Pastelaria','Churrascaria','Japonesa','Marmita','Doceria','Sorveteria','Açaí'],
-  Roupas:[],
-  'Farmácia':[],
-  Mercado:[],
-  Beleza:[],
-  Tecnologia:[],
-  'Serviços':[],
-  'Pet shop':[],
-  'Automóveis':[],
-  'Construção':[]
-};
+const groupsByCategory=Object.fromEntries(Object.entries(taxonomy).map(([category,groups])=>[category,Object.keys(groups||{}).filter(group=>group&&group!==category)]));
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const split=s=>[...new Set(String(s||'').split(/[\n,;]+/).map(x=>x.trim()).filter(Boolean))];
-function optionsFor(category,current=''){
-  const list=groupsByCategory[category]||[];
-  const valid=list.includes(current)?current:'';
-  return `<option value="">Sem grupo</option>${list.map(g=>`<option value="${esc(g)}" ${g===valid?'selected':''}>${esc(g)}</option>`).join('')}`;
-}
-function syncGroupOptions(){
-  const cat=document.getElementById('sCat'),main=document.getElementById('sGroup'),extras=document.getElementById('sGroups');
-  if(!cat||!main)return;
-  const current=main.value;
-  main.innerHTML=optionsFor(cat.value,current);
-  if(!groupsByCategory[cat.value]?.includes(current))main.value='';
-  const allowed=new Set(groupsByCategory[cat.value]||[]);
-  if(extras){
-    extras.disabled=allowed.size===0;
-    extras.placeholder=allowed.size?'Um por linha\nEx.: Sorveteria\nAçaí':'Esta categoria ainda não possui grupos cadastrados.';
-    if(!allowed.size)extras.value='';
-  }
-}
-function ensureField(){
-  const cat=document.getElementById('sCat');
-  if(!cat||document.getElementById('sGroup'))return;
-  const wrap=document.createElement('div');wrap.className='store-classification-extra';
-  wrap.innerHTML=`<div class="field"><label>Grupo principal</label><select id="sGroup"><option value="">Sem grupo</option></select><div class="meta">Os grupos dependem da categoria escolhida.</div></div><div class="field"><label>Grupos adicionais</label><textarea id="sGroups"></textarea><div class="meta">Use somente grupos específicos disponíveis para a categoria.</div></div><div class="field"><label>Especialidades / palavras-chave</label><textarea id="sSpecialties" placeholder="bolo de aniversário\nbrigadeiro\ndoces para festa"></textarea><div class="meta">Ajuda a IA a encontrar sua loja por produtos e especialidades.</div></div>`;
-  cat.closest('.field')?.insertAdjacentElement('afterend',wrap);
-  cat.addEventListener('change',syncGroupOptions);
-  syncGroupOptions();
-}
-async function loadGroup(){
-  ensureField();const{data:{session}}=await sb.auth.getSession();if(!session)return;
-  const{data}=await sb.from('local_ai_stores').select('id,category,group,groups,specialties').eq('owner_id',session.user.id).maybeSingle();if(!data)return;
-  const cat=document.getElementById('sCat'),main=document.getElementById('sGroup'),extras=document.getElementById('sGroups'),spec=document.getElementById('sSpecialties');
-  if(cat&&data.category)cat.value=data.category;
-  syncGroupOptions();
-  const allowed=new Set(groupsByCategory[cat?.value]||[]);
-  if(main)main.value=allowed.has(data.group)?data.group:'';
-  if(extras)extras.value=(data.groups||[]).filter(g=>g&&g!==data.group&&allowed.has(g)).join('\n');
-  if(spec)spec.value=(data.specialties||[]).join('\n');
-}
-async function saveGroup(){
-  const category=document.getElementById('sCat')?.value||'';
-  const allowed=new Set(groupsByCategory[category]||[]);
-  let group=document.getElementById('sGroup')?.value||null;
-  if(group&&!allowed.has(group))group=null;
-  const extras=split(document.getElementById('sGroups')?.value).filter(x=>x!==group&&allowed.has(x));
-  const specialties=split(document.getElementById('sSpecialties')?.value);
-  const all=[...new Set([group,...extras].filter(Boolean))];
-  const{data:{session}}=await sb.auth.getSession();if(!session)return;
-  for(let i=0;i<8;i++){
-    const{data}=await sb.from('local_ai_stores').select('id').eq('owner_id',session.user.id).maybeSingle();
-    if(data){await sb.from('local_ai_stores').update({group,groups:all,specialties}).eq('id',data.id);return}
-    await new Promise(r=>setTimeout(r,250));
-  }
-}
-ensureField();loadGroup();
-document.getElementById('storeForm')?.addEventListener('submit',()=>{setTimeout(saveGroup,120)},true);
-const obs=new MutationObserver(()=>{ensureField();if(!document.getElementById('loginView')?.classList.contains('hidden'))return;loadGroup()});obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
+function optionsFor(category,current=''){const list=groupsByCategory[category]||[];const valid=list.includes(current)?current:'';return `<option value="">Sem grupo</option>${list.map(g=>`<option value="${esc(g)}" ${g===valid?'selected':''}>${esc(g)}</option>`).join('')}`}
+function syncGroupOptions(){const cat=document.getElementById('sCat'),main=document.getElementById('sGroup'),extras=document.getElementById('sGroups');if(!cat||!main)return;const current=main.value;main.innerHTML=optionsFor(cat.value,current);if(!groupsByCategory[cat.value]?.includes(current))main.value='';const allowed=new Set(groupsByCategory[cat.value]||[]);if(extras){extras.disabled=allowed.size===0;extras.placeholder=allowed.size?'Um por linha\nEx.: Sorveteria\nAçaí':'Esta categoria não possui grupos cadastrados.';if(!allowed.size)extras.value=''}}
+function ensureField(){const cat=document.getElementById('sCat');if(!cat||document.getElementById('sGroup'))return;const wrap=document.createElement('div');wrap.className='store-classification-extra';wrap.innerHTML=`<div class="field"><label>Grupo principal</label><select id="sGroup"><option value="">Sem grupo</option></select><div class="meta">Os grupos dependem da categoria escolhida.</div></div><div class="field"><label>Grupos adicionais</label><textarea id="sGroups"></textarea><div class="meta">Use somente grupos específicos disponíveis para a categoria.</div></div><div class="field"><label>Especialidades / palavras-chave</label><textarea id="sSpecialties" placeholder="bolo de aniversário\nbrigadeiro\ndoces para festa"></textarea><div class="meta">Ajuda a IA a encontrar sua loja por produtos e especialidades.</div></div>`;cat.closest('.field')?.insertAdjacentElement('afterend',wrap);cat.addEventListener('change',syncGroupOptions);syncGroupOptions()}
+async function loadGroup(){ensureField();const{data:{session}}=await sb.auth.getSession();if(!session)return;const{data}=await sb.from('local_ai_stores').select('id,category,group,groups,specialties').eq('owner_id',session.user.id).maybeSingle();if(!data)return;const cat=document.getElementById('sCat'),main=document.getElementById('sGroup'),extras=document.getElementById('sGroups'),spec=document.getElementById('sSpecialties');if(cat&&data.category)cat.value=data.category;syncGroupOptions();const allowed=new Set(groupsByCategory[cat?.value]||[]);if(main)main.value=allowed.has(data.group)?data.group:'';if(extras)extras.value=(data.groups||[]).filter(g=>g&&g!==data.group&&allowed.has(g)).join('\n');if(spec)spec.value=(data.specialties||[]).join('\n')}
+async function saveGroup(){const category=document.getElementById('sCat')?.value||'';const allowed=new Set(groupsByCategory[category]||[]);let group=document.getElementById('sGroup')?.value||null;if(group&&!allowed.has(group))group=null;const extras=split(document.getElementById('sGroups')?.value).filter(x=>x!==group&&allowed.has(x));const specialties=split(document.getElementById('sSpecialties')?.value);const all=[...new Set([group,...extras].filter(Boolean))];const{data:{session}}=await sb.auth.getSession();if(!session)return;for(let i=0;i<8;i++){const{data}=await sb.from('local_ai_stores').select('id').eq('owner_id',session.user.id).maybeSingle();if(data){await sb.from('local_ai_stores').update({group,groups:all,specialties}).eq('id',data.id);return}await new Promise(r=>setTimeout(r,250))}}
+ensureField();loadGroup();document.getElementById('storeForm')?.addEventListener('submit',()=>{setTimeout(saveGroup,120)},true);const obs=new MutationObserver(()=>{ensureField();if(!document.getElementById('loginView')?.classList.contains('hidden'))return;loadGroup()});obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
+window.GuruStoreGroups={groupsByCategory};

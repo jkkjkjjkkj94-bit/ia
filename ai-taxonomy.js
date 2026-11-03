@@ -1,6 +1,5 @@
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 
-// Categoria = nível amplo. Grupo = subdivisão real da categoria.
 export const taxonomy={
   Comida:{
     Pizzaria:['pizzaria','pizza','pizzas','pizzeria','pizzarias','pizza artesanal','pizza delivery','rodízio de pizza','rodizio de pizza'],
@@ -14,42 +13,90 @@ export const taxonomy={
     Sorveteria:['sorveteria','sorvete','sorvetes','gelato','casquinha','milk shake','milkshake'],
     Açaí:['açaí','açai','acai','açaiteria','acaiteria','açaí na tigela','acai na tigela']
   },
-  Roupas:{},
-  Farmácia:{},
-  Mercado:{},
-  Beleza:{},
-  Tecnologia:{},
-  Serviços:{},
-  'Pet shop':{},
-  Automóveis:{},
-  Construção:{}
+  Roupas:{
+    Feminina:['roupa feminina','moda feminina','feminina','vestido feminino'],
+    Masculina:['roupa masculina','moda masculina','masculina'],
+    Infantil:['roupa infantil','moda infantil','infantil','roupa de criança','roupa de crianca'],
+    Calçados:['calçados','calcados','calçado','calcado','sapatos','sapato','tênis','tenis'],
+    'Moda íntima':['moda íntima','moda intima','lingerie','roupa íntima','roupa intima'],
+    Esportiva:['roupa esportiva','moda esportiva','esportiva','fitness'],
+    Acessórios:['acessórios de moda','acessorios de moda','bolsas','bolsa','cintos','cinto']
+  },
+  Farmácia:{
+    Drogaria:['drogaria','farmácia convencional','farmacia convencional'],
+    Manipulação:['farmácia de manipulação','farmacia de manipulacao','manipulação','manipulacao'],
+    'Produtos naturais':['produtos naturais','fitoterápicos','fitoterapicos','ervas medicinais']
+  },
+  Mercado:{
+    Supermercado:['supermercado','supermercados'],
+    Mercearia:['mercearia','mercearias'],
+    Hortifruti:['hortifruti','hortifrúti','frutas e verduras','verduras e frutas'],
+    Conveniência:['loja de conveniência','loja de conveniencia','conveniência','conveniencia']
+  },
+  Beleza:{
+    Salão:['salão de beleza','salao de beleza','salão','salao','cabeleireiro'],
+    Barbearia:['barbearia','barbeiro'],
+    Estética:['clínica de estética','clinica de estetica','estética','estetica'],
+    Manicure:['manicure','pedicure','unhas'],
+    Cosméticos:['cosméticos','cosmeticos','loja de cosméticos','loja de cosmeticos']
+  },
+  Tecnologia:{
+    Celulares:['celulares','smartphones','loja de celular','loja de celulares'],
+    Informática:['informática','informatica','computadores','notebooks','loja de informática','loja de informatica'],
+    Eletrônicos:['eletrônicos','eletronicos','loja de eletrônicos','loja de eletronicos'],
+    Acessórios:['acessórios eletrônicos','acessorios eletronicos','acessórios de celular','acessorios de celular'],
+    'Assistência técnica':['assistência técnica','assistencia tecnica','conserto de celular','conserto de computador']
+  },
+  Serviços:{
+    'Assistência técnica':['assistência técnica','assistencia tecnica','reparo técnico','reparo tecnico'],
+    Manutenção:['manutenção','manutencao','serviço de manutenção','servico de manutencao'],
+    Limpeza:['serviço de limpeza','servico de limpeza','limpeza residencial','limpeza comercial'],
+    'Serviços profissionais':['serviços profissionais','servicos profissionais','consultoria','assessoria']
+  },
+  'Pet shop':{
+    'Pet shop':['pet shop','petshop'],
+    Veterinária:['clínica veterinária','clinica veterinaria','veterinária','veterinaria','veterinário','veterinario'],
+    BanhoTosa:['banho e tosa','banho tosa','tosa'],
+    Rações:['ração','racao','rações','racoes','loja de ração','loja de racao']
+  },
+  Automóveis:{
+    Oficina:['oficina','oficina mecânica','oficina mecanica','mecânica automotiva','mecanica automotiva'],
+    Autopeças:['autopeças','autopecas','peças automotivas','pecas automotivas'],
+    Pneus:['pneus','pneu','borracharia'],
+    'Estética automotiva':['estética automotiva','estetica automotiva','lava rápido','lava rapido','detalhamento automotivo']
+  },
+  Construção:{
+    'Materiais de construção':['materiais de construção','materiais de construcao','material de construção','material de construcao'],
+    Ferragens:['ferragens','ferragem','loja de ferragens'],
+    Tintas:['tintas','tinta','loja de tintas'],
+    Elétrica:['material elétrico','material eletrico','elétrica','eletrica'],
+    Hidráulica:['material hidráulico','material hidraulico','hidráulica','hidraulica']
+  }
 };
 
-// Termos que levam à categoria, mas NÃO criam grupo.
 export const categoryAliases={
   Roupas:['roupa','roupas','moda','boutique','vestuário','vestuario','camiseta','camisa','calça','calca','vestido'],
-  Farmácia:['farmácia','farmacia','drogaria','remédio','remedio','medicamento'],
-  Mercado:['mercado','supermercado','mercearia','hortifruti'],
-  Beleza:['beleza','salão','salao','barbearia','cabeleireiro','manicure','estética','estetica'],
-  Tecnologia:['tecnologia','informática','informatica','celular','computador','notebook','eletrônico','eletronico','fone'],
-  Serviços:['serviço','servico','serviços','servicos','assistência','assistencia','conserto','manutenção','manutencao'],
-  'Pet shop':['pet','petshop','pet shop','ração','racao','veterinário','veterinario'],
-  Automóveis:['carro','automóvel','automovel','autopeças','autopecas','oficina','pneu'],
-  Construção:['construção','construcao','ferragem','tinta','material de construção','material de construcao'],
+  Farmácia:['farmácia','farmacia','remédio','remedio','medicamento'],
+  Mercado:['mercado','compras de mercado'],
+  Beleza:['beleza'],
+  Tecnologia:['tecnologia','celular','computador','notebook','eletrônico','eletronico','fone'],
+  Serviços:['serviço','servico','serviços','servicos','conserto'],
+  'Pet shop':['pet','animais de estimação','animais de estimacao'],
+  Automóveis:['carro','automóvel','automovel','automóveis','automoveis'],
+  Construção:['construção','construcao','obra','reforma'],
   Comida:['comida','alimentação','alimentacao','refeição','refeicao']
 };
 
-// Só termos amplos podem excluir a categoria inteira.
 const categoryExclusionAliases={
   Roupas:['roupa','roupas','vestuário','vestuario'],
-  Farmácia:['farmácia','farmacia','drogaria'],
-  Mercado:['mercado','supermercado','mercearia'],
+  Farmácia:['farmácia','farmacia'],
+  Mercado:['mercado'],
   Beleza:['beleza'],
-  Tecnologia:['tecnologia','informática','informatica'],
+  Tecnologia:['tecnologia'],
   Serviços:['serviço','servico','serviços','servicos'],
-  'Pet shop':['pet shop','petshop'],
+  'Pet shop':['pet shop','petshop','pet'],
   Automóveis:['automóveis','automoveis','automóvel','automovel'],
-  Construção:['construção','construcao','material de construção','material de construcao'],
+  Construção:['construção','construcao'],
   Comida:['comida','alimentação','alimentacao','refeição','refeicao']
 };
 let runtimeCategoryAliases=structuredClone(categoryAliases);
@@ -78,7 +125,7 @@ const approximateIntents=[
   {re:/tomar acai|tomar açaí|vontade de acai|vontade de açaí/,category:'Comida',group:'Açaí'}
 ];
 const weekDays={domingo:0,segunda:1,'segunda feira':1,terca:2,'terca feira':2,quarta:3,'quarta feira':3,quinta:4,'quinta feira':4,sexta:5,'sexta feira':5,sabado:6};
-const genericGroupTerms=new Set(['pizzaria','hamburgueria','padaria','pastelaria','churrascaria','japonesa','comida japonesa','japones','oriental','marmita','doceria','confeitaria','sorveteria','acaiteria']);
+const genericGroupTerms=new Set(Object.keys(taxonomy).flatMap(c=>Object.keys(taxonomy[c]||{})).map(norm));
 function tomorrowDay(){return(new Date().getDay()+1)%7}
 function detectDay(text){const n=norm(text);if(/\bamanha\b/.test(n))return tomorrowDay();if(/\bhoje\b/.test(n))return new Date().getDay();for(const[name,num]of Object.entries(weekDays)){const p=name.replace(/ /g,'\\s+');if(new RegExp(`(?:^|\\s)${p}(?:\\s|$)`).test(n))return num}return null}
 function hmToMinutes(h,m='0'){const hh=Number(h),mm=Number(m);return Number.isFinite(hh)&&hh>=0&&hh<=23&&Number.isFinite(mm)&&mm>=0&&mm<=59?hh*60+mm:null}

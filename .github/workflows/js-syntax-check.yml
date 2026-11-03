@@ -5,6 +5,8 @@ on:
     paths:
       - '**/*.js'
       - '**/*.mjs'
+      - 'index.html'
+      - 'tests/guru-v4-smoke.html'
       - '.github/workflows/js-syntax-check.yml'
   workflow_dispatch:
 

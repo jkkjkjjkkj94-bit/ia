@@ -123,7 +123,7 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  /\b(avaliacao|nota|reviews)\b/.test(n)?'rating':
  /\b(produtos|cardapio|estoque|tem|vende|tamanho)\b/.test(n)?'products':null;
  if(reference!==null&&Array.isArray(prev.lastResults)&&prev.lastResults.length)return{kind:'select',index:reference,ask,raw:text,filters:parseFilters(text,{},options)};
- if(ask&&prev.selectedStore&&!/\b(nova|outra|outro|procuro|encontrar)\b/.test(n))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
+ if(ask&&prev.selectedStore&&!/\b(nova|outra|outro|procuro|encontrar)\b/.test(n)&&!(/\b(?:quero|queria|busco|buscando)\s+(?:uma?|alguma?)\b/.test(n)&&getTaxon(n,lexicon)))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
  if(prev.selectedStore&&!ask&&!getTaxon(n,lexicon)&&!/(com entrega|sem entrega|mais perto|promocao|qualquer tipo)/.test(n))return{kind:'ask',ask:'knowledge',raw:text,filters:{}};
  if(ask&&!prev.selectedStore&&/\b(ela|ele|essa|esse|a loja|essa loja)\b/.test(n))return{kind:'clarify',raw:text,reason:'store'};
  const neg=n.match(/^(.*?)\b(?:nao quero|sem|exceto|menos|tirando|evitar|excluir)\b\s+(.+)$/);

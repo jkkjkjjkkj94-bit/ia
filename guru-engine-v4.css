@@ -5,14 +5,15 @@
 .store-result-card.smart-card{border:1px solid #e8e8e8;border-radius:15px;background:#fff;padding:13px 15px;box-shadow:none;min-width:0}
 .store-result-card.smart-card:hover{border-color:#d6d6d6}
 .store-result-card.smart-card .store-card-top{display:flex;align-items:flex-start;justify-content:flex-start;gap:11px}
-.store-result-card.smart-card .store-card-top>div{flex:1;min-width:0}
+.store-result-card.smart-card .store-card-top>div:not(.store-media){flex:1;min-width:0}
 .store-result-card.smart-card .store-card-top h3{font-size:14px;font-weight:700;color:#222;letter-spacing:-.01em;margin:0 0 5px}
-.store-result-card.smart-card .smart-store-logo{width:42px;height:42px;flex:0 0 42px;object-fit:cover;background:#fafafa;border:1px solid #eee;border-radius:10px}
+.store-result-card.smart-card .store-media{position:relative;width:42px;height:42px;flex:0 0 42px;min-width:42px}
+.store-result-card.smart-card .smart-store-logo{display:block;width:100%;height:100%;object-fit:cover;background:#fafafa;border:1px solid #eee;border-radius:10px}
+.store-result-card.smart-card .store-image-verified{position:absolute;right:-5px;bottom:-5px;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border:2px solid #fff;border-radius:50%;background:#1d9bf0;box-sizing:border-box}
+.store-result-card.smart-card .store-image-verified svg{display:block;width:100%;height:100%}
 .store-result-card.smart-card .smart-location{font-size:10px;color:#888;margin:0 0 4px}
 .store-result-card.smart-card .store-card-meta{display:flex;flex-wrap:wrap;gap:5px}
 .store-result-card.smart-card .store-chip{font-size:9.5px;padding:4px 7px;border-radius:999px;background:#f5f5f5;color:#555}
-.store-result-card.smart-card .store-chip-verified{display:inline-flex;align-items:center;gap:4px;color:#333;font-weight:600}
-.store-result-card.smart-card .store-chip-verified svg{display:block;width:13px;height:13px;flex:0 0 13px}
 .store-result-card.smart-card .store-address{font-size:10.5px;color:#888;margin:8px 0 0}
 .store-result-card.smart-card .smart-specialties{border-top:1px solid #f0f0f0;margin-top:9px;padding-top:8px}
 .store-result-card.smart-card .smart-specialties b{font-size:10px;color:#888;font-weight:600}
@@ -33,7 +34,8 @@
 @media(max-width:680px){
  .store-result-card.smart-card{padding:11px 12px;border-radius:12px}
  .store-result-card.smart-card .store-card-top h3{font-size:13px}
- .store-result-card.smart-card .smart-store-logo{width:38px;height:38px;flex-basis:38px}
+ .store-result-card.smart-card .store-media{width:38px;height:38px;min-width:38px;flex-basis:38px}
+ .store-result-card.smart-card .store-image-verified{width:17px;height:17px;right:-4px;bottom:-4px}
  .store-result-card.smart-card .store-action{padding:7px 9px}
  .msg.bot:has(.chat-actions){padding:12px}
 }

@@ -12,7 +12,7 @@ const TYPO=new Map(Object.entries({pizaria:'pizzaria',pizeria:'pizzaria',pizzarr
 const DAYS={domingo:0,segunda:1,terca:2,quarta:3,quinta:4,sexta:5,sabado:6};
 const DIGITS={primeira:0,primeiro:0,segunda:1,segundo:1,terceira:2,terceiro:2,quarta:3,quarto:3,quinta:4,quinto:4,sexta:5,sexto:5};
 const asNum=s=>Number(String(s||'').replace(',','.'));
-export function normalizeQuery(raw){return words(raw).map(w=>TYPO.get(w)||w).join(' ')}
+export function normalizeQuery(raw){const safe=String(raw||'').replace(/(\d)[.,](\d)/g,'$1DEC$2');return words(safe).map(w=>(TYPO.get(w)||w).replace(/(\d)dec(\d)/g,'$1.$2')).join(' ')}
 export function retailFoodConflict(raw){const n=normalizeQuery(raw);return RETAIL.test(n)&&FOOD.test(n)}
 export function buildLexicon(taxonomy={},categoryAliases={}){
  const terms=[];
@@ -47,7 +47,7 @@ function dayOf(n,today=new Date().getDay()){
  if(/\bdepois de amanha\b/.test(n))return(today+2)%7;
  if(/\bamanha\b/.test(n))return(today+1)%7;
  if(/\bhoje\b/.test(n))return today;
- for(const[k,v]of Object.entries(DAYS))if(new RegExp('(?:^|\\s)'+k+'(?:\\s|\\sfeira\\b|$)').test(n))return v;
+ for(const[k,v]of Object.entries(DAYS)){if(k==='segunda'&&/\b(?:a|o) segunda\b/.test(n)&&!/\bsegunda feira\b/.test(n))continue;if(new RegExp('(?:^|\\s)'+k+'(?:\\s|\\sfeira\\b|$)').test(n))return v;}
  return null;
 }
 const mins=(h,m)=>Number(h)*60+Number(m||0);
@@ -134,15 +134,15 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const filters=parseFilters(text,{},options);
  const excludedGroups=excludedTax?.group?[norm(excludedTax.group)]:[];
  const excludedCategories=excludedTax?.category&&!excludedTax.group?[norm(excludedTax.category)]:[];
- const excludedTerms=after&&!excludedTax?[after]:[];
+ const excludedTerms=after&&!excludedTax&&!/^(?:entrega|retirada|frete|delivery)\b/.test(after)?[after]:[];
  const allTerms=(taxon?[taxon.term,normalizeQuery(taxon.category),normalizeQuery(taxon.group||'')]:[]).filter(Boolean);
- let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+$/.test(w));
- const featureTerms=semanticTerms.filter(w=>/^(vegano|vegana|vegetariano|vegetariana|familia|familiar|tranquilo|sossegado|artesanal|barato|economico|infantil)$/.test(w));
+ let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?$/.test(w));
+ const featureTerms=semanticTerms.filter(w=>/^(vegano|vegana|vegetariano|vegetariana|familia|familiar|tranquilo|sossegado|artesanal)$/.test(w));
  const productCue=/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|preciso de|tem|vende|estoque)\b/.test(n);
  const genericProduct=/\b(produto|comprar|tem|vende|estoque)\b/.test(n);
  let productTerm=null;
  if(productCue){
-  const list=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!['produto','comprar','tem','vende','estoque'].includes(w)&&!taxon?.group?.toLowerCase().includes(w));
+  const list=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!['produto','comprar','tem','vende','estoque','tamanho','tam'].includes(w)&&!taxon?.group?.toLowerCase().includes(w));
   if(list.length)productTerm=list.slice(0,3).join(' ');
  }
  if(!productTerm&&genericProduct&&prev.selectedStore)return{kind:'ask',ask:'products',raw:text,filters};

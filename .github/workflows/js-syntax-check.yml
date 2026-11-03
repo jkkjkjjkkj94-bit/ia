@@ -32,3 +32,20 @@ jobs:
           exit "$failed"
       - name: Verify semantic search regression tests
         run: node --test tests/semantic-regression.mjs tests/guru-engine-v4.test.mjs
+
+      - name: Headless browser smoke test for GURU v4
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/guru-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          sleep 2
+          timeout 45s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --disable-background-networking --virtual-time-budget=15000 --dump-dom "http://127.0.0.1:8765/tests/guru-v4-smoke.html" > /tmp/guru-smoke.html 2>/tmp/guru-chrome.log
+          if ! grep -q 'data-smoke="PASS"' /tmp/guru-smoke.html; then
+            echo "Browser smoke test failed";grep -o 'data-report="[^"]*"' /tmp/guru-smoke.html || true
+            tail -n 25 /tmp/guru-chrome.log || true
+            exit 1
+          fi
+          echo "GURU v4 browser interactions passed."

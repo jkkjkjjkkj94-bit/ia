@@ -64,3 +64,21 @@
 @media(prefers-reduced-motion:reduce){
  .guru-typing-dot{animation:none;opacity:.7;transform:none}
 }
+
+/* Escrita progressiva: cursor sutil enquanto o GURU revela a resposta. */
+.guru-typewriter-caret::after{
+ content:"";
+ display:inline-block;
+ vertical-align:-2px;
+ height:1em;
+ width:1.5px;
+ margin-left:2px;
+ background:#777;
+ animation:guru-typewriter-cursor .65s steps(1,end) infinite;
+}
+@keyframes guru-typewriter-cursor{
+ 50%{opacity:0}
+}
+@media(prefers-reduced-motion:reduce){
+ .guru-typewriter-caret::after{animation:none;display:none}
+}

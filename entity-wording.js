@@ -1,7 +1,8 @@
 const msgs=document.getElementById('msgs');
-function state(){return window.LocalAIEngine?.state}
+let writing=false;
+function state(){return window.LocalAIEngine&&window.LocalAIEngine.state}
 function rewriteText(text){
-  const s=state();if(!text||s?.category!=='Comida')return text;
+  const s=state();if(!text||!s||s.category!=='Comida')return text;
   return String(text)
     .replace(/nenhuma loja de/gi,'nenhuma opção de')
     .replace(/uma loja de/gi,'uma opção de')
@@ -11,16 +12,29 @@ function rewriteText(text){
     .replace(/nenhuma loja cadastrada/gi,'nenhum estabelecimento cadastrado')
     .replace(/loja cadastrada/gi,'opção cadastrada');
 }
+function botOf(node){
+  if(!node)return null;
+  const el=node.nodeType===1?node:node.parentElement;
+  return el&&el.closest?el.closest('.msg.bot'):null;
+}
 function transform(node){
-  if(!(node instanceof HTMLElement)||!node.classList.contains('bot'))return;
+  if(writing||!node||!node.classList||!node.classList.contains('bot'))return;
   if(node.querySelector('.store-result-card,.normal-result-card,.chat-actions'))return;
-  const before=node.textContent||'',after=rewriteText(before);
-  if(after!==before)node.textContent=after;
+  const before=node.textContent||'';
+  const after=rewriteText(before);
+  if(after!==before){writing=true;node.textContent=after;setTimeout(()=>{writing=false},0)}
 }
-function scan(root=document){
-  if(root.matches?.('.msg.bot'))transform(root);
-  root.querySelectorAll?.('.msg.bot').forEach(transform);
+function scan(root){
+  root=root||document;
+  if(root.matches&&root.matches('.msg.bot'))transform(root);
+  if(root.querySelectorAll)root.querySelectorAll('.msg.bot').forEach(transform);
 }
-scan();
-if(msgs)new MutationObserver(records=>{for(const r of records)for(const n of r.addedNodes)if(n.nodeType===1)scan(n)}).observe(msgs,{childList:true,subtree:true});
+scan(document);
+if(msgs)new MutationObserver(records=>{
+  if(writing)return;
+  records.forEach(r=>{
+    if(r.type==='characterData')transform(botOf(r.target));
+    r.addedNodes.forEach(n=>{if(n.nodeType===1)scan(n);else transform(botOf(n))});
+  });
+}).observe(msgs,{childList:true,characterData:true,subtree:true});
 window.GuruEntityWording={rewriteText,scan};

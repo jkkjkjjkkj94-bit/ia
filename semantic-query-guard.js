@@ -18,7 +18,8 @@ const wordCorrections=new Map(Object.entries({
 }));
 
 const businessAliases=new Map([
-  ['comercio','loja'],['comercios','lojas'],['negocio','loja'],['negocios','lojas'],
+  ['comercio','loja'],['comercios','lojas'],
+  // Negócio/negócios preserva o sentido genérico e não vira loja.
   ['empresa','loja'],['empresas','lojas'],['ponto','loja'],['pontos','lojas'],
   ['estabelecimento','loja'],['estabelecimentos','lojas'],['local','loja'],['locais','lojas'],
   ['lugar','loja'],['lugares','lojas']

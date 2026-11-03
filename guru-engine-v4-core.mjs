@@ -116,13 +116,14 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const ask= /\b(que horas|horario|abre|fecha|funciona)\b/.test(n)?'hours':
  /\b(quanto fica com entrega|valor com entrega|preco com frete)\b/.test(n)?'total':
  /\b(entrega|delivery|frete)\b/.test(n)&&!/\b(com entrega|sem entrega|entrega rapida|entrega em ate)\b/.test(n)?'delivery':
- /\b(aceita|pix|pagamento|cartao|credito|debito)\b/.test(n)?'payment':
+ /\b(aceita\s+(?:pix|cartao|credito|debito|dinheiro)|pix|pagamento|cartao|credito|debito)\b/.test(n)?'payment':
  /\b(endereco|onde fica|localizacao)\b/.test(n)?'address':
  /\b(whatsapp|telefone|contato)\b/.test(n)?'contact':
  /\b(avaliacao|nota|reviews)\b/.test(n)?'rating':
  /\b(produtos|cardapio|estoque|tem|vende|tamanho)\b/.test(n)?'products':null;
  if(reference!==null&&Array.isArray(prev.lastResults)&&prev.lastResults.length)return{kind:'select',index:reference,ask,raw:text,filters:parseFilters(text,{},options)};
  if(ask&&prev.selectedStore&&!/\b(nova|outra|outro|procuro|encontrar)\b/.test(n))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
+ if(prev.selectedStore&&!ask&&!getTaxon(n,lexicon)&&!/(com entrega|sem entrega|mais perto|promocao|qualquer tipo)/.test(n))return{kind:'ask',ask:'knowledge',raw:text,filters:{}};
  if(ask&&!prev.selectedStore&&/\b(ela|ele|essa|esse|a loja|essa loja)\b/.test(n))return{kind:'clarify',raw:text,reason:'store'};
  const neg=n.match(/^(.*?)\b(?:nao quero|sem|exceto|menos|tirando|evitar|excluir)\b\s+(.+)$/);
  const after=neg?.[2]||'';
@@ -133,10 +134,11 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  if(!taxon&&/\b(restaurante|cafeteria|almoco|jantar|comer)\b/.test(positive))taxon={category:'Comida',group:null};
  const filters=parseFilters(text,{},options);
  const excludedGroups=excludedTax?.group?[norm(excludedTax.group)]:[];
- const excludedCategories=excludedTax?.category&&!excludedTax.group?[norm(excludedTax.category)]:[];
- const excludedTerms=after&&!excludedTax&&!/^(?:entrega|retirada|frete|delivery)\b/.test(after)?[after]:[];
+ const excludeCategory=!!excludedTax?.category&&!excludedTax.group&&[norm(excludedTax.category),'roupa','roupas','tecnologia','comida','beleza','mercado','farmacia','servicos','pet','construcao','automoveis'].includes(after);
+ const excludedCategories=excludeCategory?[norm(excludedTax.category)]:[];
+ const excludedTerms=after&&!excludedGroups.length&&!excludeCategory&&!/^(?:entrega|retirada|frete|delivery)\b/.test(after)?[after]:[];
  const allTerms=(taxon?[taxon.term,normalizeQuery(taxon.category),normalizeQuery(taxon.group||'')]:[]).filter(Boolean);
- let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo','barato','barata','economico','economica','aceita','pix','credito','debito','dinheiro','retirada','retirar','entrega','delivery','rapida','rapido'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?$/.test(w));
+ let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo','barato','barata','economico','economica','aceita','pix','credito','debito','dinheiro','retirada','retirar','entrega','delivery','rapida','rapido','minutos','minuto','horas','hora','numero','noite','manha','tarde'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?h?$/.test(w));
  const featureTerms=semanticTerms.filter(w=>/^(vegano|vegana|vegetariano|vegetariana|familia|familiar|tranquilo|sossegado|artesanal)$/.test(w));
  const productCue=/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|preciso de|tem|vende|estoque)\b/.test(n);
  const genericProduct=/\b(produto|comprar|tem|vende|estoque)\b/.test(n);
@@ -178,7 +180,7 @@ export function eligibleProduct(p,f={},now=Date.now()){
  if(f.quantity!=null&&Number(p.stock)<f.quantity)return false;
  if(f.promoOnly&&!activePromo(p,now))return false;
  const price=priceOf(p,now);
- if((f.minPrice!=null||f.maxPrice!=null)&&!Number.isFinite(price))return false;
+ if((f.minPrice!=null||f.maxPrice!=null||f.sort==='price')&&!Number.isFinite(price))return false;
  if(f.minPrice!=null&&(!Number.isFinite(price)||price<f.minPrice))return false;
  if(f.maxPrice!=null&&(!Number.isFinite(price)||price>f.maxPrice))return false;
  if(f.size&&!(Array.isArray(p.sizes)?p.sizes:[]).some(x=>norm(x)===norm(f.size)))return false;

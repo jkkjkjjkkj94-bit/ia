@@ -231,7 +231,28 @@ function chooseStore(row){
 function makeCard(row,index){
  const s=row.store,card=el('article','store-result-card smart-card');
  const top=el('div','store-card-top'),identity=el('div','');
- if(/^https:\/\//.test(String(s.logo_url||''))){const img=el('img','smart-store-logo');img.src=s.logo_url;img.alt='Foto de '+s.name;img.loading='lazy';img.onerror=()=>img.remove();top.appendChild(img)}
+ if(/^https:\/\//.test(String(s.logo_url||''))){
+  const media=el('div','store-media');
+  const img=el('img','smart-store-logo');
+  img.src=s.logo_url;img.alt='Foto de '+s.name;img.loading='lazy';
+  img.onerror=()=>media.remove();
+  media.appendChild(img);
+  if(s.verified){
+   const badge=el('span','store-image-verified');
+   badge.setAttribute('aria-label','Loja verificada');
+   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+   svg.setAttribute('viewBox','0 0 24 24');
+   svg.setAttribute('aria-hidden','true');
+   const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+   circle.setAttribute('cx','12');circle.setAttribute('cy','12');circle.setAttribute('r','12');circle.setAttribute('fill','#1d9bf0');
+   const check=document.createElementNS('http://www.w3.org/2000/svg','path');
+   check.setAttribute('d','m7.7 12.2 3 3 5.8-6.3');check.setAttribute('fill','none');
+   check.setAttribute('stroke','#fff');check.setAttribute('stroke-width','2.3');
+   check.setAttribute('stroke-linecap','round');check.setAttribute('stroke-linejoin','round');
+   svg.append(circle,check);badge.appendChild(svg);media.appendChild(badge);
+  }
+  top.appendChild(media);
+ }
  const title=el('h3','',s.name||'Estabelecimento');identity.appendChild(title);
  if(s.address){const city=getCityFromAddress(s.address);if(city)identity.appendChild(el('div','smart-location',city))}
  const tags=el('div','store-card-meta');
@@ -240,23 +261,7 @@ function makeCard(row,index){
  if(row.reviewCount)tags.appendChild(el('span','store-chip','★ '+row.rating.toFixed(1)+' ('+row.reviewCount+')'));
  if(s.delivery)tags.appendChild(el('span','store-chip','Entrega'));
  if(s.pickup)tags.appendChild(el('span','store-chip','Retirada'));
- if(s.verified){
-  const verified=el('span','store-chip store-chip-verified');
-  const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');
-  icon.setAttribute('viewBox','0 0 24 24');
-  icon.setAttribute('width','13');
-  icon.setAttribute('height','13');
-  icon.setAttribute('aria-hidden','true');
-  icon.setAttribute('focusable','false');
-  const ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
-  ring.setAttribute('cx','12');ring.setAttribute('cy','12');ring.setAttribute('r','9');
-  ring.setAttribute('fill','none');ring.setAttribute('stroke','currentColor');ring.setAttribute('stroke-width','1.8');
-  const check=document.createElementNS('http://www.w3.org/2000/svg','path');
-  check.setAttribute('d','m8 12 2.6 2.6L16 9');
-  check.setAttribute('fill','none');check.setAttribute('stroke','currentColor');
-  check.setAttribute('stroke-width','2');check.setAttribute('stroke-linecap','round');check.setAttribute('stroke-linejoin','round');
-  icon.append(ring,check);verified.append(icon,document.createTextNode('Verificada'));tags.appendChild(verified);
- }
+ if(s.verified)tags.appendChild(el('span','store-chip','Verificada'));
  if(s.sponsored)tags.appendChild(el('span','store-chip','Patrocinada'));
  identity.appendChild(tags);top.appendChild(identity);card.appendChild(top);
  if(s.address)card.appendChild(el('div','store-address',s.address));

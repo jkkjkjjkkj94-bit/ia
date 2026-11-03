@@ -58,12 +58,12 @@ sanitizeCategorySynonyms();
 setTimeout(sanitizeCategorySynonyms,250);
 
 await safeImport('./category-context-fix.js?v=6');
-await safeImport('./establishment-semantics.js?v=2');
+await safeImport('./establishment-semantics.js?v=3');
 await safeImport('./negative-query-priority.js?v=4');
 await safeImport('./guru-regression-fix.js?v=1');
-await safeImport('./semantic-query-guard.js?v=9');
+await safeImport('./semantic-query-guard.js?v=10');
 await safeImport('./guru-session-v3.js?v=4');
-await safeImport('./guru-language-tests.js?v=8');
+await safeImport('./guru-language-tests.js?v=9');
 await safeImport('./ai-conversation-enhancements.js?v=2');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=4');

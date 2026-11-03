@@ -52,3 +52,21 @@ test('atalhos legados apontam para a versão atual, sem religar a IA antiga',()=
  }
  assert.match(source('admin-ui-v2.js'),/admin-ui\.js\?v=2/);
 });
+
+test('versões antigas do menu não criam observadores ou menus paralelos',()=>{
+ for(const path of ['admin-ui-v2.js','admin-ui-v3.js','admin-ui-actions-v1.js','admin-menu-fix.js']){
+  const code=source(path);
+  assert.match(code,/admin-ui\.js\?v=2/);
+  assert.doesNotMatch(code,/new MutationObserver|replaceChildren\(|\.panel-nav/);
+ }
+ for(const path of ['admin-ui-v2.css','admin-menu-layout-fix.css']){
+  assert.match(source(path),/@import url\('\.\/admin-ui\.css\?v=1'\)/);
+ }
+});
+test('presença e avaliações legadas não duplicam clientes',()=>{
+ for(const path of ['lojista-presence.js','lojista-review-summary.js']){
+  const code=source(path);
+  assert.match(code,/lojista-activity\.js\?v=1/);
+  assert.doesNotMatch(code,/createClient\(|setInterval\(/);
+ }
+});

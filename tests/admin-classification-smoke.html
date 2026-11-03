@@ -1,0 +1,47 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>GURU Admin Classification Smoke</title>
+<script type="importmap">{"imports":{"https://esm.sh/@supabase/supabase-js@2.95.0":"/tests/admin-classification-supabase-mock.mjs","/guru-store-groups.js?v=1":"/tests/admin-classification-groups-mock.mjs"}}</script>
+</head><body data-smoke="RUNNING">
+<div id="drawerContent"></div><button type="button" data-open-store="41f51d5e-2609-4092-803a-56be0549a9e5" id="openStore">Abrir loja</button>
+<button type="button" id="refreshBtn">Atualizar</button>
+<script>
+let calls=[],failNext=true,refreshes=0;
+const id="41f51d5e-2609-4092-803a-56be0549a9e5";
+const store={id,name:"Pizzaria Teste",category:"Comida",group:"Pizzaria",groups:["Pizzaria"],specialties:[]};
+document.getElementById("refreshBtn").onclick=()=>refreshes++;
+window.fetch=async(url,options={})=>{
+ const method=options.method||"GET";
+ if(!String(url).includes("/admin-pending-stores"))throw Error("URL de gravação incorreta");
+ calls.push({method,url:String(url),headers:options.headers,body:options.body});
+ if(method==="GET")return new Response(JSON.stringify({store}),{status:200,headers:{"Content-Type":"application/json"}});
+ if(failNext){failNext=false;return new Response(JSON.stringify({error:"Permissão negada para teste."}),{status:403,headers:{"Content-Type":"application/json"}})}
+ const payload=JSON.parse(options.body);
+ store.group=payload.group;store.groups=payload.groups;store.specialties=payload.specialties;
+ return new Response(JSON.stringify({ok:true,store}),{status:200,headers:{"Content-Type":"application/json"}});
+};
+window.__smoke={calls,store,refresh:()=>refreshes};
+</script>
+<script type="module" src="../admin-store-group.js?v=4"></script>
+<script type="module">
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+async function test(){
+ document.querySelector("#openStore").click();
+ for(let n=0;n<40&&!document.querySelector("#adminSaveStoreGroup");n++)await pause(80);
+ const save=document.querySelector("#adminSaveStoreGroup");
+ if(!save||typeof save.onclick!=="function")throw Error("Botão salvar não tem evento");
+ if(!document.querySelector("#adminStoreGroup").value)throw Error("Grupo não foi carregado");
+ document.querySelector("#adminStoreSpecialties").value="massa artesanal\nborda recheada";
+ save.click();
+ for(let n=0;n<40&&!document.querySelector("#adminStoreClassFeedback")?.textContent?.includes("Permissão negada");n++)await pause(50);
+ if(save.disabled||save.textContent==="Salvo")throw Error("Falha foi indevidamente apresentada como sucesso");
+ if(!document.querySelector("#adminStoreClassFeedback").textContent.includes("Permissão negada"))throw Error("Erro de gravação não apareceu");
+ save.click();
+ for(let n=0;n<40&&!document.querySelector("#adminStoreClassFeedback")?.textContent?.includes("sucesso");n++)await pause(50);
+ if(!document.querySelector("#adminStoreClassFeedback").textContent.includes("sucesso"))throw Error("Sucesso não foi exibido");
+ if(window.__smoke.store.specialties.join(",")!=="massa artesanal,borda recheada")throw Error("Especialidades não foram persistidas");
+ if(!window.__smoke.calls.filter(c=>c.method==="POST").every(c=>c.headers.Authorization==="Bearer MOCK_ADMIN_TOKEN"))throw Error("JWT do administrador não foi enviado");
+ if(window.__smoke.refresh()!==1)throw Error("Lista não foi atualizada após salvar");
+ document.body.dataset.smoke="PASS";
+ document.body.dataset.report="Falha de permissão, recuperação e gravação validada";
+}
+test().catch(e=>{document.body.dataset.smoke="FAIL";document.body.dataset.report=e.message;console.error(e)});
+</script></body></html>

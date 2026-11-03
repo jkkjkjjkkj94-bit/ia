@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>GURU V4 Smoke</title></head>
+<body data-smoke="RUNNING">
+<aside class="app-sidebar"><button type="button" class="sidebar-collapse">Menu</button><button data-shell-action="new">Nova busca</button><button data-shell-action="location">Localização</button></aside>
+<section class="hero"><h1>GURU</h1></section>
+<div class="msgs" id="msgs"><div class="msg bot">Olá</div></div><div id="ctx"></div>
+<form id="chatForm"><input id="q"><button type="submit">Enviar</button></form>
+<div id="toast"></div><button id="locBtn" type="button"></button><button id="resetBtn" type="button"></button>
+<script>
+const stores=[
+ {id:'sushi',name:'Sushi Teste',category:'Comida',group:'Japonesa',groups:['Japonesa'],active:true,status:'active',address:'Rua A, Centro, Sorocaba - SP',delivery:true,delivery_fee:5,verified:true,payment_methods:['Pix']},
+ {id:'pizza',name:'Pizza Teste',category:'Comida',group:'Pizzaria',groups:['Pizzaria'],active:true,status:'active',address:'Rua B, Centro, Sorocaba - SP',delivery:true,delivery_fee:6,verified:false,payment_methods:['Pix']},
+ {id:'pending',name:'Pendente Teste',category:'Comida',group:'Pizzaria',active:false,status:'pending',address:'Sorocaba - SP',delivery:true}
+];
+const products=[
+ {id:'p1',store_id:'sushi',name:'Combo Sushi',stock:7,price:49,active:true,show_in_ai:true},
+ {id:'p2',store_id:'pizza',name:'Pizza Tradicional',stock:4,price:50,promo_price:38,active:true,show_in_ai:true}
+];
+const hours=[
+ {store_id:'sushi',weekday:6,opens_at:'18:00',closes_at:'23:00',closed:false},
+ {store_id:'pizza',weekday:6,opens_at:'11:00',closes_at:'23:00',closed:false}
+];
+window.fetch=async url=>{
+ const path=String(url),table=(path.match(/\/rest\/v1\/(local_ai_[a-z_]+)/)||[])[1];
+ const values={local_ai_stores:stores,local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[],local_ai_taxonomy_categories:[],local_ai_taxonomy_groups:[],local_ai_taxonomy_terms:[]};
+ return new Response(JSON.stringify(values[table]||[]),{status:200,headers:{'Content-Type':'application/json'}});
+};
+</script>
+<script type="module" src="../guru-engine-v4.js?v=2"></script>
+<script type="module">
+async function smoke(){
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+ for(let i=0;i<100&&!window.GuruEngineV4;i++)await sleep(50);
+ if(!window.GuruEngineV4)throw Error('motor não inicializou');
+ const guru=window.GuruEngineV4;
+ await guru.submitText('negócio de comida japonesa');
+ if(!document.querySelector('.store-result-card h3')?.textContent?.includes('Sushi Teste'))throw Error('busca japonesa falhou');
+ await guru.submitText('loja de comida japonesa');
+ if(!document.getElementById('msgs').textContent.includes('não entram na categoria Comida'))throw Error('restrição de varejo falhou');
+ await guru.submitText('pizzaria com entrega em promoção até R$ 40');
+ const cards=[...document.querySelectorAll('.store-result-card')];
+ if(cards.at(-1)?.querySelector('h3')?.textContent!=='Pizza Teste')throw Error('filtro de promoção falhou');
+ await guru.submitText('a primeira abre sábado?');
+ if(!document.getElementById('msgs').textContent.includes('sábado das'))throw Error('contexto de horário falhou');
+ const input=document.getElementById('q');
+ input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
+ for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);
+ if(!document.getElementById('msgs').textContent.includes('opções cadastradas'))throw Error('submit do formulário falhou');
+ document.body.dataset.smoke='PASS';
+ document.body.setAttribute('data-report','Busca + regra + promoção + contexto + envio OK');
+}
+smoke().catch(e=>{document.body.dataset.smoke='FAIL';document.body.setAttribute('data-report',e.message);console.error(e)});
+</script>
+</body></html>

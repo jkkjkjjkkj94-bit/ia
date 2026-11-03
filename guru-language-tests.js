@@ -26,9 +26,9 @@ const tests=[
   {q:'comida mas não pizza',negative:'pizzaria'},
   {q:'qualquer coisa menos hambúrguer',negative:'hamburgueria'},
   {q:'roupa sem infantil',negative:'infantil',baseCategory:'Roupas'},
-  {q:'roupa exceto camiseta',negative:'roupas',baseCategory:'Roupas'},
-  {q:'tecnologia sem celular',negative:'tecnologia',baseCategory:'Tecnologia'},
-  {q:'beleza menos salão',negative:'beleza',baseCategory:'Beleza'},
+  {q:'roupa exceto camiseta',negative:'camiseta',baseCategory:'Roupas'},
+  {q:'tecnologia sem celular',negative:'celular',baseCategory:'Tecnologia'},
+  {q:'beleza menos salão',negative:'salao',baseCategory:'Beleza'},
   {q:'loja vegetariana para família',traits:['vegetariano','familia'],type:'Loja'}
 ];
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();

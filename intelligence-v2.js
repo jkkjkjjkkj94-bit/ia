@@ -1,5 +1,4 @@
-// Compatibilidade legada.
-// O motor atual do GURU é carregado por context-fix.js e ai-engine.js.
-if(!window.LocalAIEngine){
-  import('./context-fix.js?v=62').catch(err=>console.error('[Legacy intelligence-v2 compatibility]',err));
+// Compatibilidade legada: toda interpretação e busca pública são feitas pelo GURU V4.
+if(document.getElementById('chatForm')&&!window.GuruEngineV4){
+  import('./guru-engine-v4.js?v=3').catch(err=>console.error('[Legacy Intelligence entrypoint]',err));
 }

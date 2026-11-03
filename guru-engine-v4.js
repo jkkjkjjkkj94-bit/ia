@@ -6,12 +6,26 @@ const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_z
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
 const form=document.getElementById('chatForm'),input=document.getElementById('q'),msgs=document.getElementById('msgs'),ctx=document.getElementById('ctx'),toast=document.getElementById('toast');
 let state=emptyState(),db=null,loadPromise=null,lastLoad=0,position=null,searchBusy=false;
+let replyBuffer=null;
+const minTypingMs=850;
 let taxonomy=structuredClone(fallbackTaxonomy),aliases=structuredClone(fallbackAliases);
 const memoryKey='guru_context_v4',ttl=2*60*60*1000;
 const money=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const dayNames=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 const el=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x};
-const add=(text,user=false)=>{const m=el('div','msg '+(user?'user':'bot'),text);msgs.appendChild(m);msgs.scrollTop=msgs.scrollHeight;return m};
+const add=(text,user=false)=>{const m=el('div','msg '+(user?'user':'bot'),text);(replyBuffer&&!user?replyBuffer:msgs).appendChild(m);if(!replyBuffer)msgs.scrollTop=msgs.scrollHeight;return m};
+function showTypingIndicator(){
+ const message=el('div','msg bot guru-typing');
+ message.setAttribute('role','status');
+ message.setAttribute('aria-label','GURU está digitando');
+ const dots=el('span','guru-typing-dots');
+ dots.setAttribute('aria-hidden','true');
+ for(let i=0;i<3;i++)dots.appendChild(el('span','guru-typing-dot'));
+ message.appendChild(dots);
+ msgs.appendChild(message);
+ msgs.scrollTop=msgs.scrollHeight;
+ return message;
+}
 const notice=t=>{if(toast){toast.textContent=t;toast.classList.add('on');setTimeout(()=>toast.classList.remove('on'),3200)}};
 const msgError=err=>{console.error('[GURU v4]',err);add('Não consegui consultar os dados agora. Confira a conexão e tente novamente.')};
 function renderContext(){
@@ -255,8 +269,19 @@ async function submitText(raw){
  if(searchBusy){notice('Aguarde a conclusão da busca atual.');return}
  searchBusy=true;input.disabled=true;
  add(t,true);
- const waiting=add('Buscando opções cadastradas...');
- try{await run(t)}catch(err){msgError(err)}finally{waiting.remove();input.disabled=false;input.focus();searchBusy=false;msgs.scrollTop=msgs.scrollHeight}
+ const typing=showTypingIndicator();
+ const start=performance.now();
+ replyBuffer=document.createDocumentFragment();
+ try{await run(t)}catch(err){msgError(err)}finally{
+  const remaining=Math.max(0,minTypingMs-(performance.now()-start));
+  if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining));
+  const completed=replyBuffer;
+  replyBuffer=null;
+  typing.remove();
+  if(completed)msgs.appendChild(completed);
+  input.disabled=false;input.focus();searchBusy=false;
+  msgs.scrollTop=msgs.scrollHeight;
+ }
 }
 function resetConversation(){
  state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};renderContext();

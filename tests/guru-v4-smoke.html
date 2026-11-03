@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><title>GURU V4 Smoke</title><link rel="stylesheet" href="../guru-engine-v4.css?v=2"></head>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>GURU V4 Smoke</title><link rel="stylesheet" href="../guru-engine-v4.css?v=3"></head>
 <body data-smoke="RUNNING">
 <aside class="app-sidebar"><button type="button" class="sidebar-collapse">Menu</button><button data-shell-action="new">Nova busca</button><button data-shell-action="location">Localização</button></aside>
 <section class="hero"><h1>GURU</h1></section>
@@ -26,7 +26,7 @@ window.fetch=async url=>{
  return new Response(JSON.stringify(values[table]||[]),{status:200,headers:{'Content-Type':'application/json'}});
 };
 </script>
-<script type="module" src="../guru-engine-v4.js?v=4"></script>
+<script type="module" src="../guru-engine-v4.js?v=5"></script>
 <script type="module">
 async function smoke(){
  const sleep=ms=>new Promise(r=>setTimeout(r,ms));

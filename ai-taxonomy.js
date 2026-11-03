@@ -54,9 +54,8 @@ export const taxonomy={
     'Serviços profissionais':['serviços profissionais','servicos profissionais','consultoria','assessoria']
   },
   'Pet shop':{
-    'Pet shop':['pet shop','petshop'],
     Veterinária:['clínica veterinária','clinica veterinaria','veterinária','veterinaria','veterinário','veterinario'],
-    BanhoTosa:['banho e tosa','banho tosa','tosa'],
+    'Banho e tosa':['banho e tosa','banho tosa','tosa'],
     Rações:['ração','racao','rações','racoes','loja de ração','loja de racao']
   },
   Automóveis:{
@@ -81,7 +80,7 @@ export const categoryAliases={
   Beleza:['beleza'],
   Tecnologia:['tecnologia','celular','computador','notebook','eletrônico','eletronico','fone'],
   Serviços:['serviço','servico','serviços','servicos','conserto'],
-  'Pet shop':['pet','animais de estimação','animais de estimacao'],
+  'Pet shop':['pet','petshop','pet shop','animais de estimação','animais de estimacao'],
   Automóveis:['carro','automóvel','automovel','automóveis','automoveis'],
   Construção:['construção','construcao','obra','reforma'],
   Comida:['comida','alimentação','alimentacao','refeição','refeicao']

@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '**/*.js'
+      - '**/*.mjs'
       - '.github/workflows/js-syntax-check.yml'
   workflow_dispatch:
 
@@ -29,3 +30,5 @@ jobs:
           done < <(find . -type f -name '*.js' -print0)
           echo "Checked $count JavaScript files."
           exit "$failed"
+      - name: Verify semantic search regression tests
+        run: node --test tests/semantic-regression.mjs

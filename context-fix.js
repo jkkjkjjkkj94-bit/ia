@@ -31,7 +31,7 @@ syncChatState();
 if(msgs)new MutationObserver(syncChatState).observe(msgs,{childList:true,subtree:true});
 async function safeImport(path){try{await import(path)}catch(error){console.error('[GURU] Falha ao carregar módulo:',path,error)}}
 await safeImport('./core-data-router.js?v=3');
-await safeImport('./ai-engine.js?v=15');
+await safeImport('./ai-engine.js?v=16');
 await safeImport('./guru-intelligence-v2.js?v=2');
 
 function sanitizeCategorySynonyms(){
@@ -49,13 +49,13 @@ function sanitizeCategorySynonyms(){
 sanitizeCategorySynonyms();
 setTimeout(sanitizeCategorySynonyms,250);
 
-await safeImport('./category-context-fix.js?v=4');
+await safeImport('./category-context-fix.js?v=5');
 await safeImport('./establishment-semantics.js?v=2');
-await safeImport('./negative-query-priority.js?v=2');
+await safeImport('./negative-query-priority.js?v=3');
 await safeImport('./guru-regression-fix.js?v=1');
 await safeImport('./semantic-query-guard.js?v=9');
 await safeImport('./guru-session-v3.js?v=4');
-await safeImport('./guru-language-tests.js?v=6');
+await safeImport('./guru-language-tests.js?v=7');
 await safeImport('./ai-conversation-enhancements.js?v=2');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');

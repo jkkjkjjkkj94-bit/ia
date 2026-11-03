@@ -24,7 +24,7 @@ const deleted=[
 
 test('a IA pública executa apenas o GURU V4',()=>{
  const html=source('index.html');
- assert.match(html,/guru-engine-v4\.js\?v=5/);
+ assert.match(html,/guru-engine-v4\.js\?v=\d+/);
  assert.doesNotMatch(html,/context-fix\.js|ai-engine\.js|chat-runtime-fix\.js/);
  assert.match(source('guru-engine-v4.js'),/guru-engine-v4-core\.mjs/);
 });

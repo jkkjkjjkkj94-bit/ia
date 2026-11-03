@@ -51,6 +51,7 @@ setTimeout(sanitizeCategorySynonyms,250);
 
 await safeImport('./category-context-fix.js?v=3');
 await safeImport('./establishment-semantics.js?v=2');
+await safeImport('./negative-query-priority.js?v=1');
 await safeImport('./guru-regression-fix.js?v=1');
 await safeImport('./semantic-query-guard.js?v=9');
 await safeImport('./guru-session-v3.js?v=4');

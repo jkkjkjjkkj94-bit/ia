@@ -5,14 +5,14 @@ const AI_KEY='sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1';
 const msgs=document.getElementById('msgs');
 let cache=null;
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const chip=(t,c='')=>{const e=document.createElement('span');e.className='store-chip '+c;e.textContent=t;return e};
 async function rest(url,key,path){const r=await fetch(url+'/rest/v1/'+path,{headers:{apikey:key,Authorization:'Bearer '+key,Accept:'application/json'}});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
 async function data(){if(cache)return cache;try{const[stores,hours,reviews]=await Promise.all([rest(CORE_URL,CORE_KEY,'local_ai_stores?select=*&active=eq.true&status=eq.active'),rest(AI_URL,AI_KEY,'local_ai_store_hours?select=*'),rest(AI_URL,AI_KEY,'local_ai_reviews?select=store_id,rating')]);return cache={stores,hours,reviews}}catch{return cache={stores:[],hours:[],reviews:[]}}}
 function byName(name,stores){const n=norm(name);return stores.find(s=>norm(s.name)===n)||stores.find(s=>norm(s.name).includes(n)||n.includes(norm(s.name)))||null}
 function city(a=''){const raw=String(a).replace(/·/g,',');const m=[...raw.matchAll(/(?:^|,)\s*([^,]+?)\s*-\s*([A-Z]{2})(?=\s*(?:,|$))/gi)].pop();return m?`${m[1].trim()} - ${m[2].toUpperCase()}`:''}
 function openNow(s,hours){const d=new Date(),h=hours.find(x=>x.store_id===s.id&&Number(x.weekday)===d.getDay());if(!h||h.closed||!h.opens_at||!h.closes_at)return null;const n=d.getHours()*60+d.getMinutes(),a=+String(h.opens_at).slice(0,2)*60+ +String(h.opens_at).slice(3,5),b=+String(h.closes_at).slice(0,2)*60+ +String(h.closes_at).slice(3,5);return n>=a&&n<=b}
-function rating(s,reviews){const rs=reviews.filter(r=>r.store_id===s.id&&Number.isFinite(Number(r.rating)));if(rs.length)return rs.reduce((a,r)=>a+Number(r.rating),0)/rs.length;const x=Number(s.rating);return x>0?x:null}
+function rating(s,reviews){const rs=reviews.filter(r=>r.store_id===s.id&&Number.isFinite(Number(r.rating)));return rs.length?rs.reduce((a,r)=>a+Number(r.rating),0)/rs.length:null}
 function distance(s){const p=window.LocalAIRealLocation;if(!p||s.latitude==null||s.longitude==null)return null;const R=6371,rad=x=>x*Math.PI/180,dLat=rad(Number(s.latitude)-p.lat),dLon=rad(Number(s.longitude)-p.lng),q=Math.sin(dLat/2)**2+Math.cos(rad(p.lat))*Math.cos(rad(Number(s.latitude)))*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))}
 function route(s){if(s.latitude!=null&&s.longitude!=null)return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.latitude+','+s.longitude)}`;return s.address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address)}`:''}
 function wa(v){const d=String(v||'').replace(/\D/g,'');return d.length>=10?`https://wa.me/${d.startsWith('55')?d:'55'+d}`:''}

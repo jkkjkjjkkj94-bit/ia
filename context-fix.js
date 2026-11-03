@@ -52,7 +52,7 @@ setTimeout(sanitizeCategorySynonyms,250);
 await safeImport('./category-context-fix.js?v=3');
 await safeImport('./guru-regression-fix.js?v=1');
 await safeImport('./semantic-query-guard.js?v=9');
-await safeImport('./guru-session-v3.js?v=1');
+await safeImport('./guru-session-v3.js?v=2');
 await safeImport('./guru-language-tests.js?v=1');
 await safeImport('./ai-conversation-enhancements.js?v=2');
 await safeImport('./real-location.js?v=1');

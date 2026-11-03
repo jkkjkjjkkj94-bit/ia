@@ -1,0 +1,52 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Admin UI Smoke</title></head>
+<body data-smoke="RUNNING">
+<div id="appView" class="panel-shell">
+<aside class="panel-side"><div class="panel-brand">Local AI</div><div class="panel-subbrand">Admin Console</div>
+<nav class="panel-nav">
+<button type="button" data-view="settings">Configurações</button>
+<button type="button" data-view="merchants">Consultas</button>
+<button type="button" data-view="overview" class="on">Visão geral</button>
+<button type="button" data-view="synonymSuggestions">Sugestões de sinônimos</button>
+<button type="button" data-view="stores">Lojas</button>
+<button type="button" data-view="pendingStores">Pendentes <span id="pendingNavCount">3</span></button>
+<button type="button" data-view="coverage">Relatórios</button>
+</nav></aside>
+<main class="panel-main">
+<div class="panel-top"><span id="pageTitle">Dashboard</span><div class="top-actions"></div></div>
+<div id="adminStores"><div class="item store-admin-item"><div class="store-row">
+<div class="title-line"><b>Loja Exemplo</b><span class="status-dot active"></span></div>
+<div class="meta">Comida · Sorocaba - SP</div><div class="meta">Qualidade: Boa</div>
+<div class="actions-wrap"><button type="button" data-open-store="store-example">Detalhes</button><button type="button" data-status="suspended">Suspender</button></div>
+</div></div></div>
+<div id="merchantList"></div>
+</main></div>
+<script type="module">
+import '../admin-ui.js?v=1';
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const run=async()=>{
+ window.dispatchEvent(new CustomEvent('guru-admin-modules-ready'));
+ await wait(700);
+ const nav=document.querySelector('.panel-nav');
+ const buttons=()=>[...nav.querySelectorAll(':scope > button[data-view]')];
+ const order=buttons().map(x=>x.dataset.view);
+ const expected=['overview','stores','pendingStores','merchants','coverage','synonymSuggestions','settings'];
+ if(JSON.stringify(order)!==JSON.stringify(expected))throw Error('Ordem incorreta: '+order.join(','));
+ if(buttons().some(b=>!b.querySelector('.admin-nav-label')))throw Error('Ícones/rótulos não aplicados');
+ if(document.querySelector('#pendingNavCount')?.textContent!=='3')throw Error('Contador não foi preservado');
+ if(document.querySelectorAll('.admin-side-toggle').length!==1||document.querySelectorAll('.admin-global-search').length!==1)throw Error('Botões duplicados');
+ const row=document.querySelector('#adminStores .admin-store-row');
+ if(!row)throw Error('Tabela não renderizada');
+ if(!row.querySelector('.admin-cell-sub')?.textContent.includes('Ativa'))throw Error('Status não preservado: '+row.textContent);
+ if(document.querySelectorAll('link[href*="admin-ui.css"]').length!==1)throw Error('CSS novo não carregado');
+ const extra=document.createElement('button');extra.dataset.view='taxonomyDb';extra.textContent='Taxonomia';nav.appendChild(extra);
+ await wait(450);
+ const ordered=buttons().map(x=>x.dataset.view);
+ if(ordered.indexOf('taxonomyDb')!==ordered.indexOf('coverage')+1)throw Error('Item tardio ficou fora de ordem: '+ordered.join(','));
+ const firstHTML=nav.innerHTML;
+ await wait(550);
+ if(nav.innerHTML!==firstHTML)throw Error('Sidebar continua se re-renderizando');
+ if(buttons().length!==new Set(buttons().map(x=>x.dataset.view)).size)throw Error('Botões duplicados');
+ document.body.dataset.smoke='PASS';document.body.setAttribute('data-report','menu estável, status correto, sem duplicação');
+};
+run().catch(e=>{document.body.dataset.smoke='FAIL';document.body.setAttribute('data-report',e.message);console.error(e)});
+</script></body></html>

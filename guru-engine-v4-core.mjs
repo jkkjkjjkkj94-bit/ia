@@ -56,13 +56,13 @@ function parseFilters(raw,prev={},options={}){
  const n=normalizeQuery(raw),f={...prev};
  if(/\b(abert[oa]s?\s+agora|funcionando agora)\b/.test(n)){f.openNow=true;f.day=null;f.start=null;f.end=null}
  const day=dayOf(n,options.today??new Date().getDay());if(day!==null){f.day=day;f.openNow=false}
- if(/\b(sem entrega|nao quero entrega)\b/.test(n))f.delivery=false;
+ if(/\b(sem entrega|sem delivery|nao quero entrega|nao quero delivery)\b/.test(n))f.delivery=false;
  else if(/\b(com entrega|delivery|faz entrega|entrega rapida|entrega hoje)\b/.test(n))f.delivery=true;
  if(/\b(para retirar|com retirada|retirada na loja|buscar na loja)\b/.test(n))f.pickup=true;
  else if(/\b(sem retirada)\b/.test(n))f.pickup=false;
  if(/\b(melhor avaliadas?|maior nota)\b/.test(n))f.sort='rating';
  else if(/\b(mais proxim[oa]s?|mais perto|perto de mim)\b/.test(n))f.sort='distance';
- else if(/\b(mais barat[oa]s?|menor preco)\b/.test(n))f.sort='price';
+ else if(/\b(mais barat[oa]s?|barat[oa]s?|economico|economica|menor preco)\b/.test(n))f.sort='price';
  const maxKm=amount(n,/\b(?:ate|no maximo|maximo)\s*(\d+(?:[.,]\d+)?)\s*km\b/);if(maxKm!==null)f.maxDistance=maxKm;
  const maxFee=amount(n,/\b(?:frete|taxa de entrega|taxa de delivery)\s*(?:de )?(?:ate|no maximo|maximo)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\b/);if(maxFee!==null){f.maxDeliveryFee=maxFee;f.delivery=true}
  const maxDeliveryTime=amount(n,/\b(?:entrega|delivery)\s+(?:em\s+)?(?:ate|no maximo)\s*(\d+)\s*(?:min|mins|minutos)\b/);if(maxDeliveryTime!==null){f.maxDeliveryMinutes=maxDeliveryTime;f.delivery=true}
@@ -136,7 +136,7 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const excludedCategories=excludedTax?.category&&!excludedTax.group?[norm(excludedTax.category)]:[];
  const excludedTerms=after&&!excludedTax&&!/^(?:entrega|retirada|frete|delivery)\b/.test(after)?[after]:[];
  const allTerms=(taxon?[taxon.term,normalizeQuery(taxon.category),normalizeQuery(taxon.group||'')]:[]).filter(Boolean);
- let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?$/.test(w));
+ let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo','barato','barata','economico','economica'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?$/.test(w));
  const featureTerms=semanticTerms.filter(w=>/^(vegano|vegana|vegetariano|vegetariana|familia|familiar|tranquilo|sossegado|artesanal)$/.test(w));
  const productCue=/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|preciso de|tem|vende|estoque)\b/.test(n);
  const genericProduct=/\b(produto|comprar|tem|vende|estoque)\b/.test(n);
@@ -169,15 +169,16 @@ export function nextState(current,plan){
 function storeGroups(store){return [store.group,...(Array.isArray(store.groups)?store.groups:[])].map(norm).filter(Boolean)}
 function productName(p){return norm([p.name,p.description,p.category,p.brand,p.color,(Array.isArray(p.sizes)?p.sizes:[]).join(' ')].join(' '))}
 export function activePromo(p,now=Date.now()){
- const price=Number(p.price),promo=Number(p.promo_price);
+ const price=p.price==null?NaN:Number(p.price),promo=p.promo_price==null?NaN:Number(p.promo_price);
  return Number.isFinite(price)&&Number.isFinite(promo)&&promo>0&&promo<price&&(!p.promo_start||Date.parse(p.promo_start)<=now)&&(!p.promo_end||Date.parse(p.promo_end)>=now);
 }
-export function priceOf(p,now=Date.now()){return activePromo(p,now)?Number(p.promo_price):Number(p.price)}
+export function priceOf(p,now=Date.now()){return activePromo(p,now)?Number(p.promo_price):(p.price==null?NaN:Number(p.price))}
 export function eligibleProduct(p,f={},now=Date.now()){
  if(p.active===false||p.show_in_ai===false||!Number.isFinite(Number(p.stock))||Number(p.stock)<=0)return false;
  if(f.quantity!=null&&Number(p.stock)<f.quantity)return false;
  if(f.promoOnly&&!activePromo(p,now))return false;
  const price=priceOf(p,now);
+ if((f.minPrice!=null||f.maxPrice!=null)&&!Number.isFinite(price))return false;
  if(f.minPrice!=null&&(!Number.isFinite(price)||price<f.minPrice))return false;
  if(f.maxPrice!=null&&(!Number.isFinite(price)||price>f.maxPrice))return false;
  if(f.size&&!(Array.isArray(p.sizes)?p.sizes:[]).some(x=>norm(x)===norm(f.size)))return false;
@@ -219,6 +220,17 @@ export function ratingsMap(reviews=[]){
  const m=new Map();for(const r of reviews){const v=Number(r.rating);if(!Number.isFinite(v)||v<1||v>5)continue;const z=m.get(r.store_id)||{sum:0,count:0};z.sum+=v;z.count++;m.set(r.store_id,z)}
  return m;
 }
+function semanticHit(token,text){
+ const n=norm(token);
+ const families={
+  vegano:/\bvegan[ao]s?\b/,vegana:/\bvegan[ao]s?\b/,
+  vegetariano:/\bvegetarian[ao]s?\b/,vegetariana:/\bvegetarian[ao]s?\b/,
+  familia:/\b(familia|familiar|criancas)\b/,familiar:/\b(familia|familiar|criancas)\b/,
+  tranquilo:/\b(tranquil[ao]|sossegad[ao]|calm[ao])\b/,
+  sossegado:/\b(tranquil[ao]|sossegad[ao]|calm[ao])\b/
+ };
+ return families[n]?families[n].test(text):text.includes(n);
+}
 export function searchStores(data={},state={},position=null,options={}){
  const stores=data.stores||[],products=data.products||[],hours=data.hours||[],reviews=data.reviews||[],knowledge=data.knowledge||[],f=state.filters||{};
  const rating=ratingsMap(reviews),max=options.limit??6,now=options.now||new Date(),output=[];
@@ -247,14 +259,14 @@ export function searchStores(data={},state={},position=null,options={}){
   const allProducts=(byStore.get(store.id)||[]).filter(p=>eligibleProduct(p,f,now.getTime()));
   const requested=words(state.productTerm||'').filter(w=>!STOP.has(w));
   const eligible=allProducts.filter(p=>requested.every(w=>productName(p).includes(w))&&!(state.excludedTerms||[]).some(term=>has(productName(p),term)));
-  const mustHaveProduct=!!state.productTerm||f.minPrice!=null||f.maxPrice!=null||f.promoOnly||f.size||f.color||f.quantity!=null||(state.excludedTerms||[]).length>0;
+  const mustHaveProduct=!!state.productTerm||f.minPrice!=null||f.maxPrice!=null||f.promoOnly||f.size||f.color||f.quantity!=null||f.sort==='price'||(state.excludedTerms||[]).length>0;
   if(mustHaveProduct&&!eligible.length)continue;
-  const text=norm([store.name,store.category,store.group,(store.groups||[]).join(' '),(store.specialties||[]).join(' '),store.description,...eligible.flatMap(p=>[p.name,p.description,p.category,p.brand]),...(kByStore.get(store.id)||[]).flatMap(k=>[k.question,(k.variations||[]).join(' '),k.answer])].join(' '));
+  const text=norm([store.name,store.address,store.category,store.group,(store.groups||[]).join(' '),(store.specialties||[]).join(' '),store.description,...eligible.flatMap(p=>[p.name,p.description,p.category,p.brand]),...(kByStore.get(store.id)||[]).flatMap(k=>[k.question,(k.variations||[]).join(' '),k.answer])].join(' '));
   const semanticTerms=state.semanticTerms||[],featureTerms=state.featureTerms||[];
-  const hits=semanticTerms.filter(t=>text.includes(t));
+  const hits=semanticTerms.filter(t=>semanticHit(t,text));
   // A mandatory feature requested in prose must be present in store/catalog information.
-  if(featureTerms.length&&!featureTerms.every(t=>text.includes(t)))continue;
-  if(semanticTerms.length&&!hits.length&&!state.category&&!state.group&&!state.productTerm)continue;
+  if(featureTerms.length&&!featureTerms.every(t=>semanticHit(t,text)))continue;
+  if(semanticTerms.length&&!hits.length)continue;
   let score=0,reasons=[];
   if(state.category){score+=30;reasons.push('categoria '+state.category)}
   if(state.group){score+=45;reasons.push('grupo '+state.group)}

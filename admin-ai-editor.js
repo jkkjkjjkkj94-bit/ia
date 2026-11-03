@@ -79,3 +79,4 @@ import('./admin-store-group.js?v=1').catch(err=>console.error('[Store Group Load
 import('./admin-pending-core.js?v=1').catch(err=>console.error('[Pending Stores Loader]',err));
 import('./admin-synonym-suggestions.js?v=1').catch(err=>console.error('[Synonym Suggestions Loader]',err));
 import('./guru-quality-admin.js?v=2').catch(err=>console.error('[GURU Quality Loader]',err));
+import('./admin-delete-controls.js?v=1').catch(err=>console.error('[Admin Delete Loader]',err));

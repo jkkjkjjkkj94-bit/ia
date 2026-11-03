@@ -58,6 +58,7 @@ await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');
 await safeImport('./regular-results-ui.js?v=3');
 await safeImport('./card-standardizer.js?v=3');
+await safeImport('./verified-store-badge.js?v=1');
 await safeImport('./zero-result-responses.js?v=2');
 await safeImport('./typing-indicator.js?v=3');
 

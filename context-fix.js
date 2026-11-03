@@ -29,10 +29,17 @@ sidebar?.querySelector('.sidebar-collapse')?.addEventListener('click',()=>body.c
 const syncChatState=()=>body.classList.toggle('chat-started',!!msgs?.querySelector('.msg.user'));
 syncChatState();
 if(msgs)new MutationObserver(syncChatState).observe(msgs,{childList:true,subtree:true});
-async function safeImport(path){try{await import(path)}catch(error){console.error('[GURU] Falha ao carregar módulo:',path,error)}}
+async function safeImport(path){try{return await import(path)}catch(error){console.error('[GURU] Falha ao carregar módulo:',path,error);return null}}
 await safeImport('./core-data-router.js?v=3');
-await safeImport('./ai-taxonomy.js?v=6');
+const taxonomyV6=await safeImport('./ai-taxonomy.js?v=6');
 await safeImport('./ai-engine.js?v=18');
+if(taxonomyV6&&window.LocalAIEngine?.getTaxonomy){
+  const current=taxonomyV6.mergeSynonymsIntoTaxonomy(taxonomyV6.taxonomy,window.LocalAIEngine.getConfig?.()?.synonyms||{});
+  const live=window.LocalAIEngine.getTaxonomy();
+  Object.keys(live).forEach(k=>delete live[k]);
+  Object.assign(live,structuredClone(current));
+  window.LocalAITaxonomy={taxonomy:taxonomyV6.taxonomy,categoryAliases:taxonomyV6.categoryAliases,functionalWords:taxonomyV6.functionalWords,mergeSynonymsIntoTaxonomy:taxonomyV6.mergeSynonymsIntoTaxonomy,analyzeQuery:taxonomyV6.analyzeQuery,active:live};
+}
 await safeImport('./guru-intelligence-v2.js?v=2');
 
 function sanitizeCategorySynonyms(){

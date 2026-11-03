@@ -36,7 +36,7 @@ function setupMerchantShell(){const list=$('#merchantList');if(!list||$('#adminM
 function decorateMerchants(){setupMerchantShell();const list=$('#merchantList');if(!list)return;list.querySelector('.merchant-summary')?.remove();[...list.querySelectorAll('.merchant-card')].forEach(card=>{if(card.dataset.uiV3==='1')return;const uid=card.dataset.merchantUser||'',name=card.querySelector('.merchant-name')?.textContent?.trim()||'Lojista',email=card.querySelector('.merchant-email')?.textContent?.trim()||'—',store=card.querySelector('.merchant-store-name')?.textContent?.trim()||'Sem loja',storeMeta=card.querySelector('.merchant-store-meta')?.textContent?.trim()||'',activity=[...card.querySelectorAll('.merchant-info')].find(x=>/Último acesso/i.test(x.textContent))?.querySelector('b')?.textContent?.trim()||'—',original=card.cloneNode(true);card.dataset.uiV3='1';card.className='admin-table-row admin-merchant-row';card.innerHTML=`<span></span><div class="admin-cell"><div class="admin-cell-title">${esc(name)}</div><div class="admin-cell-sub">${esc(email)}</div></div><div class="admin-cell"><div class="admin-cell-title">${esc(store)}</div><div class="admin-cell-sub">${esc(storeMeta)}</div></div><div class="admin-cell"><div class="admin-cell-title">${esc(activity)}</div><div class="admin-cell-sub">Último acesso</div></div><div class="admin-row-actions"><button class="admin-more" type="button">•••</button></div>`;card.querySelector('.admin-more').onclick=e=>{e.stopPropagation();const buttons=[...original.querySelectorAll('button')];if(window.GuruMerchantDetails?.open){const d=document.createElement('button');d.textContent='Visualizar detalhes';d.onclick=()=>window.GuruMerchantDetails.open(uid);buttons.unshift(d)}openMenu(card.querySelector('.admin-more'),buttons)};card.ondblclick=()=>window.GuruMerchantDetails?.open?.(uid)});paginateMerchants()}
 function paginateMerchants(){const rows=$$('#merchantList .admin-merchant-row'),pages=Math.max(1,Math.ceil(rows.length/merchantSize));merchantPage=Math.min(merchantPage,pages);rows.forEach((r,i)=>r.style.display=i>=(merchantPage-1)*merchantSize&&i<merchantPage*merchantSize?'':'none');$('#adminMerchantCount')&&($('#adminMerchantCount').textContent=`${rows.length} conta${rows.length===1?'':'s'}`);$('#adminMerchantPageInfo')&&($('#adminMerchantPageInfo').textContent=`Página ${merchantPage} de ${pages}`);$('#adminMerchantPrev')?.toggleAttribute('disabled',merchantPage<=1);$('#adminMerchantNext')?.toggleAttribute('disabled',merchantPage>=pages)}
 function updatePageTitle(){const b=$('.panel-nav [data-view].on'),h=$('#pageTitle');if(b&&h)h.textContent=labels[b.dataset.view]||b.querySelector('.admin-nav-label')?.textContent||h.textContent}
-function enhance(){setupBrand();setupNav();setupHeader();decorateStores();decorateMerchants();translateStatuses();updatePageTitle();window.GuruAdminUIActions?.refresh?.()}
+function enhance(){setupBrand();setupNav();setupHeader();decorateStores();decorateMerchants();translateStatuses();updatePageTitle();window.GuruAdminUIActions?.refresh?.();window.GuruAdminMenu?.normalize?.()}
 function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;enhance()},120)}
 new MutationObserver(m=>{if(m.some(x=>x.addedNodes.length||x.removedNodes.length))schedule()}).observe(document.body,{childList:true,subtree:true});document.addEventListener('click',e=>{if(e.target.closest('.panel-nav [data-view]')){document.body.classList.remove('admin-mobile-nav-open');setTimeout(updatePageTitle,0)}});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(enhance,350));else setTimeout(enhance,350);window.GuruAdminUIV3={refresh:enhance};
 })();
@@ -60,7 +60,7 @@ const order=['overview','stores','pendingStores','merchants','coverage','ai','so
 function ensureLayoutFix(){/* CSS incluído em admin-ui.css */}
 // Controlador único de navegação: não recria botões existentes nem altera handlers.
 const escMenu=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let menuObserver=null;
+// Apenas o observador do painel monitora alterações; menu normalizado de maneira idempotente.
 function normalizeMenu(){
  const nav=document.querySelector('.panel-nav');
  if(!nav)return;
@@ -87,16 +87,7 @@ function normalizeMenu(){
  if(desired.length===all.length&&!desired.every((b,i)=>all[i]===b))nav.replaceChildren(...desired);
 }
 function boot(){ensureLayoutFix()}
-function activateMenu(){
- normalizeMenu();
- const nav=document.querySelector('.panel-nav');
- if(nav&&!menuObserver){
-  // Acompanha somente novos botões tardios; mudanças internas não acionam reordenação.
-  // normalizeMenu é idempotente: a segunda notificação não modifica o DOM.
-  menuObserver=new MutationObserver(()=>normalizeMenu());
-  menuObserver.observe(nav,{childList:true});
- }
-}
+function activateMenu(){normalizeMenu()}
 window.addEventListener('guru-admin-modules-ready',activateMenu,{once:true});
 window.GuruAdminMenu={normalize:normalizeMenu,order:[...order]};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

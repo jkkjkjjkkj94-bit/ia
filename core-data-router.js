@@ -1,3 +1,7 @@
+if(/\/admin\.html(?:$|[?#])/i.test(window.location.pathname+window.location.search)){
+  import('./admin-login-fix.js?v=3').catch(err=>console.error('[Admin Login Bootstrap]',err));
+}
+
 const CORE_URL='https://ccsypggvelcxsqszepfs.supabase.co';
 const CORE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
 const AI_HOST='innziuzgtpfsiywqmies.supabase.co';

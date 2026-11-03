@@ -1,4 +1,4 @@
-import{taxonomy,categoryAliases,functionalWords}from'./ai-taxonomy.js?v=5';
+import{taxonomy,categoryAliases,functionalWords}from'./ai-taxonomy.js?v=6';
 
 const form=document.getElementById('chatForm');
 const input=document.getElementById('q');

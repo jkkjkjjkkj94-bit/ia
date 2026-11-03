@@ -4,6 +4,25 @@ const sidebar=document.querySelector('.app-sidebar');
 const msgs=document.getElementById('msgs');
 const q=document.getElementById('q');
 const form=document.getElementById('chatForm');
+const heroTitle=document.querySelector('.hero h1');
+const heroPhrases=[
+  'O que você procura?',
+  'O que você quer encontrar?',
+  'Procurando alguma coisa?',
+  'Onde você quer ir?',
+  'O que podemos encontrar para você?',
+  'Que tipo de lugar você procura?',
+  'O que você está procurando hoje?',
+  'Vamos encontrar o lugar certo?'
+];
+if(heroTitle){
+  let last='';
+  try{last=sessionStorage.getItem('guru_last_hero_phrase')||''}catch{}
+  const choices=heroPhrases.filter(x=>x!==last);
+  const phrase=choices[Math.floor(Math.random()*choices.length)]||heroPhrases[0];
+  heroTitle.textContent=phrase;
+  try{sessionStorage.setItem('guru_last_hero_phrase',phrase)}catch{}
+}
 const shellActions={new:()=>document.getElementById('resetBtn')?.click(),location:()=>document.getElementById('locBtn')?.click()};
 sidebar?.addEventListener('click',e=>{const btn=e.target.closest('[data-shell-action]');if(btn)shellActions[btn.dataset.shellAction]?.()});
 sidebar?.querySelector('.sidebar-collapse')?.addEventListener('click',()=>body.classList.toggle('sidebar-collapsed'));

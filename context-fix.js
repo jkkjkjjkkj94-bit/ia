@@ -31,7 +31,7 @@ sanitizeCategorySynonyms();
 setTimeout(sanitizeCategorySynonyms,250);
 
 await safeImport('./category-context-fix.js?v=3');
-await safeImport('./semantic-query-guard.js?v=7');
+await safeImport('./semantic-query-guard.js?v=8');
 await safeImport('./ai-conversation-enhancements.js?v=2');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');

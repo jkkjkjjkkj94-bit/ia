@@ -62,7 +62,7 @@ await safeImport('./regular-results-ui.js?v=3');
 await safeImport('./card-standardizer.js?v=3');
 await safeImport('./verified-store-badge.js?v=1');
 await safeImport('./zero-result-responses.js?v=2');
-await safeImport('./entity-wording.js?v=1');
+await safeImport('./entity-wording.js?v=2');
 await safeImport('./typing-indicator.js?v=3');
 
 function ensureNoCoverStyles(){

@@ -26,6 +26,54 @@ function showTypingIndicator(){
  msgs.scrollTop=msgs.scrollHeight;
  return message;
 }
+// Escreve somente o texto da resposta, sem recriar cards nem elementos interativos.
+async function animateAssistantText(node,original){
+ const letters=Array.from(original);
+ if(!letters.length){node.nodeValue=original;return}
+ const duration=Math.min(1100,Math.max(260,letters.length*24));
+ const started=performance.now();
+ await new Promise(resolve=>{
+  const tick=()=>{
+   const progress=Math.min(1,(performance.now()-started)/duration);
+   const count=Math.min(letters.length,Math.max(1,Math.floor(progress*letters.length)));
+   node.nodeValue=letters.slice(0,count).join('');
+   msgs.scrollTop=msgs.scrollHeight;
+   if(progress>=1||document.hidden){node.nodeValue=original;resolve();return}
+   setTimeout(tick,28);
+  };
+  tick();
+ });
+}
+async function showAssistantReply(fragment){
+ if(!fragment)return;
+ const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+ for(const message of [...fragment.childNodes]){
+  if(message.nodeType!==Node.ELEMENT_NODE){msgs.appendChild(message);continue}
+  const intro=message.querySelector('.hashtag-intro');
+  const textNode=intro?.firstChild||[...message.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.nodeValue?.length);
+  const target=intro||message;
+  const grid=message.querySelector('.store-results-grid');
+  const actions=message.querySelector('.chat-actions');
+  if(reduced||!textNode||textNode.nodeType!==Node.TEXT_NODE||!textNode.nodeValue?.trim()){
+   msgs.appendChild(message);
+   continue;
+  }
+  const original=textNode.nodeValue;
+  textNode.nodeValue='';
+  if(grid)grid.style.display='none';
+  if(actions)actions.style.display='none';
+  msgs.appendChild(message);
+  target.classList.add('guru-typewriter-caret');
+  try{await animateAssistantText(textNode,original)}
+  finally{
+   textNode.nodeValue=original;
+   target.classList.remove('guru-typewriter-caret');
+   if(grid)grid.style.display='';
+   if(actions)actions.style.display='';
+   msgs.scrollTop=msgs.scrollHeight;
+  }
+ }
+}
 const notice=t=>{if(toast){toast.textContent=t;toast.classList.add('on');setTimeout(()=>toast.classList.remove('on'),3200)}};
 const msgError=err=>{console.error('[GURU v4]',err);add('Não consegui consultar os dados agora. Confira a conexão e tente novamente.')};
 function renderContext(){
@@ -278,9 +326,11 @@ async function submitText(raw){
   const completed=replyBuffer;
   replyBuffer=null;
   typing.remove();
-  if(completed)msgs.appendChild(completed);
-  input.disabled=false;input.focus();searchBusy=false;
-  msgs.scrollTop=msgs.scrollHeight;
+  try{await showAssistantReply(completed)}
+  finally{
+   input.disabled=false;input.focus();searchBusy=false;
+   msgs.scrollTop=msgs.scrollHeight;
+  }
  }
 }
 function resetConversation(){

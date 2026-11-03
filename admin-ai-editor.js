@@ -85,3 +85,4 @@ import('./admin-merchant-details.js?v=1').catch(err=>console.error('[Merchant De
 import('./admin-taxonomy-db.js?v=1').catch(err=>console.error('[Taxonomy DB Loader]',err));
 import('./admin-ui-v3.js?v=1').catch(err=>console.error('[Admin UI V3 Loader]',err));
 import('./admin-ui-actions-v1.js?v=1').catch(err=>console.error('[Admin UI Actions Loader]',err));
+import('./admin-menu-fix.js?v=1').catch(err=>console.error('[Admin Menu Fix Loader]',err));

@@ -1,0 +1,31 @@
+name: JavaScript Syntax Check
+
+on:
+  push:
+    paths:
+      - '**/*.js'
+      - '.github/workflows/js-syntax-check.yml'
+  workflow_dispatch:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate every JavaScript file
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          failed=0
+          while IFS= read -r -d '' file; do
+            count=$((count + 1))
+            echo "Checking $file"
+            if ! node --input-type=module --check < "$file"; then
+              echo "::error file=$file::JavaScript syntax error"
+              failed=1
+            fi
+          done < <(find . -type f -name '*.js' -print0)
+          echo "Checked $count JavaScript files."
+          exit "$failed"

@@ -155,16 +155,16 @@ export function emptyState(){return{category:null,group:null,query:null,semantic
 export function nextState(current,plan){
  if(plan.kind!=='search')return current;
  const prev=current||emptyState(),changed=plan.taxon?.category&&plan.taxon.category!==prev.category;
- const next={...prev,filters:{...(changed?{}:prev.filters),...plan.filters},category:plan.taxon?.category||prev.category,group:changed?null:prev.group,selectedStore:null,selectedProduct:null};
+ const next={...prev,filters:{...((changed||plan.broad)?{}:prev.filters),...plan.filters},category:plan.taxon?.category||prev.category,group:changed?null:prev.group,selectedStore:null,selectedProduct:null};
  if(plan.taxon?.group)next.group=plan.taxon.group;
  else if(plan.taxon?.category)next.group=null;
  if(plan.productTerm)next.productTerm=plan.productTerm;
  else if(changed||plan.taxon?.group)next.productTerm=null;
  if(plan.taxon?.category||plan.productTerm||plan.broad){next.semanticTerms=plan.semanticTerms;next.featureTerms=plan.featureTerms}
  if(plan.broad&&!plan.taxon){next.category=null;next.group=null;next.productTerm=null;next.semanticTerms=[];next.featureTerms=[]}
- next.excludedGroups=[...new Set([...(changed?[]:prev.excludedGroups),...plan.excludedGroups])];
- next.excludedCategories=[...new Set([...(changed?[]:prev.excludedCategories),...plan.excludedCategories])];
- next.excludedTerms=[...new Set([...(changed?[]:prev.excludedTerms),...plan.excludedTerms])];
+ next.excludedGroups=[...new Set([...((changed||plan.broad)?[]:prev.excludedGroups),...plan.excludedGroups])];
+ next.excludedCategories=[...new Set([...((changed||plan.broad)?[]:prev.excludedCategories),...plan.excludedCategories])];
+ next.excludedTerms=[...new Set([...((changed||plan.broad)?[]:prev.excludedTerms),...plan.excludedTerms])];
  next.query=plan.raw;
  return next;
 }

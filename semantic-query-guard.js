@@ -4,14 +4,19 @@ const msgs=document.getElementById('msgs');
 const ctx=document.getElementById('ctx');
 
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+const normalizeCommerce=text=>String(text||'')
+  .replace(/\bcomércios\b/gi,'lojas')
+  .replace(/\bcomercios\b/gi,'lojas')
+  .replace(/\bcomércio\b/gi,'loja')
+  .replace(/\bcomercio\b/gi,'loja');
 
 const semanticRules=[
-  {re:/\b(loja|lugar|local|restaurante|estabelecimento)?\s*(de )?comida japonesa\b|\bcomida japonesa\b|\b(japonesa|japones|oriental)\b/,canonical:'japonesa'},
-  {re:/\b(algo|coisa) doce\b|\bcomer (um |uma )?doce\b|\bvontade de doce\b|\bquero comer.*doce\b|\bloja de doce(s)?\b/,canonical:'doceria'},
-  {re:/\bcomer pizza\b|\bvontade de pizza\b|\bquero.*pizza\b|\bloja de pizza(s)?\b/,canonical:'pizzaria'},
-  {re:/\b(comer|quero) (um )?(hamburguer|burger|lanche)\b|\bvontade de (hamburguer|lanche)\b|\bloja de hamburguer(es)?\b/,canonical:'hamburgueria'},
-  {re:/\b(tomar|quero) (um )?sorvete\b|\balgo gelado\b|\bloja de sorvete(s)?\b/,canonical:'sorveteria'},
-  {re:/\b(tomar|quero) (um )?acai\b|\bvontade de acai\b|\bloja de acai\b/,canonical:'acai'},
+  {re:/\b(loja|lojas|comercio|comercios|lugar|local|restaurante|estabelecimento)?\s*(de )?comida japonesa\b|\bcomida japonesa\b|\b(japonesa|japones|oriental)\b/,canonical:'japonesa'},
+  {re:/\b(algo|coisa) doce\b|\bcomer (um |uma )?doce\b|\bvontade de doce\b|\bquero comer.*doce\b|\b(loja|comercio) de doce(s)?\b/,canonical:'doceria'},
+  {re:/\bcomer pizza\b|\bvontade de pizza\b|\bquero.*pizza\b|\b(loja|comercio) de pizza(s)?\b/,canonical:'pizzaria'},
+  {re:/\b(comer|quero) (um )?(hamburguer|burger|lanche)\b|\bvontade de (hamburguer|lanche)\b|\b(loja|comercio) de hamburguer(es)?\b/,canonical:'hamburgueria'},
+  {re:/\b(tomar|quero) (um )?sorvete\b|\balgo gelado\b|\b(loja|comercio) de sorvete(s)?\b/,canonical:'sorveteria'},
+  {re:/\b(tomar|quero) (um )?acai\b|\bvontade de acai\b|\b(loja|comercio) de acai\b/,canonical:'acai'},
   {re:/\bcomida caseira\b|\bprato feito\b|\bcomida pronta\b/,canonical:'marmita'}
 ];
 
@@ -23,7 +28,7 @@ const genericCategoryRules=[
 
 const falseProducts=new Set([
   'comer','comendo','comida','tomar','bebendo','procurar','procurando','achar','encontrar','comprar','querer','quero','queria',
-  'loja','lojas','lugar','lugares','local','locais','estabelecimento','estabelecimentos','aberto','aberta','abertos','abertas',
+  'loja','lojas','comercio','comercios','lugar','lugares','local','locais','estabelecimento','estabelecimentos','aberto','aberta','abertos','abertas',
   'venda','vende','vendem','vender','produto','produtos','opcao','opcoes','opção','opções'
 ]);
 
@@ -111,9 +116,10 @@ async function runCanonical(original,canonical,{category=null,clearGroup=false,g
   userMsg(original);
   input.value='';
 
-  // Para categoria generica, nao reenvia "Comida" ao analisador antigo.
-  // O estado ja contem Categoria=Comida e Grupo=null, entao "lojas" apenas executa a busca.
-  const queryForEngine=genericCategory?'lojas':`${canonical} ${original}`;
+  const normalizedOriginal=normalizeCommerce(original);
+  // Para categoria generica, nao reenvia a categoria ao analisador antigo.
+  // Para buscas especificas, comercio/comércios vira loja/lojas antes da analise.
+  const queryForEngine=genericCategory?'lojas':`${canonical} ${normalizedOriginal}`;
   await engine.handle(queryForEngine);
 
   if(genericCategory){
@@ -149,10 +155,22 @@ form?.addEventListener('submit',async e=>{
     return;
   }
 
+  // Mesmo fora das regras semanticas, normaliza comercio para loja antes do motor.
+  if(/\bcomercios?\b/.test(n)){
+    e.preventDefault();e.stopImmediatePropagation();
+    userMsg(original);
+    input.value='';
+    cleanFalseProduct(engine.state,true);
+    await engine.handle(normalizeCommerce(original));
+    cleanFalseProduct(engine.state);
+    hideProductFromContext();
+    return;
+  }
+
   cleanFalseProduct(engine.state);
 },true);
 
 if(ctx)new MutationObserver(()=>hideProductFromContext()).observe(ctx,{childList:true,characterData:true,subtree:true});
 if(msgs)new MutationObserver(()=>{cleanFalseProduct(window.LocalAIEngine?.state);hideProductFromContext()}).observe(msgs,{childList:true,subtree:true});
 
-window.LocalAISemanticGuard={normalize:norm,rules:semanticRules,cleanFalseProduct,hideProductFromContext};
+window.LocalAISemanticGuard={normalize:norm,normalizeCommerce,rules:semanticRules,cleanFalseProduct,hideProductFromContext};

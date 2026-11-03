@@ -1,51 +1,29 @@
-# Arquitetura ativa do GURU
+# GURU — Arquitetura após a limpeza
 
-Este documento define os **pontos de entrada oficiais**. Evite carregar dois módulos que respondam ao mesmo evento (por exemplo, `submit` do chat ou montagem da sidebar).
+O repositório foi consolidado em 3 áreas, sem alterar os dados do Supabase.
 
-## GURU — interface pública
-
-- `index.html`: carrega `guru-engine-v4.css` e **um único motor**: `guru-engine-v4.js`.
-- `guru-engine-v4.js`: formulário, mensagens, contexto de sessão, acesso a CORE/HIBRID e apresentação dos resultados.
-- `guru-engine-v4-core.mjs`: interpretação de linguagem, taxonomia, filtros obrigatórios e ranking.
-- `ai-taxonomy.js`: taxonomia-base usada como fallback.
-
-**Não adicionar ao index.html:** `context-fix.js`, `ai-engine.js`, `chat-runtime-fix.js`, `smart-ranking-v2.js`, `semantic-query-guard.js` ou `guru-session-v3.js`. Essas são implementações antigas, atualmente não utilizadas pelo fluxo V4.
-
-`app.js` e `intelligence-v2.js` são redirecionamentos legados para V4.
+## Chat público
+- `index.html` → `guru-engine-v4.js` → `guru-engine-v4-core.mjs`.
+- `ai-taxonomy.js` contém a taxonomia-base; `guru-engine-v4.css`, `style.css` e `shell-layout.css` cuidam do visual.
+- Nenhum motor de IA anterior é carregado em paralelo.
 
 ## Administrador
-
-- `admin.html` carrega `core-data-router.js`, `admin.js` e `admin-post-login-loader.js`.
-- `admin.js` mantém o login, a validação administrativa e a lógica-base.
-- **Somente após verificar `role = admin`**, o loader carrega `admin-runtime-v2.js`.
-- O runtime carrega módulos especializados de negócios e **um único controlador de interface**: `admin-ui.js`.
-- `admin-ui.js`: sidebar, ordem do menu, tabelas, paginação, ações e eventos visuais. Usa `admin-ui.css`.
-- Operações separadas continuam em `admin-pending-core.js`, `admin-taxonomy-db.js`, `admin-synonym-suggestions.js`, `admin-delete-controls.js`, `admin-merchant-details.js` etc.
-
-**Não reativar:** `admin-ui-v3.js`, `admin-ui-actions-v1.js`, `admin-menu-fix.js`, `admin-ui-v2.css` ou `admin-menu-layout-fix.css` dentro do runtime novo. Seu código visual foi consolidado em `admin-ui.js` e `admin-ui.css`. `admin-ui-v2.js` permanece apenas como atalho de compatibilidade.
+- `admin.html` → `core-data-router.js`, `admin.js`, `admin-post-login-loader.js`.
+- Após autenticar o perfil `admin`, o loader chama `admin-runtime-v2.js`.
+- O único módulo visual ativo é `admin-ui.js`, com estilos em `admin-ui.css`.
+- Módulos de funções separados: `admin-ai-editor.js`, `admin-store-group.js`, `admin-pending-core.js`, `admin-synonym-suggestions.js`, `guru-quality-admin.js`, `admin-delete-controls.js`, `admin-merchant-enhancements.js`, `admin-merchant-details.js`, `admin-taxonomy-db.js`.
 
 ## Lojista
+- `lojista.html` → `core-data-router.js`, `lojista.js`, `lojista-store-group.js`, `address-validation.js`, `lojista-activity.js`.
+- `lojista-activity.js` administra presença e avaliações.
+- `guru-store-groups.js` é compartilhado com o Admin.
 
-- `lojista.html` carrega `core-data-router.js`, `lojista.js`, `lojista-store-group.js`, `address-validation.js` e `lojista-activity.js`.
-- `lojista-activity.js`: presença e resumo de avaliações com um cliente Supabase interno.
-- `guru-store-groups.js`: lista derivada da taxonomia-base, compartilhada entre `admin-store-group.js` e `lojista-store-group.js`.
-- `address-validation.js` continua isolado porque a validação de endereço é uma responsabilidade específica.
+## Arquivos antigos excluídos
+Foram removidos controladores antigos da IA pública, menus legados, versões anteriores da UI, folhas de estilo duplicadas e testes substituídos pelo GURU V4. As versões anteriores podem ser recuperadas no **histórico de commits do GitHub**, sem continuar disponíveis como scripts executáveis no site.
 
-**Não carregar:** `lojista-presence.js` e `lojista-review-summary.js` junto de `lojista-activity.js`.
+O módulo `admin-sync.js` foi retirado porque invocava uma função para atualizar `ai-engine.js` antigo; o GURU V4 usa a taxonomia e os dados atuais em runtime. A configuração da IA continua salva pelo painel administrativo em seu fluxo normal.
 
-## Arquivos históricos preservados
+## Testes
+`.github/workflows/js-syntax-check.yml` verifica a sintaxe JavaScript, as regras do motor V4, a integridade das dependências e testes de navegador do chat e do Admin.
 
-Arquivos antigos continuam no repositório para evitar a quebra de referências antigas e permitir comparações de código. Eles **não são os pontos de entrada oficiais** e não devem voltar a ser adicionados aos HTML atuais.
-
-Não excluir nem migrar registros dos dois projetos Supabase durante uma refatoração de frontend.
-
-## Testes automáticos
-
-O workflow `.github/workflows/js-syntax-check.yml` verifica:
-- Sintaxe de `.js` e `.mjs`.
-- Testes de linguagem e regras de busca.
-- Testes de integridade dos pontos de entrada e de módulos compartilhados.
-- Teste de navegador do GURU V4.
-- Teste de navegador do Admin (ordem do menu, estado das lojas e montagem estável).
-
-Mudanças em `index.html`, `admin.html`, `lojista.html` e módulos devem preservar esses testes.
+**Atenção:** o teste em navegador utiliza dados controlados. Ele não substitui testes manuais autenticados com todas as permissões, lojas e produtos reais.

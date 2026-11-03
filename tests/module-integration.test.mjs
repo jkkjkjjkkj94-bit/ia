@@ -1,72 +1,94 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,existsSync} from 'node:fs';
+import {dirname,resolve,extname} from 'node:path';
+import {fileURLToPath} from 'node:url';
 
-const source=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
-test('página pública carrega somente um motor de busca',()=>{
+const root=fileURLToPath(new URL('../',import.meta.url));
+const source=path=>readFileSync(resolve(root,path),'utf8');
+const deleted=[
+ 'admin-login-fix.js','admin-menu-fix.js','admin-menu-layout-fix.css',
+ 'admin-pending-v2.js','admin-pending.js','admin-sync.js','admin-ui-actions-v1.js',
+ 'admin-ui-v2.css','admin-ui-v2.js','admin-ui-v3.js','ai-config-runtime.js',
+ 'ai-conversation-enhancements.js','ai-engine.js','app.js','card-rating.js',
+ 'card-standardizer.js','category-context-fix.js','chat-runtime-fix.js',
+ 'context-fix.js','context-reset.js','entity-wording.js','establishment-semantics.js',
+ 'guru-intelligence-v2.js','guru-language-tests.js','guru-regression-fix.js',
+ 'guru-session-v3.js','hashtag-manager.js','hashtag-search.js','intelligence-v2.js',
+ 'lojista-presence.js','lojista-review-summary.js','negative-query-priority.js',
+ 'real-location.js','regular-results-ui.js','response-variations.js',
+ 'semantic-db-resolver.js','semantic-query-guard.js','smart-ranking-v2.js',
+ 'taxonomy-db-runtime.js','tests/semantic-regression.mjs','typing-indicator.js',
+ 'verified-store-badge.js','zero-result-responses.js'
+];
+
+test('a IA pública executa apenas o GURU V4',()=>{
  const html=source('index.html');
  assert.match(html,/guru-engine-v4\.js\?v=3/);
- for(const old of ['context-fix.js','ai-engine.js','chat-runtime-fix.js','smart-ranking-v2.js','semantic-db-resolver.js'])assert.doesNotMatch(html,new RegExp(old.replaceAll('.','\\.')));
+ assert.doesNotMatch(html,/context-fix\.js|ai-engine\.js|chat-runtime-fix\.js/);
+ assert.match(source('guru-engine-v4.js'),/guru-engine-v4-core\.mjs/);
 });
-test('runtime Admin importa um único controlador de UI',()=>{
- const runtime=source('admin-runtime-v2.js');
+
+test('Admin tem interface única e autenticação isolada',()=>{
+ const html=source('admin.html'),runtime=source('admin-runtime-v2.js');
+ assert.match(html,/admin-post-login-loader\.js\?v=4/);
+ assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
  assert.match(runtime,/admin-ui\.js\?v=2/);
- for(const old of ['admin-ui-v3.js','admin-menu-fix.js','admin-ui-actions-v1.js'])assert.doesNotMatch(runtime,new RegExp(old.replaceAll('.','\\.')));
+ assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
  const code=source('admin-ui.js');
  assert.match(code,/window\.GuruAdminUI=/);
  assert.equal((code.match(/new MutationObserver/g)||[]).length,1);
- assert.doesNotMatch(code,/admin-ui-v2\.css|admin-menu-layout-fix\.css/);
-});
-test('Admin isolado do login e com carregamento pós autenticação',()=>{
- const html=source('admin.html');
- assert.match(html,/admin-post-login-loader\.js\?v=4/);
- const loader=source('admin-post-login-loader.js');
- assert.match(loader,/profile\?\.role!=='admin'/);
- assert.match(loader,/admin-runtime-v2\.js\?v=6/);
- assert.match(loader,/guru-admin-modules-ready/);
-});
-test('Lojista usa um cliente Supabase para presença e avaliações',()=>{
- const html=source('lojista.html');
- assert.match(html,/lojista-activity\.js\?v=1/);
- assert.doesNotMatch(html,/lojista-presence\.js/);
- const activity=source('lojista-activity.js');
- assert.equal((activity.match(/createClient\(/g)||[]).length,1);
- assert.doesNotMatch(activity,/import\(['"]\.\/lojista-review-summary/);
- assert.match(activity,/refreshReviews:refresh/);
- assert.match(activity,/updatePresence:touch/);
-});
-test('Admin e lojista compartilham a mesma taxonomia de grupos',()=>{
- const shared=source('guru-store-groups.js');
- assert.match(shared,/export const groupsByCategory/);
- for(const path of ['admin-store-group.js','lojista-store-group.js']){
-  const s=source(path);
-  assert.match(s,/from'\.\/guru-store-groups\.js\?v=1'/);
-  assert.doesNotMatch(s,/const groupsByCategory=/);
- }
-});
-test('atalhos legados apontam para a versão atual, sem religar a IA antiga',()=>{
- for(const path of ['app.js','intelligence-v2.js']){
-  const s=source(path);
-  assert.match(s,/guru-engine-v4\.js\?v=3/);
-  assert.doesNotMatch(s,/import\(['"]\.\/context-fix\.js/);
- }
- assert.match(source('admin-ui-v2.js'),/admin-ui\.js\?v=2/);
+ assert.match(code,/admin-ui\.css/);
 });
 
-test('versões antigas do menu não criam observadores ou menus paralelos',()=>{
- for(const path of ['admin-ui-v2.js','admin-ui-v3.js','admin-ui-actions-v1.js','admin-menu-fix.js']){
-  const code=source(path);
-  assert.match(code,/admin-ui\.js\?v=2/);
-  assert.doesNotMatch(code,/new MutationObserver|replaceChildren\(|\.panel-nav/);
- }
- for(const path of ['admin-ui-v2.css','admin-menu-layout-fix.css']){
-  assert.match(source(path),/@import url\('\.\/admin-ui\.css\?v=1'\)/);
+test('Lojista usa módulo único de atividade e classificação compartilhada',()=>{
+ const html=source('lojista.html'),activity=source('lojista-activity.js');
+ assert.match(html,/lojista-activity\.js\?v=1/);
+ assert.equal((activity.match(/createClient\(/g)||[]).length,1);
+ assert.match(activity,/refreshReviews:refresh/);
+ assert.match(activity,/updatePresence:touch/);
+ assert.match(source('guru-store-groups.js'),/export const groupsByCategory/);
+ for(const path of ['admin-store-group.js','lojista-store-group.js']){
+  assert.match(source(path),/guru-store-groups\.js\?v=1/);
  }
 });
-test('presença e avaliações legadas não duplicam clientes',()=>{
- for(const path of ['lojista-presence.js','lojista-review-summary.js']){
-  const code=source(path);
-  assert.match(code,/lojista-activity\.js\?v=1/);
-  assert.doesNotMatch(code,/createClient\(|setInterval\(/);
+
+test('arquivos desnecessários e implementações legadas foram eliminados',()=>{
+ for(const file of deleted)assert.equal(existsSync(resolve(root,file)),false,file+' ainda existe');
+});
+
+test('páginas e módulos ativos não carregam arquivos inexistentes',()=>{
+ const queue=['index.html','admin.html','lojista.html','bancos.html','tests/guru-v4-smoke.html','tests/admin-ui-smoke.html'];
+ const seen=new Set();
+ while(queue.length){
+  const file=queue.shift();
+  if(seen.has(file))continue;
+  seen.add(file);
+  const content=source(file);
+  const deps=new Set();
+  // imports estáticos/dinâmicos, href/src HTML e folhas de estilo locais.
+  const patterns=[
+   /\bfrom\s*['"]([^'"]+)['"]/g,
+   /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+   /\bimport\s*['"]([^'"]+)['"]/g,
+   /\bload\s*\(\s*['"]([^'"]+)['"]/g,
+   /\b(?:src|href)\s*=\s*['"]([^'"]+)['"]/g,
+   /\b(?:url|@import)\s*\(\s*['"]?([^'")]+)['"]?\s*\)/g
+  ];
+  for(const pattern of patterns){
+   for(const match of content.matchAll(pattern)){
+    const ref=match[1].split('?')[0].split('#')[0];
+    if(!ref||/^(?:https?:|data:|\/\/|#)/.test(ref))continue;
+    const dep=resolve(root,dirname(file),ref);
+    if(!dep.startsWith(root))continue;
+    if(!['.js','.mjs','.css','.html'].includes(extname(dep)))continue;
+    assert.equal(existsSync(dep),true,file+' -> '+ref+' não encontrado');
+    deps.add(dep.slice(root.length).replace(/^\//,''));
+   }
+  }
+  for(const dep of deps)queue.push(dep);
  }
+ assert.ok(seen.has('guru-engine-v4-core.mjs'));
+ assert.ok(seen.has('admin-ui.js'));
+ assert.ok(seen.has('lojista-activity.js'));
 });

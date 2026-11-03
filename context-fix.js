@@ -50,10 +50,11 @@ sanitizeCategorySynonyms();
 setTimeout(sanitizeCategorySynonyms,250);
 
 await safeImport('./category-context-fix.js?v=3');
+await safeImport('./establishment-semantics.js?v=1');
 await safeImport('./guru-regression-fix.js?v=1');
 await safeImport('./semantic-query-guard.js?v=9');
-await safeImport('./guru-session-v3.js?v=2');
-await safeImport('./guru-language-tests.js?v=1');
+await safeImport('./guru-session-v3.js?v=3');
+await safeImport('./guru-language-tests.js?v=2');
 await safeImport('./ai-conversation-enhancements.js?v=2');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');
@@ -61,6 +62,7 @@ await safeImport('./regular-results-ui.js?v=3');
 await safeImport('./card-standardizer.js?v=3');
 await safeImport('./verified-store-badge.js?v=1');
 await safeImport('./zero-result-responses.js?v=2');
+await safeImport('./entity-wording.js?v=1');
 await safeImport('./typing-indicator.js?v=3');
 
 function ensureNoCoverStyles(){

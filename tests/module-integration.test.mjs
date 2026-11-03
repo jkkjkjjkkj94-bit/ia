@@ -31,7 +31,7 @@ test('a IA pública executa apenas o GURU V4',()=>{
 
 test('Admin tem interface única e autenticação isolada',()=>{
  const html=source('admin.html'),runtime=source('admin-runtime-v2.js');
- assert.match(html,/admin-post-login-loader\.js\?v=4/);
+ assert.match(html,/admin-post-login-loader\.js\?v=5/);
  assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
  assert.match(runtime,/admin-ui\.js\?v=2/);
  assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
@@ -58,7 +58,7 @@ test('arquivos desnecessários e implementações legadas foram eliminados',()=>
 });
 
 test('páginas e módulos ativos não carregam arquivos inexistentes',()=>{
- const queue=['index.html','admin.html','lojista.html','bancos.html','tests/guru-v4-smoke.html','tests/admin-ui-smoke.html'];
+ const queue=['index.html','admin.html','lojista.html','bancos.html','tests/guru-v4-smoke.html','tests/admin-ui-smoke.html','tests/admin-classification-smoke.html'];
  const seen=new Set();
  while(queue.length){
   const file=queue.shift();
@@ -91,4 +91,16 @@ test('páginas e módulos ativos não carregam arquivos inexistentes',()=>{
  assert.ok(seen.has('guru-engine-v4-core.mjs'));
  assert.ok(seen.has('admin-ui.js'));
  assert.ok(seen.has('lojista-activity.js'));
+});
+
+test('a classificação administrativa salva apenas pela função segura do CORE',()=>{
+ const admin=source('admin-store-group.js');
+ assert.match(admin,/requestClassification\('POST',storeId/);
+ assert.match(admin,/\/functions\/v1\/admin-pending-stores/);
+ assert.match(admin,/Authorization:'Bearer '\+session\.access_token/);
+ assert.doesNotMatch(admin,/from\('local_ai_stores'\)\.update\(/);
+ assert.match(admin,/Salvando\.\.\./);
+ assert.match(admin,/Erro ao salvar/);
+ assert.match(source('admin-runtime-v2.js'),/admin-store-group\.js\?v=4/);
+ assert.match(source('admin-post-login-loader.js'),/admin-runtime-v2\.js\?v=7/);
 });

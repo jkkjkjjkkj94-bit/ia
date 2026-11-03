@@ -80,3 +80,4 @@ import('./admin-pending-core.js?v=1').catch(err=>console.error('[Pending Stores 
 import('./admin-synonym-suggestions.js?v=1').catch(err=>console.error('[Synonym Suggestions Loader]',err));
 import('./guru-quality-admin.js?v=2').catch(err=>console.error('[GURU Quality Loader]',err));
 import('./admin-delete-controls.js?v=1').catch(err=>console.error('[Admin Delete Loader]',err));
+import('./admin-merchant-enhancements.js?v=1').catch(err=>console.error('[Merchant Enhancements Loader]',err));

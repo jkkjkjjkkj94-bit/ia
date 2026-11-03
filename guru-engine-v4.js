@@ -214,19 +214,103 @@ async function locate(show=true){
  },{enableHighAccuracy:false,timeout:8500,maximumAge:60000}));
 }
 function productMatchesTerm(p,t){return norm([p.name,p.description,p.category,p.brand].join(' ')).includes(norm(t))}
+// Ícones vetoriais usados no cartão de estabelecimento selecionado.
+function storeDetailIcon(kind){
+ const paths={
+  pin:['M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0','M12 10h.01'],
+  truck:['M3 6h11v11H3z','M14 10h4l3 4v3h-7','M7.5 17h.01','M17.5 17h.01'],
+  star:['m12 2 3 6.3 7 .9-5 4.9 1.3 7-6.3-3.5-6.3 3.5 1.3-7-5-4.9 7-.9z'],
+  clock:['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20','M12 6v6l4 2'],
+  bag:['M4 8h16l-1 13H5L4 8z','M9 9V6a3 3 0 0 1 6 0v3'],
+  card:['M3 5h18v14H3z','M3 10h18'],
+  phone:['M5 3h4l1.5 4-2.2 1.8a15 15 0 0 0 6.9 6.9L17 13.5l4 1.5v4c0 1.1-.9 2-2 2A16 16 0 0 1 3 5c0-1.1.9-2 2-2'],
+  shop:['M3 10h18l-1.5-6h-15L3 10z','M5 10v10h14V10','M9 20v-6h6v6']
+ };
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+ svg.setAttribute('viewBox','0 0 24 24');
+ svg.setAttribute('width','16');svg.setAttribute('height','16');
+ svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');
+ svg.setAttribute('stroke-width','1.7');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');
+ svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');
+ (paths[kind]||paths.shop).forEach(d=>{
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',d);svg.appendChild(path);
+ });
+ return svg;
+}
 function chooseStore(row){
- state.selectedStore=row.store;state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;renderContext();save();
- const s=row.store,parts=[s.name];
- if(s.category)parts.push(s.category+(s.group?' · '+s.group:''));
- if(s.address)parts.push('Endereço: '+s.address);
- if(s.delivery)parts.push('Entrega: '+(s.delivery_fee==null?'taxa não informada':money(s.delivery_fee)));
- if(row.reviewCount>0)parts.push('Avaliação: '+row.rating.toFixed(1)+'/5 ('+row.reviewCount+' avaliações)');
- const box=add(parts.join('\n\n'));
- const actions=el('div','chat-actions');
- for(const [label,q] of [['Horário','Qual o horário?'],['Entrega','Ela entrega?'],['Produtos','Quais produtos tem?'],['Pagamento','Aceita Pix?'],['Contato','Qual o WhatsApp?']]){
-  const b=el('button','',label);b.type='button';b.onclick=()=>submitText(q);actions.appendChild(b);
+ state.selectedStore=row.store;
+ state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;
+ renderContext();save();
+ const s=row.store;
+ const box=add('',false);
+ box.classList.add('selected-store-card');
+ const shell=el('div','selected-store-shell');
+ const header=el('div','selected-store-header');
+ const media=el('div','selected-store-media');
+ const fallback=el('div','selected-store-logo-fallback');
+ fallback.appendChild(storeDetailIcon('shop'));
+ if(/^https:\/\//.test(String(s.logo_url||''))){
+  const img=el('img','selected-store-logo');
+  img.src=s.logo_url;img.alt='Logo de '+(s.name||'estabelecimento');img.loading='lazy';
+  img.onerror=()=>img.replaceWith(fallback);
+  media.appendChild(img);
+ }else media.appendChild(fallback);
+ if(s.verified){
+  const badge=el('span','selected-store-badge');
+  badge.setAttribute('role','img');badge.setAttribute('aria-label','Estabelecimento verificado');
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');
+  const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  circle.setAttribute('cx','12');circle.setAttribute('cy','12');circle.setAttribute('r','12');circle.setAttribute('fill','#1d9bf0');
+  const check=document.createElementNS('http://www.w3.org/2000/svg','path');
+  check.setAttribute('d','m7.7 12.2 3 3 5.8-6.3');
+  check.setAttribute('fill','none');check.setAttribute('stroke','#fff');check.setAttribute('stroke-width','2.4');
+  check.setAttribute('stroke-linecap','round');check.setAttribute('stroke-linejoin','round');
+  svg.append(circle,check);badge.appendChild(svg);media.appendChild(badge);
  }
- box.appendChild(actions);return box;
+ header.appendChild(media);
+ const identity=el('div','selected-store-identity');
+ identity.appendChild(el('div','selected-store-eyebrow','LOJA SELECIONADA'));
+ identity.appendChild(el('h3','selected-store-title',s.name||'Estabelecimento'));
+ const tags=el('div','selected-store-tags');
+ for(const label of [s.category,s.group].filter(Boolean))tags.appendChild(el('span','selected-store-tag',label));
+ if(row.reviewCount>0){
+  const score=el('span','selected-store-tag selected-store-tag-rating','★ '+Number(row.rating||0).toFixed(1)+' ('+row.reviewCount+')');
+  tags.appendChild(score);
+ }
+ if(s.delivery)tags.appendChild(el('span','selected-store-tag','Entrega'));
+ if(s.pickup)tags.appendChild(el('span','selected-store-tag','Retirada'));
+ if(s.sponsored)tags.appendChild(el('span','selected-store-tag','Patrocinada'));
+ identity.appendChild(tags);header.appendChild(identity);shell.appendChild(header);
+ const details=el('div','selected-store-details');
+ const appendDetail=(iconKey,label,value)=>{
+  const line=el('div','selected-store-detail-row');
+  const icon=el('span','selected-store-detail-icon');icon.appendChild(storeDetailIcon(iconKey));
+  const body=el('div','selected-store-detail-text');
+  body.append(el('div','selected-store-detail-label',label),el('div','selected-store-detail-value',value));
+  line.append(icon,body);details.appendChild(line);
+ };
+ if(s.address)appendDetail('pin','Endereço',s.address);
+ if(s.delivery)appendDetail('truck','Entrega',s.delivery_fee==null?'Taxa não informada':money(s.delivery_fee));
+ if(row.reviewCount>0){
+  const count=Number(row.reviewCount);
+  appendDetail('star','Avaliação',Number(row.rating||0).toFixed(1)+'/5 · '+count+(count===1?' avaliação':' avaliações'));
+ }
+ if(details.childNodes.length)shell.appendChild(details);
+ const actions=el('div','chat-actions selected-store-actions');
+ for(const [iconKey,label,q] of [
+  ['clock','Horário','Qual o horário?'],
+  ['truck','Entrega','Ela entrega?'],
+  ['bag','Produtos','Quais produtos tem?'],
+  ['card','Pagamento','Aceita Pix?'],
+  ['phone','Contato','Qual o WhatsApp?']
+ ]){
+  const b=el('button','selected-store-action');
+  b.type='button';b.append(storeDetailIcon(iconKey),document.createTextNode(label));
+  b.onclick=()=>submitText(q);actions.appendChild(b);
+ }
+ shell.appendChild(actions);box.appendChild(shell);return box;
 }
 function makeCard(row,index){
  const s=row.store,card=el('article','store-result-card smart-card');

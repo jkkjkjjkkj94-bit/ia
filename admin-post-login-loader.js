@@ -2,24 +2,20 @@ import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function boot(){
-  const nav=document.querySelector('.panel-nav');
-  try{
-    const{data:{session}}=await sb.auth.getSession();
-    if(!session)return;
-    const{data:profile}=await sb.from('local_ai_profiles').select('role').eq('user_id',session.user.id).maybeSingle();
-    if(profile?.role!=='admin')return;
-    if(nav){nav.style.visibility='hidden';nav.style.opacity='0';nav.style.pointerEvents='none'}
-    document.body.classList.add('admin-menu-booting');
-    await import('./admin-runtime-v2.js?v=1');
-    window.dispatchEvent(new CustomEvent('guru-admin-modules-ready'));
-    await wait(50);
-    if(nav){nav.style.visibility='visible';nav.style.opacity='1';nav.style.pointerEvents='auto'}
-    document.body.classList.remove('admin-menu-booting');
-    document.body.classList.add('admin-menu-ready');
-  }catch(err){
-    if(nav){nav.style.visibility='visible';nav.style.opacity='1';nav.style.pointerEvents='auto'}
-    document.body.classList.remove('admin-menu-booting');
-    console.error('[GURU Admin Post Login Loader]',err);
-  }
+ const nav=document.querySelector('.panel-nav');
+ try{
+  const{data:{session},error}=await sb.auth.getSession();if(error)throw error;if(!session)return;
+  const{data:profile,error:profileError}=await sb.from('local_ai_profiles').select('role').eq('user_id',session.user.id).maybeSingle();if(profileError)throw profileError;if(profile?.role!=='admin')return;
+  if(nav){nav.style.visibility='hidden';nav.style.opacity='0';nav.style.pointerEvents='none'}
+  document.body.classList.add('admin-menu-booting');
+  await import('./admin-runtime-v2.js?v=2');
+  window.dispatchEvent(new CustomEvent('guru-admin-modules-ready'));
+  await wait(60);
+  if(nav){nav.style.visibility='visible';nav.style.opacity='1';nav.style.pointerEvents='auto'}
+  document.body.classList.remove('admin-menu-booting');document.body.classList.add('admin-menu-ready');
+ }catch(err){
+  if(nav){nav.style.visibility='visible';nav.style.opacity='1';nav.style.pointerEvents='auto'}
+  document.body.classList.remove('admin-menu-booting');console.error('[GURU Admin Post Login Loader]',err);
+ }
 }
 boot();

@@ -7,6 +7,7 @@ on:
       - '**/*.mjs'
       - 'index.html'
       - 'tests/guru-v4-smoke.html'
+      - 'tests/admin-ui-smoke.html'
       - '.github/workflows/js-syntax-check.yml'
   workflow_dispatch:
 
@@ -51,3 +52,11 @@ jobs:
             exit 1
           fi
           echo "GURU v4 browser interactions passed."
+          timeout 45s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --disable-background-networking --virtual-time-budget=15000 --dump-dom "http://127.0.0.1:8765/tests/admin-ui-smoke.html" > /tmp/guru-admin-smoke.html 2>/tmp/guru-admin-chrome.log
+          if ! grep -q 'data-smoke="PASS"' /tmp/guru-admin-smoke.html; then
+            echo "Admin UI smoke test failed"; grep -o 'data-report="[^"]*"' /tmp/guru-admin-smoke.html || true
+            tail -n 25 /tmp/guru-admin-chrome.log || true
+            exit 1
+          fi
+          echo "GURU Admin sidebar, tables and menu stability passed."
+

@@ -19,7 +19,6 @@ function ensureEditor(){
   field.insertBefore(note,ta);field.insertBefore(editor,ta);
   const label=field.querySelector('label');if(label)label.textContent='Editor visual';
 }
-
 function addGroupCard(container,title='',values=[]){
   const card=document.createElement('div');card.className='ai-config-group';card.innerHTML=`<div class="ai-config-group-head"><strong>Grupo</strong><button type="button" class="btn sm danger ai-remove-group">Remover</button></div><div class="field"><label>Termo principal</label><input class="ai-main-key" value="${esc(title)}" placeholder="Ex.: pizzaria"></div><div class="field"><label>Sinônimos / termos relacionados</label><textarea class="ai-group-values" placeholder="Um termo por linha ou separados por vírgula">${esc(values.join('\n'))}</textarea><div class="meta">Ex.: pizza, pizzas, pizzeria, rodízio de pizza</div></div>`;
   card.querySelector('.ai-remove-group').onclick=()=>{card.remove();syncToJSON()};
@@ -79,4 +78,4 @@ import('./admin-sync.js?v=1').catch(err=>console.error('[Local AI Sync Loader]',
 import('./admin-store-group.js?v=1').catch(err=>console.error('[Store Group Loader]',err));
 import('./admin-pending-core.js?v=1').catch(err=>console.error('[Pending Stores Loader]',err));
 import('./admin-synonym-suggestions.js?v=1').catch(err=>console.error('[Synonym Suggestions Loader]',err));
-import('./guru-quality-admin.js?v=1').catch(err=>console.error('[GURU Quality Loader]',err));
+import('./guru-quality-admin.js?v=2').catch(err=>console.error('[GURU Quality Loader]',err));

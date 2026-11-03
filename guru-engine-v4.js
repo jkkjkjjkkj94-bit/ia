@@ -45,7 +45,7 @@ async function animateAssistantText(node,original){
  // Revela os caracteres progressivamente, com pequenas pausas naturais.
  const letters=Array.from(original);
  if(!letters.length){node.nodeValue=original;return}
- const weights=letters.map(char=>/[.!?]/.test(char)?3.2:/[,;:]/.test(char)?1.8:/\\s/.test(char)?0.55:1);
+ const weights=letters.map(char=>/[.!?]/.test(char)?3.2:/[,;:]/.test(char)?1.8:/\s/.test(char)?0.55:1);
  const totalWeight=weights.reduce((sum,w)=>sum+w,0);
  const duration=Math.min(5600,Math.max(450,totalWeight*30));
  const unitMs=duration/totalWeight;

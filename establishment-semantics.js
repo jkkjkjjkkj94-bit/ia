@@ -18,7 +18,9 @@ const explicitTypes=[
   [/\bmercados?\b/,'Mercado'],
   [/\bfarmacias?\b/,'Farmácia']
 ];
-const retail=/\b(loja|lojas|comercio|comercios|negocio|negocios|empresa|empresas|ponto|pontos)\b/;
+const retail=/\b(loja|lojas|comercio|comercios|empresa|empresas|ponto|pontos)\b/;
+// "Negócio" é um termo genérico: pode ser restaurante, serviço, loja etc.
+// Somente sinais explícitos de varejo impedem busca na categoria Comida.
 const food=/\b(comida|comer|almoco|jantar|japonesa|japones|sushi|pizza|pizzaria|hamburguer|hamburgueria|lanche|doceria|doce|sorvete|sorveteria|acai|marmita|padaria|cafeteria|restaurante|churrasco|churrascaria|pastel|pastelaria)\b/;
 const clothes=/\b(roupa|roupas|vestuario|moda|camisa|camiseta|calca|vestido)\b/;
 

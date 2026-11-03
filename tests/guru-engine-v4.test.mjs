@@ -122,3 +122,29 @@ test('busca por doceria aberta no sábado ignora verbos de ligação sem descart
  const p=plan('quero uma doceria que fique aberta no sábado');
  assert.deepEqual(searchStores(samples,nextState(emptyState(),p)).map(x=>x.store.id),[]);
 });
+
+test('dias de funcionamento no plural e nova pesquisa após selecionar loja',()=>{
+ const sweet=shop('sweet','Comida','Doceria',{name:'Doceria Exemplo'});
+ const data={stores:[sweet],products:[],reviews:[],knowledge:[],hours:[
+  {store_id:'sweet',weekday:0,opens_at:'09:00',closes_at:'18:00',closed:false},
+  {store_id:'sweet',weekday:1,opens_at:'09:00',closes_at:'18:00',closed:false},
+  {store_id:'sweet',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false}
+ ]};
+ const cases=[
+  ['quero uma doceria aberta aos sábados',6],
+  ['uma doceria que abre aos domingos',0],
+  ['doceria que funciona às segundas-feiras',1]
+ ];
+ for(const [query,day] of cases){
+  const p=plan(query);
+  assert.equal(p.kind,'search',query);
+  assert.equal(p.taxon?.group,'Doceria',query);
+  assert.equal(p.filters.day,day,query);
+  assert.deepEqual(p.semanticTerms,[],query);
+  const matches=searchStores(data,nextState(emptyState(),p),null,{now:new Date('2026-11-03T15:00:00')});
+  assert.deepEqual(matches.map(x=>x.store.id),['sweet'],query);
+ }
+ const prev={...emptyState(),selectedStore:shop('pizza','Comida','Pizzaria')};
+ assert.equal(plan('quero uma doceria que abre aos sábados',prev).kind,'search');
+ assert.equal(plan('que horas abre?',prev).kind,'ask');
+});

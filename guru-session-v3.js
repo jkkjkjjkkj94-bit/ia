@@ -12,7 +12,7 @@ let timer=null;
 function state(){return window.LocalAIEngine?.state}
 function snapshot(s=state()){
   if(!s)return null;
-  return{updatedAt:Date.now(),category:s.category||null,group:s.group||null,product:s.product||null,specialty:s.specialty||null,day:s.day??null,openNow:!!s.openNow,delivery:s.delivery??null,sortBy:s.sortBy||null,timePeriod:s.timePeriod||null,location:{city:s.location?.city||null,uf:s.location?.uf||null}};
+  return{updatedAt:Date.now(),establishmentType:s.establishmentType||null,category:s.category||null,group:s.group||null,product:s.product||null,specialty:s.specialty||null,day:s.day??null,openNow:!!s.openNow,delivery:s.delivery??null,sortBy:s.sortBy||null,timePeriod:s.timePeriod||null,location:{city:s.location?.city||null,uf:s.location?.uf||null}};
 }
 function save(){const p=snapshot();if(!p)return;try{sessionStorage.setItem(MEMORY_KEY,JSON.stringify(p))}catch{}}
 function restore(){
@@ -20,7 +20,7 @@ function restore(){
   try{
     const p=JSON.parse(sessionStorage.getItem(MEMORY_KEY)||'null');
     if(!p?.updatedAt||Date.now()-p.updatedAt>MEMORY_TTL)return false;
-    for(const k of ['category','group','product','specialty','day','openNow','delivery','sortBy','timePeriod'])if(p[k]!==null&&p[k]!==undefined)s[k]=p[k];
+    for(const k of ['establishmentType','category','group','product','specialty','day','openNow','delivery','sortBy','timePeriod'])if(p[k]!==null&&p[k]!==undefined)s[k]=p[k];
     if(p.location?.city)s.location.city=p.location.city;if(p.location?.uf)s.location.uf=p.location.uf;
     return true;
   }catch{return false}
@@ -28,6 +28,7 @@ function restore(){
 function clear(){try{sessionStorage.removeItem(MEMORY_KEY)}catch{}}
 function trail(s=state()){
   if(!s)return[];const a=[];
+  if(s.establishmentType)a.push(s.establishmentType);
   if(s.category)a.push(s.category);if(s.group)a.push(s.group);if(s.product)a.push(s.product);else if(s.specialty)a.push(s.specialty);
   if(s.day!=null)a.push(days[s.day]||String(s.day));if(s.openNow)a.push('abertas agora');if(s.delivery===true)a.push('com entrega');if(s.delivery===false)a.push('sem entrega');
   if(s.sortBy==='distancia')a.push('mais perto');if(s.sortBy==='preco')a.push('mais barato');if(s.sortBy==='avaliacao')a.push('melhor avaliadas');
@@ -54,9 +55,7 @@ function rerank(){
       if(!changed)return;
       const frag=document.createDocumentFragment();desired.forEach(card=>frag.appendChild(card));grid.appendChild(frag);
     });
-  }finally{
-    queueMicrotask(()=>{reranking=false});
-  }
+  }finally{queueMicrotask(()=>{reranking=false})}
 }
 function refresh(){if(reranking)return;clearTimeout(timer);timer=setTimeout(()=>{save();renderTrail();rerank()},300)}
 setTimeout(()=>{restore();renderTrail()},180);

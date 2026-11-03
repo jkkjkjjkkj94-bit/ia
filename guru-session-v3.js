@@ -7,6 +7,7 @@ const MEMORY_TTL=2*60*60*1000;
 const days=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 let writingContext=false;
+let reranking=false;
 let timer=null;
 function state(){return window.LocalAIEngine?.state}
 function snapshot(s=state()){
@@ -41,17 +42,25 @@ function quality(store){
   return Math.min(100,q);
 }
 function rerank(){
+  if(reranking)return;
   const s=state();if(!msgs||!Array.isArray(s?.lastResults)||!s.lastResults.length)return;
   const byName=new Map(s.lastResults.map((r,i)=>[norm(r.store?.name),{r,i,q:quality(r.store)}]));
-  msgs.querySelectorAll('.store-results-grid').forEach(grid=>{
-    const cards=[...grid.querySelectorAll(':scope > .store-result-card')];if(cards.length<2)return;
-    cards.map((card,index)=>{const x=byName.get(norm(card.querySelector('h3')?.textContent||''));const q=x?.q||0;card.dataset.qualityScore=String(q);return{card,index,rank:index-q/90}})
-      .sort((a,b)=>a.rank-b.rank).forEach(x=>grid.appendChild(x.card));
-  });
+  reranking=true;
+  try{
+    msgs.querySelectorAll('.store-results-grid').forEach(grid=>{
+      const cards=[...grid.querySelectorAll(':scope > .store-result-card')];if(cards.length<2)return;
+      const desired=cards.map((card,index)=>{const x=byName.get(norm(card.querySelector('h3')?.textContent||''));const q=x?.q||0;card.dataset.qualityScore=String(q);return{card,index,rank:index-q/90}}).sort((a,b)=>a.rank-b.rank).map(x=>x.card);
+      const changed=desired.some((card,i)=>cards[i]!==card);
+      if(!changed)return;
+      const frag=document.createDocumentFragment();desired.forEach(card=>frag.appendChild(card));grid.appendChild(frag);
+    });
+  }finally{
+    queueMicrotask(()=>{reranking=false});
+  }
 }
-function refresh(){clearTimeout(timer);timer=setTimeout(()=>{save();renderTrail();rerank()},300)}
+function refresh(){if(reranking)return;clearTimeout(timer);timer=setTimeout(()=>{save();renderTrail();rerank()},300)}
 setTimeout(()=>{restore();renderTrail()},180);
 form?.addEventListener('submit',refresh,true);
-ctx&&new MutationObserver(()=>{if(!writingContext)refresh()}).observe(ctx,{childList:true,characterData:true,subtree:true});
-msgs&&new MutationObserver(refresh).observe(msgs,{childList:true,subtree:true});
+ctx&&new MutationObserver(()=>{if(!writingContext&&!reranking)refresh()}).observe(ctx,{childList:true,characterData:true,subtree:true});
+msgs&&new MutationObserver(()=>{if(!reranking)refresh()}).observe(msgs,{childList:true,subtree:true});
 window.GuruSessionV3={save,restore,clear,trail,quality,rerank};

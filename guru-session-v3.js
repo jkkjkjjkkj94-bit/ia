@@ -10,6 +10,7 @@ let writingContext=false;
 let reranking=false;
 let timer=null;
 function state(){return window.LocalAIEngine?.state}
+function hasUserSearch(){return !!msgs?.querySelector('.msg.user')}
 function snapshot(s=state()){
   if(!s)return null;
   return{updatedAt:Date.now(),establishmentType:s.establishmentType||null,category:s.category||null,group:s.group||null,product:s.product||null,specialty:s.specialty||null,day:s.day??null,openNow:!!s.openNow,delivery:s.delivery??null,sortBy:s.sortBy||null,timePeriod:s.timePeriod||null,location:{city:s.location?.city||null,uf:s.location?.uf||null}};
@@ -34,7 +35,17 @@ function trail(s=state()){
   if(s.sortBy==='distancia')a.push('mais perto');if(s.sortBy==='preco')a.push('mais barato');if(s.sortBy==='avaliacao')a.push('melhor avaliadas');
   return a;
 }
-function renderTrail(){if(!ctx||writingContext)return;const a=trail();if(!a.length)return;const text='Contexto: '+a.join(' → ');if(ctx.textContent!==text){writingContext=true;ctx.textContent=text;queueMicrotask(()=>writingContext=false)}}
+function renderTrail(){
+  if(!ctx||writingContext)return;
+  if(!hasUserSearch()){
+    if(ctx.textContent){writingContext=true;ctx.textContent='';queueMicrotask(()=>writingContext=false)}
+    return;
+  }
+  const a=trail();
+  if(!a.length){if(ctx.textContent){writingContext=true;ctx.textContent='';queueMicrotask(()=>writingContext=false)}return}
+  const text='Contexto: '+a.join(' → ');
+  if(ctx.textContent!==text){writingContext=true;ctx.textContent=text;queueMicrotask(()=>writingContext=false)}
+}
 function quality(store){
   if(!store)return 0;let q=0;
   if(store.address)q+=14;if(store.latitude!=null&&store.longitude!=null)q+=14;if(store.logo_url)q+=10;if(store.whatsapp||store.phone)q+=10;
@@ -60,6 +71,6 @@ function rerank(){
 function refresh(){if(reranking)return;clearTimeout(timer);timer=setTimeout(()=>{save();renderTrail();rerank()},300)}
 setTimeout(()=>{restore();renderTrail()},180);
 form?.addEventListener('submit',refresh,true);
-ctx&&new MutationObserver(()=>{if(!writingContext&&!reranking)refresh()}).observe(ctx,{childList:true,characterData:true,subtree:true});
-msgs&&new MutationObserver(()=>{if(!reranking)refresh()}).observe(msgs,{childList:true,subtree:true});
+ctx&&new MutationObserver(()=>{if(!writingContext&&!reranking&&hasUserSearch())refresh()}).observe(ctx,{childList:true,characterData:true,subtree:true});
+msgs&&new MutationObserver(()=>{if(!reranking){renderTrail();refresh()}}).observe(msgs,{childList:true,subtree:true});
 window.GuruSessionV3={save,restore,clear,trail,quality,rerank};

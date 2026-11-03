@@ -136,7 +136,7 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const excludedCategories=excludedTax?.category&&!excludedTax.group?[norm(excludedTax.category)]:[];
  const excludedTerms=after&&!excludedTax&&!/^(?:entrega|retirada|frete|delivery)\b/.test(after)?[after]:[];
  const allTerms=(taxon?[taxon.term,normalizeQuery(taxon.category),normalizeQuery(taxon.group||'')]:[]).filter(Boolean);
- let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo','barato','barata','economico','economica'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?$/.test(w));
+ let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo','barato','barata','economico','economica','aceita','pix','credito','debito','dinheiro','retirada','retirar','entrega','delivery','rapida','rapido'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?$/.test(w));
  const featureTerms=semanticTerms.filter(w=>/^(vegano|vegana|vegetariano|vegetariana|familia|familiar|tranquilo|sossegado|artesanal)$/.test(w));
  const productCue=/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|preciso de|tem|vende|estoque)\b/.test(n);
  const genericProduct=/\b(produto|comprar|tem|vende|estoque)\b/.test(n);

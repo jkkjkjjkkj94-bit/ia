@@ -1,5 +1,5 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
-import{taxonomy}from'./ai-taxonomy.js?v=5';
+import{taxonomy}from'./ai-taxonomy.js?v=6';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const groupsByCategory=Object.fromEntries(Object.entries(taxonomy).map(([category,groups])=>[category,Object.keys(groups||{}).filter(group=>group&&group!==category)]));
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));

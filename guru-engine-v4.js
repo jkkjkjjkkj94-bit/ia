@@ -240,7 +240,23 @@ function makeCard(row,index){
  if(row.reviewCount)tags.appendChild(el('span','store-chip','★ '+row.rating.toFixed(1)+' ('+row.reviewCount+')'));
  if(s.delivery)tags.appendChild(el('span','store-chip','Entrega'));
  if(s.pickup)tags.appendChild(el('span','store-chip','Retirada'));
- if(s.verified)tags.appendChild(el('span','store-chip','Verificada'));
+ if(s.verified){
+  const verified=el('span','store-chip store-chip-verified');
+  const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  icon.setAttribute('viewBox','0 0 24 24');
+  icon.setAttribute('width','13');
+  icon.setAttribute('height','13');
+  icon.setAttribute('aria-hidden','true');
+  icon.setAttribute('focusable','false');
+  const ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  ring.setAttribute('cx','12');ring.setAttribute('cy','12');ring.setAttribute('r','9');
+  ring.setAttribute('fill','none');ring.setAttribute('stroke','currentColor');ring.setAttribute('stroke-width','1.8');
+  const check=document.createElementNS('http://www.w3.org/2000/svg','path');
+  check.setAttribute('d','m8 12 2.6 2.6L16 9');
+  check.setAttribute('fill','none');check.setAttribute('stroke','currentColor');
+  check.setAttribute('stroke-width','2');check.setAttribute('stroke-linecap','round');check.setAttribute('stroke-linejoin','round');
+  icon.append(ring,check);verified.append(icon,document.createTextNode('Verificada'));tags.appendChild(verified);
+ }
  if(s.sponsored)tags.appendChild(el('span','store-chip','Patrocinada'));
  identity.appendChild(tags);top.appendChild(identity);card.appendChild(top);
  if(s.address)card.appendChild(el('div','store-address',s.address));

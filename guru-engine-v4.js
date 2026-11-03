@@ -197,6 +197,8 @@ function productListFor(store,query=''){
 function replyAboutStore(text,ask,filter={}){
  const s=state.selectedStore;if(!s){add('Escolha uma das opções encontradas antes de perguntar sobre ela.');return}
  const n=norm(text),day=filter.day??state.filters.day??new Date().getDay();
+ const record=(db?.knowledge||[]).find(k=>k.store_id===s.id&&k.active!==false&&[k.question,...(Array.isArray(k.variations)?k.variations:[])].some(q=>norm(q).length>=4&&(norm(text).includes(norm(q))||norm(q).includes(norm(text)))));
+ if(record?.answer&&ask!=='total'){add(String(record.answer));return}
  if(ask==='hours'){
   const h=db.hours.find(x=>x.store_id===s.id&&Number(x.weekday)===day);
   add(!h?'Essa loja ainda não informou o horário de '+dayNames[day]+'.':h.closed?'Essa loja está cadastrada como fechada no '+dayNames[day]+'.':s.name+' funciona no '+dayNames[day]+' das '+String(h.opens_at).slice(0,5)+' às '+String(h.closes_at).slice(0,5)+'.');return;

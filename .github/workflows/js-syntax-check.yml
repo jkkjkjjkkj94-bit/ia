@@ -10,6 +10,7 @@ on:
       - 'lojista.html'
       - 'tests/guru-v4-smoke.html'
       - 'tests/admin-ui-smoke.html'
+      - 'tests/admin-classification-smoke.html'
       - '.github/workflows/js-syntax-check.yml'
   workflow_dispatch:
 
@@ -61,4 +62,11 @@ jobs:
             exit 1
           fi
           echo "GURU Admin sidebar, tables and menu stability passed."
+          timeout 45s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --disable-background-networking --virtual-time-budget=12000 --dump-dom "http://127.0.0.1:8765/tests/admin-classification-smoke.html" > /tmp/guru-classification-smoke.html 2>/tmp/guru-classification-chrome.log
+          if ! grep -q 'data-smoke="PASS"' /tmp/guru-classification-smoke.html; then
+            echo "Admin classification smoke test failed"; grep -o 'data-report="[^"]*"' /tmp/guru-classification-smoke.html || true
+            tail -n 25 /tmp/guru-classification-chrome.log || true
+            exit 1
+          fi
+          echo "Admin classification save and error recovery passed."
 

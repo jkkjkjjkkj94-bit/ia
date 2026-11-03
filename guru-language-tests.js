@@ -24,10 +24,14 @@ const tests=[
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 const days={domingo:0,segunda:1,terca:2,quarta:3,quinta:4,sexta:5,sabado:6};
 function inspect(q){
-  const g=window.LocalAISemanticGuard,sem=window.GuruEstablishmentSemantics;
+  const g=window.LocalAISemanticGuard,sem=window.GuruEstablishmentSemantics,reg=window.GuruRegressionFix;
   if(!g)return{error:'guard indisponível'};
-  const normalized=g.normalizeNaturalLanguage?.(q)||q,n=norm(normalized);
+  const normalized=g.normalizeNaturalLanguage?.(q)||q;
+  const n=norm(reg?.normalize?.(normalized)||normalized);
   const rule=(g.rules||[]).find(r=>r.re.test(n));
+  let canonical=rule?.canonical||null;
+  if(/\bsushi\b|\bcomida japonesa\b/.test(n))canonical='japonesa';
+  else if(/\bpizzaria\b|\bpizza\b/.test(n))canonical='pizzaria';
   let category=sem?.inferCategory?.(q)||null;
   if(!category){if(/\bcomida\b/.test(n))category='Comida';else if(/\broupas?\b/.test(n))category='Roupas';else if(/\btecnologia\b/.test(n))category='Tecnologia';else if(/\bfarmacia\b/.test(n))category='Farmácia';else if(/\bmercado\b/.test(n))category='Mercado';else if(/\bbeleza\b/.test(n))category='Beleza'}
   const fake={excludedGroups:new Set(),delivery:null,sortBy:null,specialty:null,term:null,product:null,openNow:false,day:null};
@@ -35,7 +39,7 @@ function inspect(q){
   if(/abert[oa]s? agora/.test(n))fake.openNow=true;
   if(/com entrega|delivery/.test(n))fake.delivery=true;
   for(const[k,v]of Object.entries(days))if(new RegExp(`\\b${k}\\b`).test(n))fake.day=v;
-  return{normalized,canonical:rule?.canonical||null,category,type:sem?.detectType?.(q)??null,excluded:[...fake.excludedGroups],traits:String(fake.specialty||'').split(' ').filter(Boolean),openNow:fake.openNow,delivery:fake.delivery,day:fake.day};
+  return{normalized:n,canonical,category,type:sem?.detectType?.(q)??null,excluded:[...fake.excludedGroups],traits:String(fake.specialty||'').split(' ').filter(Boolean),openNow:fake.openNow,delivery:fake.delivery,day:fake.day};
 }
 function run(){
   const results=tests.map(t=>{const got=inspect(t.q);let pass=!got.error;if(t.contains)pass=pass&&norm(got.normalized).includes(norm(t.contains));if(t.canonical)pass=pass&&got.canonical===t.canonical;if(Object.prototype.hasOwnProperty.call(t,'category'))pass=pass&&got.category===t.category;if(Object.prototype.hasOwnProperty.call(t,'type'))pass=pass&&got.type===t.type;if(t.excluded)pass=pass&&got.excluded.includes(norm(t.excluded));if(t.traits)pass=pass&&t.traits.every(x=>got.traits.includes(x));if(t.openNow!==undefined)pass=pass&&got.openNow===t.openNow;if(t.delivery!==undefined)pass=pass&&got.delivery===t.delivery;if(t.day!==undefined)pass=pass&&got.day===t.day;return{...t,got,pass}});

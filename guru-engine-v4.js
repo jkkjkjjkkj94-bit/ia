@@ -13,7 +13,21 @@ const memoryKey='guru_context_v4',ttl=2*60*60*1000;
 const money=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const dayNames=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 const el=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x};
-const add=(text,user=false)=>{const m=el('div','msg '+(user?'user':'bot'),text);(replyBuffer&&!user?replyBuffer:msgs).appendChild(m);if(!replyBuffer)msgs.scrollTop=msgs.scrollHeight;return m};
+const add=(text,user=false)=>{
+ const m=el('div','msg '+(user?'user':'bot'),text);
+ (replyBuffer&&!user?replyBuffer:msgs).appendChild(m);
+ if(!replyBuffer){
+  msgs.scrollTop=msgs.scrollHeight;
+  // Também anima respostas abertas diretamente pelos cards e pelo botão de reiniciar.
+  if(!user)queueMicrotask(()=>{
+   if(!m.isConnected)return;
+   const fragment=document.createDocumentFragment();
+   fragment.appendChild(m);
+   void showAssistantReply(fragment);
+  });
+ }
+ return m;
+};
 function showTypingIndicator(){
  const message=el('div','msg bot guru-typing');
  message.setAttribute('role','status');
@@ -28,18 +42,28 @@ function showTypingIndicator(){
 }
 // Escreve somente o texto da resposta, sem recriar cards nem elementos interativos.
 async function animateAssistantText(node,original){
+ // Revela os caracteres progressivamente, com pequenas pausas naturais.
  const letters=Array.from(original);
  if(!letters.length){node.nodeValue=original;return}
- const duration=Math.min(1100,Math.max(260,letters.length*24));
+ const weights=letters.map(char=>/[.!?]/.test(char)?3.2:/[,;:]/.test(char)?1.8:/\\s/.test(char)?0.55:1);
+ const totalWeight=weights.reduce((sum,w)=>sum+w,0);
+ const duration=Math.min(5600,Math.max(450,totalWeight*30));
+ const unitMs=duration/totalWeight;
+ let count=0,elapsedUnits=0;
  const started=performance.now();
  await new Promise(resolve=>{
   const tick=()=>{
-   const progress=Math.min(1,(performance.now()-started)/duration);
-   const count=Math.min(letters.length,Math.max(1,Math.floor(progress*letters.length)));
+   if(document.hidden||!node.isConnected){node.nodeValue=original;resolve();return}
+   const elapsed=performance.now()-started;
+   while(count<letters.length&&elapsedUnits+weights[count]*unitMs<=elapsed){
+    elapsedUnits+=weights[count]*unitMs;
+    count++;
+   }
+   if(!count)count=1;
    node.nodeValue=letters.slice(0,count).join('');
    msgs.scrollTop=msgs.scrollHeight;
-   if(progress>=1||document.hidden){node.nodeValue=original;resolve();return}
-   setTimeout(tick,28);
+   if(count>=letters.length){node.nodeValue=original;resolve();return}
+   setTimeout(tick,24);
   };
   tick();
  });

@@ -22,11 +22,11 @@ const hours=[
 ];
 window.fetch=async url=>{
  const path=String(url),table=(path.match(/\/rest\/v1\/(local_ai_[a-z_]+)/)||[])[1];
- const values={local_ai_stores:stores,local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[],local_ai_taxonomy_categories:[],local_ai_taxonomy_groups:[],local_ai_taxonomy_terms:[]};
+ const values={local_ai_stores:stores,local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[{store_id:'pizza',question:'tem estacionamento?',variations:['possui estacionamento?'],answer:'Sim, tem estacionamento.',active:true}],local_ai_taxonomy_categories:[],local_ai_taxonomy_groups:[],local_ai_taxonomy_terms:[]};
  return new Response(JSON.stringify(values[table]||[]),{status:200,headers:{'Content-Type':'application/json'}});
 };
 </script>
-<script type="module" src="../guru-engine-v4.js?v=2"></script>
+<script type="module" src="../guru-engine-v4.js?v=3"></script>
 <script type="module">
 async function smoke(){
  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -42,6 +42,8 @@ async function smoke(){
  if(cards.at(-1)?.querySelector('h3')?.textContent!=='Pizza Teste')throw Error('filtro de promoção falhou');
  await guru.submitText('a primeira abre sábado?');
  if(!document.getElementById('msgs').textContent.includes('sábado das'))throw Error('contexto de horário falhou');
+ await guru.submitText('tem estacionamento?');
+ if(!document.getElementById('msgs').textContent.includes('Sim, tem estacionamento.'))throw Error('resposta cadastrada do lojista não funcionou');
  const input=document.getElementById('q');
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
  for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);

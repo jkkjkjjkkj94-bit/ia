@@ -1,0 +1,17 @@
+:root{--admin-side:226px}
+.panel-side{height:100vh;display:flex;flex-direction:column;overflow:hidden;padding:10px 8px!important;gap:8px!important}
+.panel-side>div:first-child{flex:0 0 auto;min-height:44px!important;padding:2px 7px 6px!important}
+.panel-nav{flex:1 1 auto;min-height:0;overflow-y:auto!important;overflow-x:hidden!important;padding:2px 0 4px!important;gap:1px!important;scrollbar-width:none;-ms-overflow-style:none}
+.panel-nav::-webkit-scrollbar{display:none;width:0;height:0}
+.panel-nav button{min-height:32px!important;height:32px!important;padding:5px 8px!important;border-radius:7px!important;font-size:12px!important;gap:8px!important;flex:0 0 auto}
+.admin-nav-icon{width:16px!important;height:16px!important;flex-basis:16px!important}
+.admin-nav-icon svg{width:15px!important;height:15px!important}
+.admin-nav-label{display:block!important;min-width:0;overflow:visible!important;text-overflow:clip!important;white-space:nowrap!important;font-size:12px!important}
+.admin-nav-count{font-size:9px!important;margin-left:2px;color:#888}
+.panel-side>small{flex:0 0 auto;display:block!important;border-top:1px solid var(--admin-line);margin:2px -8px -10px;padding:8px 10px 9px!important;background:#fff;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:9px!important}
+.admin-side-toggle{top:9px!important;right:8px!important;width:27px!important;height:27px!important}
+body.admin-sidebar-collapsed .panel-side>small{display:none!important}
+body.admin-sidebar-collapsed .panel-nav button{padding:5px 0!important}
+body.admin-sidebar-collapsed .admin-nav-label{display:none!important}
+@media(max-height:760px){.panel-nav button{min-height:29px!important;height:29px!important;padding:4px 7px!important;font-size:11.5px!important}.panel-side{padding-top:7px!important}.panel-side>div:first-child{min-height:40px!important}.panel-side>small{font-size:8.5px!important;padding-top:6px!important;padding-bottom:7px!important}}
+@media(max-width:850px){.panel-side{width:min(238px,88vw)!important}.panel-nav button{min-height:34px!important;height:34px!important}.panel-side>small{margin-top:auto}}

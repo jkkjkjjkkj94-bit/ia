@@ -129,7 +129,7 @@ async function locate(show=true){
 }
 function productMatchesTerm(p,t){return norm([p.name,p.description,p.category,p.brand].join(' ')).includes(norm(t))}
 function chooseStore(row){
- state.selectedStore=row.store;state.selectedProduct=row.products?.[0]||null;renderContext();save();
+ state.selectedStore=row.store;state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;renderContext();save();
  const s=row.store,parts=[s.name];
  if(s.category)parts.push(s.category+(s.group?' · '+s.group:''));
  if(s.address)parts.push('Endereço: '+s.address);
@@ -173,7 +173,7 @@ function makeCard(row,index){
  why.onclick=()=>panel.classList.toggle('on');card.appendChild(why);card.appendChild(panel);
  const actions=el('div','store-card-actions');
  const view=el('button','store-action primary','Ver loja');view.type='button';view.onclick=()=>chooseStore(row);actions.appendChild(view);
- const products=el('button','store-action','Produtos');products.type='button';products.onclick=()=>{state.selectedStore=s;state.selectedProduct=row.products[0]||null;replyAboutStore('quais produtos tem?','products');renderContext();save()};actions.appendChild(products);
+ const products=el('button','store-action','Produtos');products.type='button';products.onclick=()=>{state.selectedStore=s;state.selectedProduct=null;replyAboutStore('quais produtos tem?','products');renderContext();save()};actions.appendChild(products);
  const phone=String(s.whatsapp||'').replace(/\D/g,'');
  if(phone.length>=10&&phone.length<=15){const a=el('a','store-action link','WhatsApp');a.href='https://wa.me/'+phone;a.target='_blank';a.rel='noopener noreferrer';actions.appendChild(a)}
  card.appendChild(actions);return card;
@@ -191,7 +191,7 @@ function productListFor(store,query=''){
  const upper=String(query).match(/\b(PP|P|M|G|GG|XG)\b/);
  const sz=(size||upper)?.[1]?.toUpperCase();
  let productTerm=n.match(/(?:tem|vende|procurando|preciso de|quero)\s+(?:alguma?|[oa]|um|uma)?\s*([a-z0-9 ]{3,50})/);
- const term=productTerm?.[1]?.replace(/\b(?:tamanho|tam)\b.*$/,'').trim();
+ const term=productTerm?.[1]?.replace(/\b(?:tamanho|tam)\s*(?:pp|p|m|g|gg|xg)\b/g,'').replace(/\s+(?:pp|p|m|g|gg|xg)$/,'').trim();
  return list.filter(p=>(!sz||Array.isArray(p.sizes)&&p.sizes.some(v=>norm(v)===norm(sz)))&&(!term||productMatchesTerm(p,term)));
 }
 function replyAboutStore(text,ask,filter={}){
@@ -227,11 +227,11 @@ async function run(text){
  if(plan.kind==='select'){
   const index=plan.index<0?state.lastResults.length-1:plan.index,row=state.lastResults[index];
   if(!row){add('Essa opção não existe na lista atual.');return}
-  state.selectedStore=row.store;state.selectedProduct=row.products?.[0]||null;
-  if(plan.ask){replyAboutStore(text,plan.ask,plan.filters);renderContext();save()}else chooseStore(row);
+  state.selectedStore=row.store;state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;
+  if(plan.ask){if(plan.filters?.day!=null)state.filters.day=plan.filters.day;replyAboutStore(text,plan.ask,plan.filters);renderContext();save()}else chooseStore(row);
   return;
  }
- if(plan.kind==='ask'){replyAboutStore(text,plan.ask,plan.filters);renderContext();save();return}
+ if(plan.kind==='ask'){if(plan.filters?.day!=null)state.filters.day=plan.filters.day;replyAboutStore(text,plan.ask,plan.filters);renderContext();save();return}
  if(plan.kind!=='search')return;
  if(isLocationSearch(text,plan)&&!position&&(!state.location?.city)){
   await locate(false);

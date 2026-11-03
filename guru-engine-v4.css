@@ -91,93 +91,93 @@
 .msg.bot.selected-store-card:has(.chat-actions){
  align-self:flex-start;
  display:block;
- width:min(740px,100%);
+ width:min(610px,100%);
  max-width:100%;
- padding:18px 20px 15px;
+ padding:13px 15px 12px;
  border:1px solid #e9e9eb;
- border-radius:20px;
+ border-radius:16px;
  background:linear-gradient(180deg,#fff 0%,#fdfdfd 100%);
- box-shadow:0 8px 25px rgba(0,0,0,.035);
+ box-shadow:0 5px 18px rgba(0,0,0,.025);
  color:#232323;
  line-height:1.5;
  white-space:normal;
  animation:guru-store-reveal .28s ease-out both;
 }
 .msg.bot.selected-store-card:has(.chat-actions)::before{content:none;display:none}
-.selected-store-shell{display:grid;gap:15px;min-width:0}
-.selected-store-header{display:flex;align-items:center;gap:13px;min-width:0}
-.selected-store-media{position:relative;width:54px;height:54px;min-width:54px;flex:0 0 54px}
+.selected-store-shell{display:grid;gap:10px;min-width:0}
+.selected-store-header{display:flex;align-items:center;gap:10px;min-width:0}
+.selected-store-media{position:relative;width:43px;height:43px;min-width:43px;flex:0 0 43px}
 .selected-store-logo,.selected-store-logo-fallback{
  display:grid;place-items:center;width:100%;height:100%;
- border:1px solid #ededed;border-radius:14px;
+ border:1px solid #ededed;border-radius:10px;
  background:#f7f7f7;object-fit:cover;
 }
-.selected-store-logo-fallback svg{width:23px;height:23px;color:#555}
+.selected-store-logo-fallback svg{width:20px;height:20px;color:#555}
 .selected-store-badge{
- position:absolute;right:-5px;bottom:-4px;
- width:19px;height:19px;border:2px solid #fff;
+ position:absolute;right:-4px;bottom:-4px;
+ width:17px;height:17px;border:2px solid #fff;
  border-radius:50%;display:grid;place-items:center;
  background:#1d9bf0;box-sizing:border-box;
 }
 .selected-store-badge svg{display:block;width:100%;height:100%}
 .selected-store-identity{flex:1;min-width:0}
 .selected-store-eyebrow{
- margin:0 0 3px;color:#999;font-size:9px;
+ margin:0 0 2px;color:#999;font-size:8px;
  font-weight:700;letter-spacing:.095em;line-height:1.35;
 }
 .selected-store-title{
- font-size:17px;line-height:1.3;font-weight:700;
+ font-size:15px;line-height:1.25;font-weight:700;
  letter-spacing:-.025em;color:#181818;margin:0;
  overflow-wrap:anywhere;
 }
-.selected-store-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.selected-store-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
 .selected-store-tag{
- display:inline-flex;align-items:center;min-height:23px;
- padding:3px 9px;border-radius:999px;
+ display:inline-flex;align-items:center;min-height:20px;
+ padding:2px 7px;border-radius:999px;
  background:#f4f4f4;color:#666;
- font-size:10px;font-weight:500;line-height:1.3;
+ font-size:9px;font-weight:500;line-height:1.3;
 }
 .selected-store-tag-rating{background:#f1f5fc;color:#345b94;font-weight:600}
 .selected-store-details{
  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
- gap:12px 20px;
- padding:14px 0;
+ gap:8px 15px;
+ padding:10px 0;
  border-top:1px solid #f0f0f0;
  border-bottom:1px solid #f0f0f0;
 }
 .selected-store-detail-row{
- display:flex;align-items:flex-start;gap:10px;min-width:0;
+ display:flex;align-items:flex-start;gap:8px;min-width:0;
 }
 .selected-store-detail-row:first-child{grid-column:1/-1}
 .selected-store-detail-icon{
- flex:0 0 29px;width:29px;height:29px;
+ flex:0 0 25px;width:25px;height:25px;
  display:grid;place-items:center;
- background:#f6f6f6;border-radius:9px;color:#555;
+ background:#f6f6f6;border-radius:8px;color:#555;
 }
-.selected-store-detail-icon svg{width:15px;height:15px;display:block}
+.selected-store-detail-icon svg{width:13px;height:13px;display:block}
 .selected-store-detail-text{min-width:0;flex:1}
 .selected-store-detail-label{
- font-size:9.5px;line-height:1.3;font-weight:600;color:#929292;
- letter-spacing:.015em;margin:0 0 3px;
+ font-size:9px;line-height:1.3;font-weight:600;color:#929292;
+ letter-spacing:.015em;margin:0 0 1px;
 }
 .selected-store-detail-value{
- font-size:11.5px;font-weight:500;line-height:1.5;
+ font-size:10.5px;font-weight:500;line-height:1.4;
  color:#303030;overflow-wrap:anywhere;white-space:normal;
 }
 .msg.bot.selected-store-card .selected-store-actions{
- display:flex;flex-wrap:wrap;gap:7px;
+ display:flex;flex-wrap:wrap;gap:5px;
  margin:0;padding:0;border:0;min-width:0;
 }
 .msg.bot.selected-store-card .selected-store-actions .selected-store-action{
- display:inline-flex;align-items:center;justify-content:center;gap:7px;
- min-height:34px;padding:7px 12px;
- border:1px solid #e8e8e8;border-radius:10px;
+ display:inline-flex;align-items:center;justify-content:center;gap:6px;
+ min-height:30px;padding:6px 10px;
+ border:1px solid #e8e8e8;border-radius:8px;
  background:#fafafa;color:#414141;
- font-size:10.5px;font-weight:600;line-height:1.2;
+ font-size:10px;font-weight:600;line-height:1.2;
  white-space:nowrap;transition:background .15s ease,border-color .15s ease;
 }
 .msg.bot.selected-store-card .selected-store-actions .selected-store-action svg{
- display:block;width:14px;height:14px;flex:0 0 14px;
+ display:block;width:13px;height:13px;flex:0 0 13px;
 }
 .msg.bot.selected-store-card .selected-store-actions .selected-store-action::before{
  content:none;display:none;
@@ -199,10 +199,10 @@
  to{opacity:1;transform:translateY(0)}
 }
 @media(max-width:680px){
- .msg.bot.selected-store-card:has(.chat-actions){width:100%;padding:15px;border-radius:17px}
- .selected-store-media{width:48px;height:48px;min-width:48px;flex-basis:48px}
- .selected-store-title{font-size:15px}
- .selected-store-details{grid-template-columns:1fr;gap:13px}
+ .msg.bot.selected-store-card:has(.chat-actions){width:100%;padding:12px;border-radius:14px}
+ .selected-store-media{width:40px;height:40px;min-width:40px;flex-basis:40px}
+ .selected-store-title{font-size:14px}
+ .selected-store-details{grid-template-columns:1fr;gap:9px}
  .selected-store-detail-row:first-child{grid-column:auto}
  .msg.bot.selected-store-card .selected-store-actions{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
  .msg.bot.selected-store-card .selected-store-actions::-webkit-scrollbar{display:none}

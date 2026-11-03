@@ -83,4 +83,4 @@ import('./admin-delete-controls.js?v=1').catch(err=>console.error('[Admin Delete
 import('./admin-merchant-enhancements.js?v=1').catch(err=>console.error('[Merchant Enhancements Loader]',err));
 import('./admin-merchant-details.js?v=1').catch(err=>console.error('[Merchant Details Loader]',err));
 import('./admin-taxonomy-db.js?v=1').catch(err=>console.error('[Taxonomy DB Loader]',err));
-import('./admin-ui-v2.js?v=1').catch(err=>console.error('[Admin UI V2 Loader]',err));
+import('./admin-ui-v3.js?v=1').catch(err=>console.error('[Admin UI V3 Loader]',err));

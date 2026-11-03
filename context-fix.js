@@ -51,6 +51,8 @@ setTimeout(sanitizeCategorySynonyms,250);
 
 await safeImport('./category-context-fix.js?v=3');
 await safeImport('./semantic-query-guard.js?v=9');
+await safeImport('./guru-session-v3.js?v=1');
+await safeImport('./guru-language-tests.js?v=1');
 await safeImport('./ai-conversation-enhancements.js?v=2');
 await safeImport('./real-location.js?v=1');
 await safeImport('./hashtag-search.js?v=3');
@@ -130,4 +132,4 @@ compactCards();
 if(msgs)new MutationObserver(mutations=>{for(const m of mutations)m.addedNodes.forEach(n=>{if(n.nodeType===1)compactCards(n)})}).observe(msgs,{childList:true,subtree:true});
 
 document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{if(!q||!form)return;q.value=b.dataset.q||'';form.requestSubmit()}));
-document.getElementById('resetBtn')?.addEventListener('click',()=>{window.LocalAIEngine?.reset?.();if(msgs){const d=document.createElement('div');d.className='msg bot';d.textContent='Pronto. Limpei o contexto da busca. O que você procura agora?';msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight}});
+document.getElementById('resetBtn')?.addEventListener('click',()=>{window.GuruSessionV3?.clear?.();window.LocalAIEngine?.reset?.();if(msgs){const d=document.createElement('div');d.className='msg bot';d.textContent='Pronto. Limpei o contexto da busca. O que você procura agora?';msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight}});

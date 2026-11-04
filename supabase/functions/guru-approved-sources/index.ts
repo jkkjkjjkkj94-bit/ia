@@ -136,6 +136,18 @@ Deno.serve(async req=>{
  if(req.headers.get("origin")!==ORIGIN)return output({error:"Origem não autorizada."},403);
  if(req.method==="OPTIONS")return output({ok:true});
  if(req.method!=="POST"||!SECRET||!BASE)return output({error:"Indisponível."},503);
+ let body:any;try{body=await req.json()}catch{return output({error:"JSON inválido."},400)}
+ if(typeof body?.sourceId!=="string"||!/^[0-9a-f-]{36}$/i.test(body.sourceId))return output({error:"Fonte inválida."},400);
+ if(body.action==="refresh"){
+  // Coleta automática SOMENTE de fontes previamente aprovadas, uma vez por 12 horas.
+  const claim=await rest("rpc/guru_web_claim_refresh",{
+    method:"POST",body:JSON.stringify({p_source:body.sourceId}),
+  });
+  if(!claim.ok)return output({error:"Atualização indisponível."},503);
+  if(await claim.json()!==true)return output({status:"recent",products:0,message:"Fonte atualizada recentemente ou em atualização."});
+  return syncSource(body.sourceId);
+ }
+ if(body.action!=="sync")return output({error:"Ação inválida."},400);
  const authorization=req.headers.get("authorization")||"";
  if(!authorization.startsWith("Bearer "))return output({error:"Acesso administrativo necessário."},401);
  let user:any;
@@ -151,8 +163,5 @@ Deno.serve(async req=>{
  if(!check.ok)return output({error:"Não foi possível validar permissão."},403);
  const profiles=await check.json();
  if(profiles[0]?.role!=="admin")return output({error:"Apenas administradores podem atualizar fontes."},403);
- let body:any;try{body=await req.json()}catch{return output({error:"JSON inválido."},400)}
- if(body?.action!=="sync"||typeof body.sourceId!=="string"||!/^[0-9a-f-]{36}$/i.test(body.sourceId))
-  return output({error:"Ação inválida."},400);
  return syncSource(body.sourceId);
 });

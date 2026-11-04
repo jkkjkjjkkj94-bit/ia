@@ -332,14 +332,22 @@ test('todas as 10 categorias e 50 grupos da taxonomia são reconhecidos com cont
  const dataByGroup={stores:storesByGroup,products:[],reviews:[],knowledge:[],hours:[]};
  for(let i=0;i<groups.length;i++){
   const {category,group}=groups[i];
-  const question='Quero encontrar '+category+' '+group;
-  const p=interpret(question,registeredTaxonomy,registeredAliases);
-  assert.equal(p.kind,'search',question);
-  assert.equal(p.taxon?.category,category,question);
-  assert.equal(p.taxon?.group,group,question);
-  assert.deepEqual(p.semanticTerms,[],question);
-  assert.equal(p.productTerm,null,question);
-  const results=searchStores(dataByGroup,nextState(emptyState(),p),null,{limit:60});
-  assert.deepEqual(results.map(r=>r.store.id),['g'+i],question);
+  const firstAlias=registeredTaxonomy[category][group].find(alias=>alias!==group);
+  const variants=[
+   'Quero encontrar '+category+' '+group,
+   'Onde encontro '+category+' '+group+'?',
+   'Existem estabelecimentos de '+category+' '+group+'?'
+  ];
+  if(firstAlias)variants.push('Procure '+category+' '+firstAlias);
+  for(const question of variants){
+   const p=interpret(question,registeredTaxonomy,registeredAliases);
+   assert.equal(p.kind,'search',question);
+   assert.equal(p.taxon?.category,category,question);
+   assert.equal(p.taxon?.group,group,question);
+   assert.deepEqual(p.semanticTerms,[],question);
+   assert.equal(p.productTerm,null,question);
+   const results=searchStores(dataByGroup,nextState(emptyState(),p),null,{limit:60});
+   assert.deepEqual(results.map(r=>r.store.id),['g'+i],question);
+  }
  }
 });

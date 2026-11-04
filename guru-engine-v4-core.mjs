@@ -75,12 +75,13 @@ function parseFilters(raw,prev={},options={}){
  const maxFee=amount(n,/\b(?:frete|taxa de entrega|taxa de delivery)\s*(?:de )?(?:ate|no maximo|maximo)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\b/);if(maxFee!==null){f.maxDeliveryFee=maxFee;f.delivery=true}
  const maxDeliveryTime=amount(n,/\b(?:entrega|delivery)\s+(?:em\s+)?(?:ate|no maximo)\s*(\d+)\s*(?:min|mins|minutos)\b/);if(maxDeliveryTime!==null){f.maxDeliveryMinutes=maxDeliveryTime;f.delivery=true}
  const minRating=amount(n,/\b(?:nota|avaliacao)\s*(?:acima de|maior que|de pelo menos|minima|a partir de)\s*(\d(?:[.,]\d)?)\b/);if(minRating!==null)f.minRating=minRating;
+ const ratingOnlyNumeric=/\b(?:nota|avaliacao)\s*(?:acima de|maior que|de pelo menos|minima|a partir de|ate|abaixo de|menor que)\b/.test(n);
  const priceRange=n.match(/\bentre\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:e|a)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?)?\b/);
  if(priceRange){f.minPrice=asNum(priceRange[1]);f.maxPrice=asNum(priceRange[2])}
  else{
   const maxPrice=amount(n,/\b(?:ate|menos de|maximo|no maximo)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?|rs|r)?\b(?!\s*(?:h|horas|km|m|minutos)\b)/);
-  if(maxPrice!==null&&!/\b(?:frete|taxa|entrega|delivery)\s+/.test(n))f.maxPrice=maxPrice;
-  const minPrice=amount(n,/\b(?:acima de|mais de|a partir de)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?)?\b/);if(minPrice!==null)f.minPrice=minPrice;
+  if(maxPrice!==null&&!/\b(?:frete|taxa|entrega|delivery)\s+/.test(n)&&!ratingOnlyNumeric)f.maxPrice=maxPrice;
+  const minPrice=amount(n,/\b(?:acima de|mais de|a partir de)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?)?\b/);if(minPrice!==null&&!ratingOnlyNumeric)f.minPrice=minPrice;
  }
  if(/\b(em promocao|promocao|com desconto|em oferta|oferta)\b/.test(n))f.promoOnly=true;
  const sz=n.match(/\b(?:tamanho|tam)\s*(pp|p|m|g|gg|xg)\b/);
@@ -198,7 +199,7 @@ export function activePromo(p,now=Date.now()){
 }
 export function priceOf(p,now=Date.now()){return activePromo(p,now)?Number(p.promo_price):(p.price==null?NaN:Number(p.price))}
 export function eligibleProduct(p,f={},now=Date.now()){
- if(p.active===false||p.show_in_ai===false||!Number.isFinite(Number(p.stock))||Number(p.stock)<=0)return false;
+ if(p.active!==true||p.show_in_ai!==true||!Number.isFinite(Number(p.stock))||Number(p.stock)<=0)return false;
  if(f.quantity!=null&&Number(p.stock)<f.quantity)return false;
  if(f.promoOnly&&!activePromo(p,now))return false;
  const price=priceOf(p,now);
@@ -212,11 +213,11 @@ export function eligibleProduct(p,f={},now=Date.now()){
 function intervalsFor(hours,storeId,weekday){
  const w=weekday??new Date().getDay();
  const intervals=[];
- const get=(day)=>hours.find(h=>h.store_id===storeId&&Number(h.weekday)===day&&!h.closed&&h.opens_at&&h.closes_at);
- for(const delta of [-1,0]){
-  const h=get((w+delta+7)%7);if(!h)continue;
+ const get=(day)=>hours.filter(h=>h.store_id===storeId&&Number(h.weekday)===day&&!h.closed&&h.opens_at&&h.closes_at);
+ for(const delta of [-1,0])for(const h of get((w+delta+7)%7)){
   const start=mins(String(h.opens_at).slice(0,2),String(h.opens_at).slice(3,5))+1440*delta;
   let end=mins(String(h.closes_at).slice(0,2),String(h.closes_at).slice(3,5))+1440*delta;
+  if(!Number.isFinite(start)||!Number.isFinite(end))continue;
   if(end<=start)end+=1440;
   intervals.push([start,end]);
  }
@@ -234,9 +235,12 @@ export function scheduleMatches(store,hours,f={},now=new Date()){
  });
 }
 export function distanceKm(a,b){
- if(!a||b.latitude==null||b.longitude==null)return null;
- const lat=Number(b.latitude),lon=Number(b.longitude),alat=Number(a.lat),alon=Number(a.lng);
- if(![lat,lon,alat,alon].every(Number.isFinite))return null;
+ if(!a||!b)return null;
+ // Coordenadas nulas e vazias não representam (0,0); valores fora de faixa não são válidos.
+ const raw=[b.latitude,b.longitude,a.lat,a.lng];
+ if(raw.some(v=>v==null||String(v).trim()===''))return null;
+ const [lat,lon,alat,alon]=raw.map(Number);
+ if(![lat,lon,alat,alon].every(Number.isFinite)||Math.abs(lat)>90||Math.abs(alat)>90||Math.abs(lon)>180||Math.abs(alon)>180)return null;
  const rad=x=>x*Math.PI/180,R=6371,dlat=rad(lat-alat),dlon=rad(lon-alon);
  const v=Math.sin(dlat/2)**2+Math.cos(rad(alat))*Math.cos(rad(lat))*Math.sin(dlon/2)**2;
  return R*2*Math.atan2(Math.sqrt(v),Math.sqrt(1-v));
@@ -254,7 +258,12 @@ function semanticHit(token,text){
   tranquilo:/\b(tranquil[ao]|sossegad[ao]|calm[ao])\b/,
   sossegado:/\b(tranquil[ao]|sossegad[ao]|calm[ao])\b/
  };
- return families[n]?families[n].test(text):text.includes(n);
+ // Não confundir "bar" com "barbearia" nem aceitar correspondência dentro de palavras.
+ return families[n]?families[n].test(text):has(text,n);
+}
+function storeNamePartialHit(token,name){
+ const t=norm(token);
+ return t.length>=4&&words(name).some(w=>w.startsWith(t));
 }
 function storeNameTypoHit(token,name){
  const t=norm(token);
@@ -293,7 +302,7 @@ export function searchStores(data={},state={},position=null,options={}){
   if(mustHaveProduct&&!eligible.length)continue;
   const text=norm([store.name,store.address,store.category,store.group,(store.groups||[]).join(' '),(store.specialties||[]).join(' '),store.description,...eligible.flatMap(p=>[p.name,p.description,p.category,p.brand]),...(kByStore.get(store.id)||[]).flatMap(k=>[k.question,(k.variations||[]).join(' '),k.answer])].join(' '));
   const semanticTerms=state.semanticTerms||[],featureTerms=state.featureTerms||[];
-  const hits=semanticTerms.filter(t=>semanticHit(t,text)||storeNameTypoHit(t,store.name));
+  const hits=semanticTerms.filter(t=>semanticHit(t,text)||storeNamePartialHit(t,store.name)||storeNameTypoHit(t,store.name));
   // A mandatory feature requested in prose must be present in store/catalog information.
   if(featureTerms.length&&!featureTerms.every(t=>semanticHit(t,text)))continue;
   // Termos específicos são critérios cumulativos: uma palavra no endereço não basta para corresponder ao nome informado.

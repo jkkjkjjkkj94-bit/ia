@@ -154,7 +154,8 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const allTerms=(taxon?[taxon.term,normalizeQuery(taxon.category),normalizeQuery(taxon.group||'')]:[]).filter(Boolean);
  let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo','barato','barata','economico','economica','aceita','pix','credito','debito','dinheiro','retirada','retirar','entrega','delivery','rapida','rapido','minutos','minuto','horas','hora','numero','noite','manha','tarde'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!(w==='feira'&&/\b(?:segunda|terca|quarta|quinta|sexta) feira\b/.test(positive))&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?h?$/.test(w));
  const featureTerms=semanticTerms.filter(w=>/^(vegano|vegana|vegetariano|vegetariana|familia|familiar|tranquilo|sossegado|artesanal)$/.test(w));
- const productCue=/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|preciso de|tem|vende|estoque)\b/.test(n);
+ const lookingForStore=/\b(?:tem|vende)\s+(?:(?:um|uma|algum|alguma)\s+)?(?:loja|lojas|comercio|comercios|estabelecimento|estabelecimentos)\b/.test(n);
+ const productCue=!lookingForStore&&/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|preciso de|tem|vende|estoque)\b/.test(n);
  const genericProduct=/\b(produto|comprar|tem|vende|estoque)\b/.test(n);
  let productTerm=null;
  if(productCue){

@@ -1,5 +1,5 @@
 // GURU IA híbrida: complementa, mas nunca substitui, o ranking determinístico.
-// Configure OPENAI_API_KEY e GURU_TURNSTILE_SECRET no Supabase antes de ativar no frontend.
+// OPENAI_API_KEY guardada no Supabase; cotas atômicas em Postgres sem Cloudflare.
 const ALLOWED_ORIGIN = Deno.env.get("GURU_ALLOWED_ORIGIN") || "https://jkkjkjjkkj94-bit.github.io";
 const OPENAI_MODEL = Deno.env.get("GURU_OPENAI_MODEL") || "gpt-6-luna";
 
@@ -44,8 +44,10 @@ Deno.serve(async (req: Request) => {
 
   // Fail closed: endpoint público não poderá consumir tokens pagos sem proteção antiabuso.
   const apiKey = Deno.env.get("OPENAI_API_KEY");
-  const challengeSecret = Deno.env.get("GURU_TURNSTILE_SECRET");
-  if (!apiKey || !challengeSecret) return json({ unavailable: true }, 503);
+  const adminKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+    (() => { try { return JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}").default || ""; } catch { return ""; } })();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (!apiKey || !adminKey || !supabaseUrl) return json({ unavailable: true }, 503);
   if (Number(req.headers.get("content-length") || "0") > 5000) return json({ error: "Pedido muito grande." }, 413);
 
   let body: any;
@@ -55,23 +57,29 @@ Deno.serve(async (req: Request) => {
     body = JSON.parse(raw);
   } catch { return json({ error: "JSON inválido." }, 400); }
   const question = limited(body?.question, 380);
-  const token = limited(body?.turnstileToken, 2500);
   const results = publicResults(body?.results);
-  if (!question || !results.length || !token) return json({ error: "Dados insuficientes." }, 400);
+  if (!question || !results.length) return json({ error: "Dados insuficientes." }, 400);
 
-  const challenge = new URLSearchParams({ secret: challengeSecret, response: token });
-  let verified: any = null;
+  // O IP auxilia no limite por cliente, mas pode ser falsificado; o limite global é obrigatório.
+  const remoteAddress = (req.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim().slice(0,80);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(remoteAddress + ":" + adminKey));
+  const clientHash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+  let allowed = false;
   try {
-    const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    const r = await fetch(supabaseUrl + "/rest/v1/rpc/guru_hybrid_claim_quota", {
       method: "POST",
-      body: challenge,
-      signal: AbortSignal.timeout(5500),
+      headers: {
+        apikey: adminKey,
+        ...(adminKey.startsWith("eyJ") ? { Authorization: "Bearer " + adminKey } : {}),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ p_client: clientHash }),
+      signal: AbortSignal.timeout(5000),
     });
-    if (r.ok) verified = await r.json();
-  } catch { /* Sem verificação, sem chamada paga. */ }
-  if (!verified?.success || verified.hostname !== new URL(ALLOWED_ORIGIN).hostname) {
-    return json({ error: "Verificação de segurança não concluída." }, 403);
-  }
+    if (!r.ok) return json({ unavailable: true }, 503);
+    allowed = (await r.json()) === true;
+  } catch { return json({ unavailable: true }, 503); }
+  if (!allowed) return json({ limitReached: true }, 429);
 
   const prompt = JSON.stringify({ pergunta: question, resultados: results });
   const instructions = [

@@ -75,6 +75,21 @@ Deno.serve(async (req: Request) => {
     if (!r.ok) return json({ unavailable: true }, 503);
     allowed = (await r.json()) === true;
   } catch { return json({ unavailable: true }, 503); }
+  // Métricas verificadas pelo servidor; não dependem de eventos enviados por visitantes.
+  const recordOutcome = async (outcome: string) => {
+    try {
+      await fetch(supabaseUrl + "/rest/v1/rpc/guru_hybrid_record_metric", {
+        method: "POST",
+        headers: {
+          apikey: adminKey,
+          ...(adminKey.startsWith("eyJ") ? { Authorization: "Bearer " + adminKey } : {}),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_outcome: outcome }),
+        signal: AbortSignal.timeout(1500),
+      });
+    } catch { /* Métrica não interrompe resposta ao usuário. */ }
+  };
   if (!allowed) return json({ limitReached: true }, 429);
 
   const prompt = JSON.stringify({ pergunta: question, resultados: results });
@@ -107,11 +122,16 @@ Deno.serve(async (req: Request) => {
       }),
       signal: AbortSignal.timeout(9000),
     });
-    if (!response.ok) return json({ unavailable: true }, 502);
+    if (!response.ok) {
+      await recordOutcome("api_error");
+      return json({ unavailable: true }, 502);
+    }
     const data = await response.json();
     const answer = outputText(data);
+    await recordOutcome(answer ? "success" : "empty_response");
     return answer ? json({ answer, source: "openai" }) : json({ unavailable: true }, 502);
   } catch {
+    await recordOutcome("network_error");
     return json({ unavailable: true }, 502);
   }
 });

@@ -3,6 +3,7 @@ import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from '.
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
 import {recordSearch,recordSelection} from './guru-telemetry-v5.mjs?v=1';
+import {searchAlternatives,preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
@@ -675,12 +676,28 @@ async function run(text){
  applyLocation(text,draft);
  if(db.unavailable.hours&&(draft.filters.openNow||draft.filters.day!=null||(Array.isArray(draft.filters.days)&&draft.filters.days.length)||draft.filters.start!=null||draft.filters.end!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
  if(db.unavailable.reviews&&(draft.filters.minRating!=null||draft.filters.sort==='rating')){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
- state=draft;
+ // Busca híbrida: resultados literais primeiro; sinônimos e erros de escrita
+ // só entram quando a consulta original não encontrou nenhum resultado.
+ let finalState=draft,rows=searchStores(db,draft,position,{limit:6}),recovery=null;
+ if(!rows.length){
+  for(const alt of searchAlternatives(text,db,taxonomy,aliases)){
+   const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});
+   if(alternatePlan.kind!=='search')continue;
+   const alternateState=preserveMandatoryFilters(draft,nextState(state,alternatePlan));
+   applyLocation(text,alternateState);
+   const found=searchStores(db,alternateState,position,{limit:6});
+   if(found.length){rows=found;finalState=alternateState;recovery=alt;break}
+  }
+ }
+ state=finalState;
  renderContext();save();
- const rows=searchStores(db,state,position,{limit:6});
  state.lastResults=rows;
  recordSearch(text,plan,rows);
  if(!rows.length){add(explainEmptySearch(db,state,position));save();return}
+ if(recovery){
+  const hint=recovery.mode==='correction'?'Corrigi uma possível palavra digitada incorretamente.':'Encontrei uma expressão relacionada no catálogo.';
+  add(hint+' Pesquisei por “'+recovery.query+'”.');
+ }
  const natural=await hybridResponse(text,rows);
  if(natural)add(natural);
  displayResults(rows);

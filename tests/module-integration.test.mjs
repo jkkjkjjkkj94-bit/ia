@@ -334,3 +334,20 @@ test('Erro HTTP 403 do robots bloqueia apenas a coleta, sem afetar produtos cada
  assert.match(admin,/Consulta automática indisponível/);
  assert.match(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
 });
+
+
+test('Cadastro manual de produtos e sincronização do catálogo sem crawling bloqueado',()=>{
+ const admin=source('admin-web-sources.js');
+ assert.match(admin,/guruManualProductForm/);
+ assert.match(admin,/guruManualName/);
+ assert.match(admin,/guruManualUrl/);
+ assert.match(admin,/async function addManualProduct/);
+ assert.match(admin,/site\.origin!==url\.origin/);
+ assert.match(admin,/ignoreDuplicates:true/);
+ assert.match(admin,/availability:'unknown'/);
+ assert.match(admin,/async function synchronize\(source\)/);
+ assert.match(admin,/count:'exact',head:true/);
+ assert.match(admin,/indexed_count:quantity/);
+ assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
+ assert.doesNotMatch(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
+});

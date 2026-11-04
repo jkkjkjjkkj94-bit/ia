@@ -7,7 +7,7 @@ const THANKS=/^(?:obrigad[oa]|muito obrigad[oa]|obrigad[oa] mesmo|valeu|valeu me
 const GOODBYE=/^(?:tchau|ate mais|ate logo|ate breve|ate a proxima|falou|flw|fui|adeus|boa noite ate mais|valeu tchau|obrigado tchau)(?: guru)?$/;
 const WELL=/^(?:estou bem|to bem|tudo certo|tudo otimo|tudo tranquilo|tudo joia|bem tambem|tambem estou bem|otimo|legal|beleza|maravilha)(?: (?:obrigad[oa]|e voce|e por ai|guru|por perguntar))*$/;
 const INTRO=/^(?:quem e voce|voce e quem|qual seu nome|como voce se chama|voce e uma ia|voce e um robo|o que e a guru|o que voce faz|como funciona a guru|o que voce sabe fazer|voce pode me ajudar|pode me ajudar|me ajuda|preciso de ajuda)$/;
-const greetingPrefix=/^(?:(?:oi+|ola+|opa|e ai|eae|hey|bom dia|boa tarde|boa noite|salve|oie)(?: guru)?(?:[\s,.!?;:–-]+(?:tudo bem|tudo bom|como vai|beleza))?|tudo bem|tudo bom|beleza|td bem)\b[\s,.!?;:–-]*/i;
+const greetingPrefix=/^(?:(?:oi+|ol[aá]+|opa|[eé] a[ií]|eae|hey|bom dia|boa tarde|boa noite|salve|oie)(?: guru)?(?:[\s,.!?;:–-]+(?:tudo bem|tudo bom|como vai|beleza))?|tudo bem|tudo bom|beleza|td bem)\b[\s,.!?;:–-]*/i;
 function socialAnswer(normalized){
  if(GREETING.test(normalized)||HOW_ARE_YOU.test(normalized)){
   if(/tudo bem|tudo bom|como|td bem|td bom|beleza/.test(normalized))return 'Oi! Tudo certo por aqui 😊 E com você? Se precisar, posso ajudar a encontrar lojas, produtos ou serviços.';

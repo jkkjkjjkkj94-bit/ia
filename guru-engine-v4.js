@@ -105,6 +105,7 @@ function renderContext(){
  if(state.category)parts.push('Categoria: '+state.category);if(state.group)parts.push('Grupo: '+state.group);
  if(state.location?.city)parts.push('Cidade: '+state.location.city);
  if(state.filters?.day!=null)parts.push('Dia: '+dayNames[state.filters.day]);
+ if(Array.isArray(state.filters?.days)&&state.filters.days.includes(0)&&state.filters.days.includes(6))parts.push('Fim de semana');
  if(state.filters?.openNow)parts.push('abertas agora');
  if(state.filters?.delivery===true)parts.push('com entrega');else if(state.filters?.delivery===false)parts.push('sem entrega');
  if(state.filters?.pickup===true)parts.push('com retirada');
@@ -447,7 +448,7 @@ async function run(text){
  }
  state=nextState(state,plan);
  applyLocation(text);
- if(db.unavailable.hours&&(state.filters.openNow||state.filters.day!=null||state.filters.start!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
+ if(db.unavailable.hours&&(state.filters.openNow||state.filters.day!=null||(Array.isArray(state.filters.days)&&state.filters.days.length)||state.filters.start!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
  if(db.unavailable.reviews&&state.filters.minRating!=null){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
  renderContext();save();
  const rows=searchStores(db,state,position,{limit:6});

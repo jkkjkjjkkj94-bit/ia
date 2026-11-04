@@ -84,6 +84,16 @@ async function smoke(){
   throw Error('Frase bem avaliada não ativou ordenação por nota');
  if(guru.interpret('Você tem alguma sugestão de pizzaria que permita retirada?').filters.pickup!==true)
   throw Error('Frase permita retirada não ativou filtro de retirada');
+ if(guru.interpret('Pizzaria que não faz entrega.').filters.delivery!==false)
+  throw Error('Negação de entrega foi invertida');
+ if(guru.interpret('Quero uma pizzaria que leve a pizza em casa.').filters.delivery!==true)
+  throw Error('Entrega em casa não reconhecida');
+ if(guru.interpret('Preciso buscar a pizza no balcão.').filters.pickup!==true)
+  throw Error('Retirada no balcão não reconhecida');
+ if(guru.interpret('Pizzaria com pizza de calabresa até R$ 50.').productTerm!=='calabresa')
+  throw Error('Sabor de pizza não gerou exigência de produto');
+ if(guru.interpret('Tem pizza de chocolate nessas pizzarias?').productTerm!=='chocolate')
+  throw Error('Produto inexistente pode gerar falso positivo');
  await guru.submitText('Tem algum lugar que prepare pizzas?');
  const pizzaNaturalCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
  if(pizzaNaturalCards?.querySelector('h3')?.textContent!=='Pizza Teste')

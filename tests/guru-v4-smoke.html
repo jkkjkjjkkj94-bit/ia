@@ -64,6 +64,13 @@ async function smoke(){
  if(getComputedStyle(grid).display==='none')throw Error('Cards não foram exibidos após a escrita');
  if(!document.querySelector('.store-result-card h3')?.textContent?.includes('Sushi Teste'))throw Error('busca japonesa falhou');
  if(![...document.querySelectorAll('.store-result-card .store-chip')].some(el=>el.textContent==='Verificada'))throw Error('Destaque verificada não aparece quando flag COREDB é falsa');
+ guru.reset();
+ await guru.submitText('comida');
+ const latestGrid=[...document.querySelectorAll('.store-results-grid')].at(-1);
+ const orderedNames=[...(latestGrid?.querySelectorAll('.store-result-card h3')||[])].map(el=>el.textContent);
+ const desiredOrder=['Doceria Teste','Sushi Teste','Pizza Teste'];
+ if(JSON.stringify(orderedNames)!==JSON.stringify(desiredOrder))
+  throw Error('Cards não respeitam Patrocinada > Verificada > Normal: '+JSON.stringify(orderedNames));
  await guru.submitText('loja de comida japonesa');
  const recentCards=[...document.querySelectorAll('.store-result-card h3')];
  if(!recentCards.some(x=>x.textContent==='Sushi Teste'))throw Error('loja de comida japonesa não encontrou estabelecimento válido');
@@ -178,13 +185,6 @@ async function smoke(){
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
  for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);
  if(!document.getElementById('msgs').textContent.includes('opções cadastradas'))throw Error('submit do formulário falhou');
- guru.reset();
- await guru.submitText('comida');
- const latestGrid=[...document.querySelectorAll('.store-results-grid')].at(-1);
- const orderedNames=[...(latestGrid?.querySelectorAll('.store-result-card h3')||[])].map(el=>el.textContent);
- const desiredOrder=['Doceria Teste','Sushi Teste','Pizza Teste'];
- if(JSON.stringify(orderedNames)!==JSON.stringify(desiredOrder))
-  throw Error('Cards não respeitam Patrocinada > Verificada > Normal: '+JSON.stringify(orderedNames));
  document.body.dataset.smoke='PASS';
  document.body.setAttribute('data-report','Busca + regra + promoção + contexto + envio OK');
 }

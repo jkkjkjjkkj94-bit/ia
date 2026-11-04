@@ -139,12 +139,20 @@ function rehydrate(){
  delete state._lastIds;delete state._selectedId;delete state._productId;
 }
 async function read(project,table,query=''){
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+ // Pagina resultados com ordenação estável: a API pode limitar respostas a 1.000 registros.
+ const limit=200,maxRows=10000,all=[];
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
  try{
-  const r=await fetch(project.url+'/rest/v1/'+table+'?select=*'+query,{headers:{apikey:project.key,Authorization:'Bearer '+project.key,Accept:'application/json'},signal:controller.signal});
-  if(!r.ok)throw new Error(table+' HTTP '+r.status);
-  const rows=await r.json();if(!Array.isArray(rows))throw new Error(table+' sem resposta válida');
-  return rows;
+  for(let offset=0;offset<maxRows;offset+=limit){
+   const url=project.url+'/rest/v1/'+table+'?select=*'+query+'&order=id.asc&limit='+limit+'&offset='+offset;
+   const r=await fetch(url,{headers:{apikey:project.key,Authorization:'Bearer '+project.key,Accept:'application/json'},signal:controller.signal});
+   if(!r.ok)throw new Error(table+' HTTP '+r.status);
+   const rows=await r.json();
+   if(!Array.isArray(rows))throw new Error(table+' sem resposta válida');
+   all.push(...rows);
+   if(rows.length<limit)return all;
+  }
+  throw new Error(table+' excedeu o limite de leitura ('+maxRows+' registros); ajuste a consulta.');
  }finally{clearTimeout(timer)}
 }
 function mergeTaxonomy(cats=[],groups=[],terms=[]){
@@ -182,7 +190,7 @@ async function loadData(force=false){
   const failures=all.map((x,i)=>x.status==='rejected'?i:null).filter(x=>x!==null);
   if(failures.length)console.warn('[GURU v4] Dados complementares indisponíveis',failures);
   mergeTaxonomy(get(5),get(6),get(7));
-  db={stores:get(0),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7)}};
+  db={stores:get(0),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7)}};
   lastLoad=Date.now();rehydrate();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;
@@ -390,7 +398,7 @@ function replyAboutStore(text,ask,filter={}){
  const n=norm(text),day=filter.day??state.filters.day??new Date().getDay();
  const record=(db?.knowledge||[]).find(k=>k.store_id===s.id&&k.active!==false&&[k.question,...(Array.isArray(k.variations)?k.variations:[])].some(q=>norm(q).length>=4&&(norm(text).includes(norm(q))||norm(q).includes(norm(text)))));
  if(record?.answer&&ask!=='total'){add(String(record.answer));return}
- if(ask==='knowledge'){add('Não encontrei uma resposta específica cadastrada. Dados da loja: '+[s.name,s.category,s.group,s.address].filter(Boolean).join(' · ')+'.');return}
+ if(ask==='knowledge'){if(db.unavailable.knowledge){add('Não consegui consultar as respostas cadastradas desta loja agora. Tente novamente.');return}add('Não encontrei uma resposta específica cadastrada. Dados da loja: '+[s.name,s.category,s.group,s.address].filter(Boolean).join(' · ')+'.');return}
  if(ask==='hours'){
   const h=db.hours.find(x=>x.store_id===s.id&&Number(x.weekday)===day);
   add(!h?'Essa loja ainda não informou o horário de '+dayNames[day]+'.':h.closed?'Essa loja está cadastrada como fechada no '+dayNames[day]+'.':s.name+' funciona no '+dayNames[day]+' das '+String(h.opens_at).slice(0,5)+' às '+String(h.closes_at).slice(0,5)+'.');return;

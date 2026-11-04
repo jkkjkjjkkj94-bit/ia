@@ -195,8 +195,14 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const specificProductCue=/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|estoque)\b/.test(n);
  const productCue=!lookingForStore&&(specificProductCue||(!taxon?.group&&/\b(preciso de|tem|vende)\b/.test(n)));
  const genericProduct=/\b(produto|comprar|tem|vende|estoque)\b/.test(n);
- let productTerm=null;
- if(productCue){
+ // "Pizza de calabresa" é uma exigência de produto, mas "quero comprar doces"
+ // apenas indica a categoria Doceria. Não exija catálogo para uma busca genérica.
+ const namedPizza=n.match(/\bpizzas?\s+(?:de\s+)?([a-z][a-z0-9]+)\b/);
+ const ignoredFlavor=new Set('em na no de da do com sem para ate abaixo acima mais melhor boa bom pronta pronto disponivel disponiveis estoque entrega casa por aqui hoje agora amanha'.split(' '));
+ const flavor=namedPizza&&!ignoredFlavor.has(namedPizza[1])&&!STOP.has(namedPizza[1])?namedPizza[1]:null;
+ const stockedItem=n.match(/\b([a-z][a-z0-9]+)\s+em\s+estoque\b/);
+ let productTerm=flavor||(stockedItem&&!STOP.has(stockedItem[1])?stockedItem[1]:null);
+ if(!productTerm&&productCue&&!taxon?.group){
   const list=words(searchContent).filter(w=>w.length>2&&!STOP.has(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!['produto','comprar','tem','vende','estoque','tamanho','tam'].includes(w)&&!taxon?.group?.toLowerCase().includes(w)&&!words(taxon?.term||'').includes(w));
   if(list.length)productTerm=list.slice(0,3).join(' ');
  }

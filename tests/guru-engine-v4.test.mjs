@@ -231,3 +231,16 @@ test('buscar um novo estabelecimento não se transforma em pergunta sobre produt
   assert.equal(p.productTerm,null,query);
  }
 });
+
+test('nomes de lojas completos, parciais e com uma letra incorreta',()=>{
+ const sweet=shop('sweet','Comida','Doceria',{name:'Loja do Misael Teste'});
+ const other=shop('other','Comida','Doceria',{name:'Outra Doceria'});
+ const sample={stores:[sweet,other],products:[],hours:[],reviews:[],knowledge:[]};
+ const queries=['Misael','Misa','Misaell','doceria Misael','doceria Misaell','Loja do Misael Teste'];
+ for(const query of queries){
+  const p=plan(query);
+  const found=searchStores(sample,nextState(emptyState(),p));
+  assert.deepEqual(found.map(x=>x.store.id),['sweet'],query);
+ }
+ assert.deepEqual(searchStores(sample,nextState(emptyState(),plan('doceria'))).map(x=>x.store.id).sort(),['other','sweet']);
+});

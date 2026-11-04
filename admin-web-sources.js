@@ -27,20 +27,9 @@ function init(){
  +'<div class="field"><label>Página pública do catálogo (mesmo domínio)</label><input id="guruCatalogUrl" type="url" placeholder="https://www.nike.com.br/nav/categorias/tenis" required></div>'
  +'<div class="field"><label>Ação</label><button type="submit" class="btn dark">Cadastrar fonte</button></div></form>'
  +'<div class="meta" style="margin:12px 0">A sincronização respeita regras do site e não consegue extrair todos os catálogos. Se a loja usar JavaScript ou bloquear consultas automatizadas, utilize um feed autorizado ou uma API oficial.</div>'
- +'<div id="guruApprovedSourcesList" class="list"></div>'
- +'<div class="card" id="guruFeedCard" style="margin-top:14px">'
- +'<h3>Importar feed autorizado · Nike/Awin</h3><div class="meta">Importe um arquivo CSV ou JSON fornecido pelo parceiro após aprovação. A GURU valida cada link e só aceita produtos do domínio da fonte aprovada. Até 1.500 linhas/arquivo (450 KB).</div>'
- +'<form id="guruFeedForm" style="margin-top:12px;display:grid;gap:10px">'
- +'<div class="field"><label>Fonte cadastrada</label><select id="guruFeedSource" required><option value="">Selecione uma loja</option></select></div>'
- +'<div class="field"><label>Arquivo de feed autorizado</label><input id="guruFeedFile" type="file" accept=".csv,.json,text/csv,application/json" required></div>'
- +'<label class="check-line"><input id="guruFeedApproval" type="checkbox" required> Confirmo que tenho autorização para usar e importar este feed do fornecedor.</label>'
- +'<div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn dark" type="submit" id="guruFeedImportButton">Importar arquivo</button><button class="btn" type="button" id="guruFeedPartnerSync">Sincronizar feed Awin configurado no servidor</button></div>'
- +'<div class="meta" id="guruFeedReport" role="status">Feed Awin Brasil: anunciante 17652. Requer aprovação do programa. Credenciais e URL privada nunca devem ser colocadas aqui.</div>'
- +'</form></div>';
+ +'<div id="guruApprovedSourcesList" class="list"></div>';
  section.appendChild(card);
  get('guruSourceForm').addEventListener('submit',e=>{e.preventDefault();void addSource()});
- get('guruFeedForm').addEventListener('submit',e=>{e.preventDefault();void importApprovedFeed()});
- get('guruFeedPartnerSync').addEventListener('click',()=>{void syncPartnerFeed()});
  void refresh();
 }
 async function addSource(){
@@ -76,82 +65,13 @@ async function synchronize(source){
  }catch{tell('Não foi possível acessar a fonte. Confira se o site permite leitura automatizada.')}
  await refresh();
 }
-async function grantFeedPermission(source){
- const agreement=get('guruFeedApproval');
- if(!agreement?.checked)throw Error('Confirme que possui autorização para utilizar os dados do parceiro.');
- const {error}=await sb.from('guru_web_sources').update({
-  feed_authorized:true,feed_provider:source.base_url==='https://www.nike.com.br'?'awin_nike_br':'authorized_file',
-  feed_status:'pending',updated_at:new Date().toISOString()
- }).eq('id',source.id);
- if(error)throw Error('Não foi possível registrar autorização: '+error.message);
-}
-async function sendFeedAction(action,sourceId,feed=null,format=null){
- const {data:{session}}=await sb.auth.getSession();
- if(!session)throw Error('Sessão administrativa expirada.');
- const r=await fetch('https://innziuzgtpfsiywqmies.supabase.co/functions/v1/guru-authorized-feed',{
-  method:'POST',headers:{apikey:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1',
-   Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},
-  body:JSON.stringify({action,sourceId,feed,format}),signal:AbortSignal.timeout(60000)
- });
- const body=await r.json();
- if(!r.ok)throw Error(body.message||body.error||'Não foi possível importar o feed.');
- return body;
-}
-async function selectedFeedSource(){
- const id=get('guruFeedSource')?.value;
- if(!id)throw Error('Selecione uma fonte cadastrada.');
- const {data,error}=await sb.from('guru_web_sources').select('id,name,base_url,enabled').eq('id',id).maybeSingle();
- if(error||!data?.enabled)throw Error('Selecione uma fonte ativa e autorizada.');
- return data;
-}
-async function importApprovedFeed(){
- const report=get('guruFeedReport'),button=get('guruFeedImportButton'),file=get('guruFeedFile')?.files?.[0];
- if(!file){tell('Selecione um CSV ou JSON autorizado.');return}
- if(file.size>350000){tell('Divida o feed em arquivos de até 350 KB com no máximo 1.500 registros.');return}
- const format=file.name.toLowerCase().endsWith('.json')?'json':file.name.toLowerCase().endsWith('.csv')?'csv':null;
- if(!format){tell('Use arquivo .csv ou .json.');return}
- button.disabled=true;
- if(report)report.textContent='Validando permissão e importando produtos...';
- try{
-  const source=await selectedFeedSource();
-  await grantFeedPermission(source);
-  const result=await sendFeedAction('upload',source.id,await file.text(),format);
-  if(report)report.textContent='Importação concluída: '+Number(result.stored||0)+' registros processados, '+Number(result.total||0)+' produtos cadastrados, '+Number(result.discarded||0)+' linhas rejeitadas.';
-  tell('Feed autorizado importado com sucesso.');await refresh();
- }catch(err){
-  if(report)report.textContent=err.message||'Falha ao importar feed.';
-  tell(err.message||'Falha ao importar feed.');
- }finally{button.disabled=false}
-}
-async function syncPartnerFeed(){
- const button=get('guruFeedPartnerSync'),report=get('guruFeedReport');
- button.disabled=true;
- try{
-  const source=await selectedFeedSource();await grantFeedPermission(source);
-  if(report)report.textContent='Verificando feed Awin configurado no servidor...';
-  const r=await sendFeedAction('partner_sync',source.id);
-  if(report)report.textContent='Feed sincronizado: '+Number(r.stored||0)+' produtos processados.';
-  await refresh();
- }catch(err){if(report)report.textContent=err.message; tell(err.message)}
- finally{button.disabled=false}
-}
 async function refresh(){
  const list=get('guruApprovedSourcesList');if(!list)return;
  list.textContent='Consultando fontes autorizadas...';
- const {data,error}=await sb.from('guru_web_sources').select('id,name,base_url,catalog_url,enabled,sync_status,sync_note,last_synced_at,next_page,indexed_count,scanned_pages,auto_sync_enabled,feed_authorized,feed_status,feed_last_import_at,feed_last_import_count,feed_last_note').order('name');
+ const {data,error}=await sb.from('guru_web_sources').select('id,name,base_url,catalog_url,enabled,sync_status,sync_note,last_synced_at,next_page,indexed_count,scanned_pages,auto_sync_enabled').order('name');
  if(error){list.textContent='Sem acesso às fontes: '+error.message;return}
  list.replaceChildren();
  if(!data?.length){list.textContent='Nenhuma fonte web cadastrada.';return}
- const select=get('guruFeedSource');
- if(select){
-  const chosen=select.value;
-  select.replaceChildren();
-  const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Selecione uma loja autorizada';select.appendChild(placeholder);
-  for(const source of data.filter(x=>x.enabled)){
-   const o=document.createElement('option');o.value=source.id;o.textContent=source.name;select.appendChild(o);
-  }
-  if(data.some(x=>x.id===chosen&&x.enabled))select.value=chosen;
- }
  for(const s of data){
   const item=document.createElement('div');item.className='item';
   const header=document.createElement('div');header.className='row';
@@ -160,8 +80,7 @@ async function refresh(){
     +'<div class="meta">Status: '+esc(s.sync_status)+' · '+(s.last_synced_at?new Date(s.last_synced_at).toLocaleString('pt-BR'):'sem sincronização')+'</div>'
     +'<div class="meta">Coleta automática: '+(s.auto_sync_enabled===true?'autorizada':'desativada — requer API ou feed autorizado')+'</div>'
     +'<div class="meta">Produtos indexados: '+Number(s.indexed_count||0)+' · páginas processadas: '+Number(s.scanned_pages||0)+' · próxima página: '+Number(s.next_page||1)+'</div>'
-    +(s.sync_note?'<div class="meta">'+esc(s.sync_note)+'</div>':'')
-    +'<div class="meta">Feed: '+esc(s.feed_status||'não configurado')+(s.feed_last_import_at?' · '+new Date(s.feed_last_import_at).toLocaleString('pt-BR'):'')+'</div>';
+    +(s.sync_note?'<div class="meta">'+esc(s.sync_note)+'</div>':'');
   const buttons=document.createElement('div');buttons.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
   const sync=document.createElement('button');sync.id='guruSync_'+s.id;sync.className='btn sm';sync.type='button';sync.textContent='Sincronizar';sync.disabled=!s.enabled||s.auto_sync_enabled!==true;sync.onclick=()=>synchronize(s);
   const toggle=document.createElement('button');toggle.className='btn sm';toggle.type='button';

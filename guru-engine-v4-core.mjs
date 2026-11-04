@@ -302,7 +302,7 @@ function storeNameTypoHit(token,name){
  return words(name).some(w=>w.length>=5&&Math.abs(w.length-t.length)<=1&&editDistance(t,w)===1);
 }
 // Explica a ausência de resultados com base na categoria disponível, sem inventar estabelecimentos.
-export function explainEmptySearch(data={},state={}){
+export function explainEmptySearch(data={},state={},position=null){
  const active=(data.stores||[]).filter(s=>s.active===true&&s.status==='active');
  const category=state.category,group=state.group;
  if(!active.length)return 'Não há estabelecimentos ativos disponíveis no cadastro neste momento.';
@@ -311,6 +311,26 @@ export function explainEmptySearch(data={},state={}){
  }
  if(group&&!active.some(s=>(!category||norm(s.category)===norm(category))&&storeGroups(s).includes(norm(group)))){
   return 'Não há estabelecimentos ativos cadastrados como '+group+' no momento. Você pode pesquisar outro tipo de estabelecimento.';
+ }
+ // Diga qual combinação realmente falhou: nunca confunda ausência de Pix com falha do interpretador.
+ const filters=state.filters||{};
+ if((category||group)&&filters.delivery===true&&filters.payment){
+  // Reaplicar a busca completa mantém localização, horário e todos os demais filtros intactos.
+  const onlyDelivery={...state,filters:{...filters,payment:null}};
+  const onlyPayment={...state,filters:{...filters,delivery:null}};
+  const offersDelivery=searchStores(data,onlyDelivery,position,{limit:1}).length>0;
+  const acceptsPayment=searchStores(data,onlyPayment,position,{limit:1}).length>0;
+  const label=group||category;
+  const paymentLabel=norm(filters.payment)==='pix'?'Pix':String(filters.payment);
+  if(offersDelivery&&acceptsPayment){
+   return 'Há estabelecimentos em '+label+' que fazem entrega e outros que aceitam '+paymentLabel+', mas nenhum atende aos dois requisitos ao mesmo tempo. Você pode pesquisar apenas entrega ou apenas '+paymentLabel+'.';
+  }
+  if(offersDelivery){
+   return 'Há estabelecimentos em '+label+' que fazem entrega, mas nenhum deles atende também à exigência de '+paymentLabel+' nos demais critérios desta pesquisa.';
+  }
+  if(acceptsPayment){
+   return 'Há estabelecimentos em '+label+' que aceitam '+paymentLabel+', mas nenhum deles atende também à exigência de entrega nos demais critérios desta pesquisa.';
+  }
  }
  if(category||group){
   const label=group||category;

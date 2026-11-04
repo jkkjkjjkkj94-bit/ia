@@ -64,10 +64,17 @@ function parseFilters(raw,prev={},options={}){
  // 'Fim de semana' significa sábado OU domingo, não a data de hoje.
  if(/\bfim de semana\b/.test(n)){f.days=[0,6];f.day=null;f.openNow=false}
  const day=dayOf(n,options.today??new Date().getDay());if(day!==null){f.day=day;f.days=null;f.openNow=false}
- if(/\b(sem entrega|sem delivery|nao quero entrega|nao quero delivery|nao faz entrega|nao oferece entrega|nao realiza entrega|nao entrega)\b/.test(n))f.delivery=false;
- else if(/\b(com entrega|delivery|faz entrega|faca entrega|oferece entrega|realiza entrega|entrega rapida|entrega hoje|lev[ae] (?:a )?pizza em casa|entrega em domicilio|levar (?:a )?pizza em casa)\b/.test(n))f.delivery=true;
- if(/\b(para retirar|com retirada|retirada na loja|buscar na loja|buscar (?:a )?pizza no balcao|retirar no balcao|retirada no balcao|permita retirada|permite retirada|oferece retirada|faz retirada)\b/.test(n))f.pickup=true;
- else if(/\b(sem retirada)\b/.test(n))f.pickup=false;
+ // Sábado OU domingo é uma alternativa; sábado E domingo exige funcionamento nos dois dias.
+ if(/\b(?:sabado\s+(?:e|ou)\s+domingo|domingo\s+(?:e|ou)\s+sabado)\b/.test(n)){
+  const everyDay=/\b(?:sabado\s+e\s+domingo|domingo\s+e\s+sabado)\b/.test(n);
+  f.day=null;f.openNow=false;
+  if(everyDay){f.daysAll=[0,6];f.days=null}
+  else{f.days=[0,6];f.daysAll=null}
+ }
+ if(/\b(sem entrega|sem entregas|sem delivery|nao quero entrega|nao quero delivery|nao faz entregas?|nao faz delivery|nao oferece entregas?|nao realiza entregas?|nao entrega|nao entregam)\b/.test(n))f.delivery=false;
+ else if(/\b(com entrega|delivery|faz entregas?|faca entregas?|oferece entregas?|realiza entregas?|entrega rapida|entrega hoje|entrega em casa|entrega no (?:meu )?endereco|entregas? em domicilio|realiza entregas? em domicilio|trabalha com delivery|lev[ae] (?:a )?pizza em casa|levar (?:a )?pizza em casa)\b/.test(n))f.delivery=true;
+ if(/\b(sem retirada|nao permite retirada|nao oferece retirada|nao faz retirada|nao tem retirada)\b/.test(n))f.pickup=false;
+ else if(/\b(para retirar|com retirada|retirada na loja|buscar na loja|buscar (?:a )?pizza no balcao|buscar no balcao|retirar no balcao|retirada no balcao|permita retirada|permite retirada|oferece retirada|faz retirada|retirar (?:meu )?pedido|para retirar (?:meu )?pedido)\b/.test(n))f.pickup=true;
  if(/\b(melhor avaliadas?|maior nota|bem avaliadas?|bem avaliados?|melhor reputacao|mais bem avaliadas?)\b/.test(n))f.sort='rating';
  else if(/\b(mais proxim[oa]s?|mais perto|perto de mim)\b/.test(n))f.sort='distance';
  else if(/\b(mais barat[oa]s?|barat[oa]s?|economicos?|economicas?|menor preco)\b/.test(n))f.sort='price';
@@ -93,11 +100,19 @@ function parseFilters(raw,prev={},options={}){
  if(sz||lastSize)f.size=String((sz||lastSize)[1]).toUpperCase();
  const color=COLORS.find(c=>has(n,c));if(color)f.color=color;
  const q=n.match(/\b(\d{1,3})\s*(?:unidades|unidade|pares|itens|pecas)\b/);if(q)f.quantity=Number(q[1]);
- if(/\b(?:pix|pagamento por pix)\b/.test(n))f.payment='pix';
- else if(/\b(?:cartao de credito|credito)\b/.test(n))f.payment='credito';
- else if(/\b(?:cartao de debito|debito)\b/.test(n))f.payment='debito';
- else if(/\bcartao\b/.test(n))f.payment='cartao';
- else if(/\bdinheiro\b/.test(n))f.payment='dinheiro';
+ // Pagamentos são cumulativos: "Pix e cartão" exige ambos, "sem Pix" exclui Pix.
+ // Não confunda negação de pagamento com o requisito positivo do mesmo método.
+ const paymentTerms=[...n.matchAll(/\b(cartao(?:s|es)?(?:\s+de\s+(?:credito|debito))?|pix|credito|debito|dinheiro)\b/g)];
+ const required=[],excluded=[];
+ for(const hit of paymentTerms){
+  const token=hit[1],method=token.includes('credito')?'credito':token.includes('debito')?'debito':token.startsWith('cart')?'cartao':token;
+  const prefix=n.slice(Math.max(0,hit.index-55),hit.index);
+  const isNegative=/(?:\bnao\s+(?:aceita|aceitam|recebe|recebem|permite|possui|tem)|\bsem)\s+(?:(?:pagamento|pagar)\s+(?:em|por|com)\s+)?$/.test(prefix);
+  const selected=isNegative?excluded:required;
+  if(!selected.includes(method))selected.push(method);
+ }
+ if(required.length){f.payment=required[0];if(required.length>1)f.paymentsAll=required}
+ if(excluded.length)f.excludedPayments=excluded;
  const rangeAfter=n.match(/\b(?:depois das|apos as|a partir das)\s*(\d{1,2})(?::(\d{2}))?/);
  const rangeBefore=n.match(/\b(?:antes das|ate as)\s*(\d{1,2})(?::(\d{2}))?/);
  const exact=n.match(/\b(?:as)\s*(\d{1,2})(?::(\d{2}))?\s*(?:h|horas)?\b/);
@@ -187,7 +202,7 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const excludedGroups=excludedTax?.group?[norm(excludedTax.group)]:[];
  const excludeCategory=!!excludedTax?.category&&!excludedTax.group&&[norm(excludedTax.category),'roupa','roupas','tecnologia','comida','beleza','mercado','farmacia','servicos','pet','construcao','automoveis'].includes(after);
  const excludedCategories=excludeCategory?[norm(excludedTax.category)]:[];
- const excludedTerms=after&&!excludedGroups.length&&!excludeCategory&&!/^(?:entrega|retirada|frete|delivery)\b/.test(after)?[after]:[];
+ const excludedTerms=after&&!excludedGroups.length&&!excludeCategory&&!/^(?:entregas?|retirada|frete|delivery|pix|cartoes?|cartao|credito|debito|dinheiro)\b/.test(after)?[after]:[];
  const allTerms=(taxon?[taxon.term,normalizeQuery(taxon.category),normalizeQuery(taxon.group||'')]:[]).filter(Boolean);
  let semanticTerms=words(searchContent).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','estoque','frete','taxa','promocao','acima','abaixo','barato','barata','economico','economica','aceita','pix','credito','debito','dinheiro','retirada','retirar','entrega','delivery','rapida','rapido','minutos','minuto','horas','hora','numero','noite','manha','tarde'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!(w==='feira'&&/\b(?:segunda|terca|quarta|quinta|sexta) feira\b/.test(positive))&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?h?$/.test(w));
  const featureTerms=semanticTerms.filter(w=>/^(vegano|vegana|vegetariano|vegetariana|familia|familiar|tranquilo|sossegado|artesanal)$/.test(w));
@@ -264,15 +279,17 @@ function intervalsFor(hours,storeId,weekday){
  return intervals;
 }
 export function scheduleMatches(store,hours,f={},now=new Date()){
- if(!f.openNow&&f.day==null&&!(Array.isArray(f.days)&&f.days.length)&&f.start==null&&f.end==null)return true;
- const days=Array.isArray(f.days)&&f.days.length?f.days:[f.openNow?now.getDay():f.day??now.getDay()];
+ if(!f.openNow&&f.day==null&&!(Array.isArray(f.days)&&f.days.length)&&!(Array.isArray(f.daysAll)&&f.daysAll.length)&&f.start==null&&f.end==null)return true;
+ const requireAll=Array.isArray(f.daysAll)&&f.daysAll.length>0;
+ const days=requireAll?f.daysAll:Array.isArray(f.days)&&f.days.length?f.days:[f.openNow?now.getDay():f.day??now.getDay()];
  const a=f.start??0,b=f.end??1439;
- return days.some(weekday=>{
+ const isOpen=weekday=>{
   const intervals=intervalsFor(hours,store.id,weekday);
   if(f.openNow){const m=now.getHours()*60+now.getMinutes();return intervals.some(([from,to])=>from<=m&&m<to)}
   if(a===b)return intervals.some(([from,to])=>from<=a&&to>a);
   return intervals.some(([from,to])=>from<=b&&to>a);
- });
+ };
+ return requireAll?days.every(isOpen):days.some(isOpen);
 }
 export function distanceKm(a,b){
  if(!a||!b)return null;
@@ -365,8 +382,11 @@ export function searchStores(data={},state={},position=null,options={}){
   if(f.delivery===false&&store.delivery)continue;
   if(f.pickup===true&&!store.pickup)continue;
   if(f.pickup===false&&store.pickup)continue;
-  if(f.payment&&!Array.isArray(store.payment_methods))continue;
-  if(f.payment&&!(store.payment_methods||[]).some(p=>norm(p).includes(f.payment)))continue;
+  const payMethods=Array.isArray(store.payment_methods)?store.payment_methods.map(norm):[];
+  const acceptsPayment=method=>payMethods.some(p=>p.includes(method)||(method==='cartao'&&/\b(cartao|credito|debito)\b/.test(p)));
+  if(f.payment&&!acceptsPayment(f.payment))continue;
+  if((f.paymentsAll||[]).some(method=>!acceptsPayment(method)))continue;
+  if((f.excludedPayments||[]).some(method=>acceptsPayment(method)))continue;
   if(f.maxDeliveryFee!=null&&(!store.delivery||store.delivery_fee==null||Number(store.delivery_fee)>f.maxDeliveryFee))continue;
   if(f.maxDeliveryMinutes!=null&&(!store.delivery||store.avg_delivery_minutes==null||Number(store.avg_delivery_minutes)>f.maxDeliveryMinutes))continue;
   const where=state.location||{};if((where.city&&!norm(store.address).includes(norm(where.city)))||(where.uf&&!has(norm(store.address),where.uf))||(where.neighborhood&&!norm(store.address).includes(norm(where.neighborhood))))continue;

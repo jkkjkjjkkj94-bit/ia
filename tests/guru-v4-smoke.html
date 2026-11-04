@@ -197,12 +197,13 @@ async function smoke(){
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
  for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);
  if(!document.getElementById('msgs').textContent.includes('opções cadastradas'))throw Error('submit do formulário falhou');
+ guru.reset();
  await guru.submitText('pizzaria com entrega');
  const deliveryChip=[...document.querySelectorAll('#ctx .guru-filter-chip')].find(e=>e.textContent.includes('Com entrega'));
  if(!deliveryChip)throw Error('Filtro ativo não apareceu em etiqueta');
  deliveryChip.click();
  if(guru.getState().filters.delivery!==undefined)throw Error('Remoção do filtro não atualizou o contexto');
- if(!document.querySelector('#ctx .guru-filter-chip')?.textContent.includes('Categoria'))throw Error('Filtros restantes desapareceram indevidamente');
+ if(![...document.querySelectorAll('#ctx .guru-filter-chip')].some(e=>e.textContent.includes('Pizzaria')))throw Error('Filtro de pizzaria desapareceu indevidamente');
  guru.reset();
  if(document.body.classList.contains('chat-started'))throw Error('Nova busca não retornou à tela inicial');
  if(document.querySelectorAll('#ctx .guru-filter-chip').length)throw Error('Filtros antigos permaneceram após nova busca');

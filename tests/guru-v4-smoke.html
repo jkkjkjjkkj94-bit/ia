@@ -2,8 +2,8 @@
 <html lang="pt-BR"><head><meta charset="utf-8"><title>GURU V4 Smoke</title><link rel="stylesheet" href="../guru-engine-v4.css?v=3"></head>
 <body data-smoke="RUNNING">
 <aside class="app-sidebar"><button type="button" class="sidebar-collapse">Menu</button><button data-shell-action="new">Nova busca</button><button data-shell-action="location">Localização</button></aside>
-<section class="hero"><h1>GURU</h1></section>
-<div class="msgs" id="msgs"><div class="msg bot">Olá</div></div><div id="ctx"></div>
+<section class="hero"><h1>GURU</h1><p>Encontre lojas e produtos.</p></section>
+<div class="msgs" id="msgs"><div class="msg bot">Olá</div></div><div id="ctx"></div><div id="guruSuggestions" role="listbox" hidden></div>
 <form id="chatForm"><input id="q"><button type="submit">Enviar</button></form>
 <div id="toast"></div><button id="locBtn" type="button"></button><button id="resetBtn" type="button"></button>
 <script>
@@ -38,9 +38,21 @@ async function smoke(){
  for(let i=0;i<100&&!window.GuruEngineV4;i++)await sleep(50);
  if(!window.GuruEngineV4)throw Error('motor não inicializou');
  const guru=window.GuruEngineV4;
+ await guru.refresh();
+ const inputSuggest=document.getElementById('q');
+ inputSuggest.value='Pizza';inputSuggest.dispatchEvent(new Event('input',{bubbles:true}));
+ const suggestions=document.getElementById('guruSuggestions');
+ if(suggestions.hidden)throw Error('Autocomplete não apareceu');
+ const suggestionsText=suggestions.textContent;
+ if(!suggestionsText.includes('Pizza Teste')||!suggestionsText.includes('Pizza Tradicional'))throw Error('Sugestões de loja e produto ausentes');
+ if(suggestionsText.includes('Pendente Teste'))throw Error('Sugestão incluiu loja inativa');
+ inputSuggest.value='zztermo desconhecido';inputSuggest.dispatchEvent(new Event('input',{bubbles:true}));
+ if(!suggestions.hidden)throw Error('Autocomplete deve permitir busca livre sem sugestões');
+ inputSuggest.value='';inputSuggest.dispatchEvent(new Event('input',{bubbles:true}));
  const firstRequest=guru.submitText('negócio de comida japonesa');
  const typing=document.querySelector('.guru-typing');
  if(!typing)throw Error('Indicador de digitação não apareceu');
+ if(!document.body.classList.contains('chat-started'))throw Error('Transição inicial para chat não ocorreu');
  if(typing.querySelectorAll('.guru-typing-dot').length!==3)throw Error('Indicador deve ter três pontos');
  if(typing.getAttribute('role')!=='status')throw Error('Indicador não acessível');
  if(document.querySelector('.store-result-card'))throw Error('Resultados apareceram antes da digitação terminar');
@@ -185,6 +197,15 @@ async function smoke(){
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
  for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);
  if(!document.getElementById('msgs').textContent.includes('opções cadastradas'))throw Error('submit do formulário falhou');
+ await guru.submitText('pizzaria com entrega');
+ const deliveryChip=[...document.querySelectorAll('#ctx .guru-filter-chip')].find(e=>e.textContent.includes('Com entrega'));
+ if(!deliveryChip)throw Error('Filtro ativo não apareceu em etiqueta');
+ deliveryChip.click();
+ if(guru.getState().filters.delivery!==undefined)throw Error('Remoção do filtro não atualizou o contexto');
+ if(!document.querySelector('#ctx .guru-filter-chip')?.textContent.includes('Categoria'))throw Error('Filtros restantes desapareceram indevidamente');
+ guru.reset();
+ if(document.body.classList.contains('chat-started'))throw Error('Nova busca não retornou à tela inicial');
+ if(document.querySelectorAll('#ctx .guru-filter-chip').length)throw Error('Filtros antigos permaneceram após nova busca');
  document.body.dataset.smoke='PASS';
  document.body.setAttribute('data-report','Busca + regra + promoção + contexto + envio OK');
 }

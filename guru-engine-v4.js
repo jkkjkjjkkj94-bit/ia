@@ -1,6 +1,6 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=17';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=17';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
@@ -199,7 +199,8 @@ async function loadData(force=false){
    read(AI,'local_ai_store_knowledge','&active=eq.true'),
    read(AI,'local_ai_taxonomy_categories','&active=eq.true'),
    read(AI,'local_ai_taxonomy_groups','&active=eq.true'),
-   read(AI,'local_ai_taxonomy_terms','&active=eq.true')
+   read(AI,'local_ai_taxonomy_terms','&active=eq.true'),
+   read(AI,'local_ai_store_highlights')
   ]);
   const get=i=>all[i].status==='fulfilled'?all[i].value:[];
   if(all[0].status==='rejected')throw all[0].reason;
@@ -207,7 +208,10 @@ async function loadData(force=false){
   const failures=all.map((x,i)=>x.status==='rejected'?i:null).filter(x=>x!==null);
   if(failures.length)console.warn('[GURU v4] Dados complementares indisponíveis',failures);
   mergeTaxonomy(get(5),get(6),get(7));
-  db={stores:get(0),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7)}};
+  const highlightsByStore=new Map(get(8).map(h=>[h.store_id,h]));
+  const now=Date.now();
+  // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
+  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
   lastLoad=Date.now();rehydrate();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;

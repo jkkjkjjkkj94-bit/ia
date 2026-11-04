@@ -119,3 +119,12 @@ test('pontuação do ranking é compartilhada entre Admin e busca pública',()=>
  assert.match(ui,/admin-score-number/);
  assert.match(ui,/Score<\/span>/);
 });
+
+
+test('painel de qualidade ignora confiança ausente sem descartar zero válido',()=>{
+ const code=source('guru-quality-admin.js');
+ const expression=code.match(/rows\.map\(r=>r\.confidence\)\.filter\(v=>v!==null&&v!==undefined&&v!==''&&Number\.isFinite\(Number\(v\)\)\)\.map\(Number\)/)?.[0];
+ assert.ok(expression,'filtro da confiança média não localizado');
+ const values=Function('rows','return '+expression);
+ assert.deepEqual(values([{confidence:null},{confidence:undefined},{confidence:''},{confidence:'0.9'},{confidence:0},{confidence:'invalid'}]),[0.9,0]);
+});

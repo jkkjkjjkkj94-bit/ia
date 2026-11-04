@@ -317,7 +317,7 @@ test('Site sem autorização de coleta preserva os produtos e desativa sincroniz
  assert.match(edge,/s\.auto_sync_enabled===false/);
  assert.match(edge,/robots\.status/);
  assert.match(edge,/permittedByRobots/);
- assert.match(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
+ assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
  assert.match(admin,/requer API ou feed autorizado/);
  assert.match(catalog,/if\(source\.auto_sync_enabled!==true\)return false/);
 });
@@ -332,7 +332,7 @@ test('Erro HTTP 403 do robots bloqueia apenas a coleta, sem afetar produtos cada
  assert.match(edge,/Os produtos já cadastrados continuam disponíveis/);
  assert.match(admin,/explainSourceError/);
  assert.match(admin,/Consulta automática indisponível/);
- assert.match(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
+ assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
 });
 
 

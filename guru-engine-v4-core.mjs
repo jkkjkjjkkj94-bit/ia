@@ -3,7 +3,7 @@
 export const norm = value => String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s#]/g,' ').replace(/\s+/g,' ').trim();
 const has=(text,term)=>(' '+norm(text)+' ').includes(' '+norm(term)+' ');
 const words=text=>norm(text).split(' ').filter(Boolean);
-const STOP=new Set('quero queria preciso preciso de procuro procurando procurar encontre encontrar achar onde como qual quais uma um uns umas de da do das dos em no na nos nas aos todos todas cada com para por que meu minha seus suas me mostre mostra mostre negocio negocios comercio comercios loja lojas lugar lugares local locais estabelecimento estabelecimentos empresa empresas ponto pontos aberto aberta abertos abertas agora hoje amanha depois antes ate mais menos real reais preco precos custa custam tem vende vendem fique fiquem ficar fica ficam esteja estejam estar esta estao funcione funcionem funciona funcionam abram abrem abre abrir aberto abertos me me da ai tipo generico qualquer algo algum alguma coisa comer comida almoco jantar refeicao restaurante restaurantes horario funciona funcionamento funcionando funcionando-se funcionando agora tenha tenham tendo que tenha disponivel disponiveis perto longe mim aqui entrega frete taxa quanto fica eu gostaria'.split(' '));
+const STOP=new Set('quero queria preciso preciso de procuro procurando procurar encontre encontrar achar onde como qual quais uma um uns umas de da do das dos em no na nos nas aos todos todas cada com para por que meu minha seus suas me mostre mostra mostre indique indicar indica indiquei indicaria recomende recomenda recomendar recomendaria recomendacoes recomendacao sugestao sugestoes sugira existe existem existiria sabe saber pode poderia poderia-se acha acham achou me aconselha negocio negocios comercio comercios loja lojas lugar lugares local locais estabelecimento estabelecimentos empresa empresas ponto pontos aberto aberta abertos abertas agora hoje amanha depois antes ate mais menos real reais preco precos custa custam tem vende vendem fique fiquem ficar fica ficam esteja estejam estar esta estao funcione funcionem funciona funcionam abram abrem abre abrir aberto abertos me me da ai tipo generico qualquer algo algum alguma coisa comer comida almoco jantar refeicao restaurante restaurantes horario funciona funcionamento funcionando funcionando-se funcionando agora tenha tenham tendo que tenha disponivel disponiveis perto longe proximo proximos proxima proximas melhor melhores boa boas bom bons mim aqui entrega frete taxa quanto fica eu gostaria'.split(' '));
 const COLORS=['preto','preta','branco','branca','azul','vermelho','vermelha','verde','amarelo','amarela','rosa','roxo','roxa','cinza','bege','marrom'];
 const GROUP_HINTS=new Set('pizza pizzaria sushi japonesa japones oriental hamburguer hamburgueria doceria doce acai sorveteria sorvete marmita padaria pastelaria churrascaria cafeteria restaurante'.split(' '));
 const RETAIL=/\b(loja|lojas|comercio|comercios|empresa|empresas|ponto|pontos)\b/;
@@ -161,7 +161,7 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
   const list=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!['produto','comprar','tem','vende','estoque','tamanho','tam'].includes(w)&&!taxon?.group?.toLowerCase().includes(w));
   if(list.length)productTerm=list.slice(0,3).join(' ');
  }
- if(!productTerm&&genericProduct&&prev.selectedStore)return{kind:'ask',ask:'products',raw:text,filters};
+ if(!productTerm&&genericProduct&&prev.selectedStore&&!taxon)return{kind:'ask',ask:'products',raw:text,filters};
  const broad=/^(lojas?|comercios?|negocios?|estabelecimentos?|lugares?)(?:\s+(?:abert[oa]s?\s+agora|com entrega|sem entrega|com retirada))?$/.test(n);
  return{kind:'search',raw:text,normalized:n,positive,taxon,filters,excludedGroups,excludedCategories,excludedTerms,semanticTerms,featureTerms,productTerm,broad,reference,ask};
 }
@@ -297,7 +297,7 @@ export function searchStores(data={},state={},position=null,options={}){
   if(rv){score+=Math.min(10,avg*2);reasons.push('avaliação '+avg.toFixed(1)+'/5')}
   if(norm(state.query).includes(norm(store.name))){score+=45;reasons.unshift('loja citada')}
   if(store.verified)score+=2;
-  if(!score){const generic=STOP.has(norm(state.query))||/^(lojas|comercios|negocios|estabelecimentos|lugares)/.test(norm(state.query));if(!generic)continue;score=1}
+  if(!score){const generic=STOP.has(norm(state.query))||/^(lojas?|comercios?|negocios?|estabelecimentos?|lugares?)\b/.test(norm(state.query));if(!generic)continue;score=1}
   output.push({store,products:eligible,score,reason:reasons,distance:km,rating:avg,reviewCount:rv?.count||0,minPrice:eligible.length?Math.min(...eligible.map(p=>priceOf(p,now.getTime()))):null});
  }
  const sort=f.sort;

@@ -145,8 +145,15 @@ function getReference(n){
 // Distingue nome próprio solicitado explicitamente de palavras de contexto conversacional.
 // Termos livres não se tornam exigências apenas por não estarem numa lista de STOP.
 function requestedStoreNameTerms(raw,taxon,semanticTerms){
- if(!taxon||!semanticTerms?.length)return [];
+ if(!semanticTerms?.length)return [];
  const n=normalizeQuery(raw);
+ // Nome próprio citado após "loja/estabelecimento" é uma exigência real,
+ // mesmo sem a categoria: evita encontrar "Outra Loja Teste" ao pedir "Misael Teste".
+ if(!taxon){
+  const named=String(raw||'').match(/\b(?:loja|estabelecimento)\s+(?:d[aeo]\s+)?([\p{Lu}][\p{L}\p{N}]+(?:\s+[\p{Lu}][\p{L}\p{N}]+)*)/iu);
+  if(named)return words(named[1]).filter(w=>semanticTerms.includes(w));
+ }
+ 
  const nameCues=new Set('nome chamada chamado denominada denominado apelidada apelidado'.split(' '));
  if(/\b(?:de nome|com o nome|chamad[oa]|denominad[oa])\b/.test(n))return semanticTerms.filter(t=>!nameCues.has(t));
  if(!taxon.group)return [];

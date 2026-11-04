@@ -8,8 +8,8 @@
 <div id="toast"></div><button id="locBtn" type="button"></button><button id="resetBtn" type="button"></button>
 <script>
 const stores=[
- {id:'sushi',name:'Sushi Teste',category:'Comida',group:'Japonesa',groups:['Japonesa'],active:true,status:'active',address:'Rua A, Centro, Sorocaba - SP',delivery:true,delivery_fee:5,verified:true,payment_methods:['Pix']},
- {id:'pizza',name:'Pizza Teste',category:'Comida',group:'Pizzaria',groups:['Pizzaria'],active:true,status:'active',address:'Rua B, Centro, Sorocaba - SP',delivery:true,delivery_fee:6,verified:false,payment_methods:['Pix']},
+ {id:'sushi',name:'Sushi Teste',category:'Comida',group:'Japonesa',groups:['Japonesa'],active:true,status:'active',address:'Rua A, Centro, Sorocaba - SP',delivery:true,delivery_fee:5,verified:false,payment_methods:['Pix']},
+ {id:'pizza',name:'Pizza Teste',category:'Comida',group:'Pizzaria',groups:['Pizzaria'],active:true,status:'active',address:'Rua B, Centro, Sorocaba - SP',delivery:true,delivery_fee:6,verified:true,payment_methods:['Pix']},
  {id:'sweet',name:'Doceria Teste',category:'Comida',group:'Doceria',groups:['Doceria'],active:true,status:'active',address:'Rua C, Centro, Sorocaba - SP',delivery:false,pickup:false},
  {id:'pending',name:'Pendente Teste',category:'Comida',group:'Pizzaria',active:false,status:'pending',address:'Sorocaba - SP',delivery:true}
 ];
@@ -27,7 +27,7 @@ window.smokeFailHours=false;window.smokeFailReviews=false;window.smokeDisableSto
 window.fetch=async url=>{
  const path=String(url),table=(path.match(/\/rest\/v1\/(local_ai_[a-z_]+)/)||[])[1];
  if((table==='local_ai_store_hours'&&window.smokeFailHours)||(table==='local_ai_reviews'&&window.smokeFailReviews))return new Response('Falha simulada de rede',{status:503});
- const values={local_ai_stores:stores.filter(s=>s.id!==window.smokeDisableStore),local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[{store_id:'pizza',question:'tem estacionamento?',variations:['possui estacionamento?'],answer:'Sim, tem estacionamento.',active:true},{store_id:'pizza',question:'ela faz entrega?',variations:[],answer:'Não, ela não faz entrega.',active:true}],local_ai_taxonomy_categories:[{id:'c1',name:'Comida',active:true}],local_ai_taxonomy_groups:[{id:'g1',category_id:'c1',name:'Japonesa',active:true},{id:'g2',category_id:'c1',name:'Pizzaria',active:true},{id:'g3',category_id:'c1',name:'Doceria',active:true}],local_ai_taxonomy_terms:[{id:'t1',category_id:'c1',group_id:'g3',term:'doces',active:true}]};
+ const values={local_ai_stores:stores.filter(s=>s.id!==window.smokeDisableStore),local_ai_products:products,local_ai_store_hours:hours,local_ai_store_highlights:[{store_id:'sushi',highlight_type:'verified',active:true},{store_id:'pizza',highlight_type:'normal',active:true},{store_id:'sweet',highlight_type:'sponsored',active:true}],local_ai_reviews:[],local_ai_store_knowledge:[{store_id:'pizza',question:'tem estacionamento?',variations:['possui estacionamento?'],answer:'Sim, tem estacionamento.',active:true},{store_id:'pizza',question:'ela faz entrega?',variations:[],answer:'Não, ela não faz entrega.',active:true}],local_ai_taxonomy_categories:[{id:'c1',name:'Comida',active:true}],local_ai_taxonomy_groups:[{id:'g1',category_id:'c1',name:'Japonesa',active:true},{id:'g2',category_id:'c1',name:'Pizzaria',active:true},{id:'g3',category_id:'c1',name:'Doceria',active:true}],local_ai_taxonomy_terms:[{id:'t1',category_id:'c1',group_id:'g3',term:'doces',active:true}]};
  return new Response(JSON.stringify(values[table]||[]),{status:200,headers:{'Content-Type':'application/json'}});
 };
 </script>
@@ -63,6 +63,7 @@ async function smoke(){
  if(document.querySelector('.guru-typewriter-caret'))throw Error('Cursor não desapareceu ao terminar');
  if(getComputedStyle(grid).display==='none')throw Error('Cards não foram exibidos após a escrita');
  if(!document.querySelector('.store-result-card h3')?.textContent?.includes('Sushi Teste'))throw Error('busca japonesa falhou');
+ if(![...document.querySelectorAll('.store-result-card .store-chip')].some(el=>el.textContent==='Verificada'))throw Error('Destaque verificada não aparece quando flag COREDB é falsa');
  await guru.submitText('loja de comida japonesa');
  const recentCards=[...document.querySelectorAll('.store-result-card h3')];
  if(!recentCards.some(x=>x.textContent==='Sushi Teste'))throw Error('loja de comida japonesa não encontrou estabelecimento válido');
@@ -107,6 +108,7 @@ async function smoke(){
  const pizzaNaturalCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
  if(pizzaNaturalCards?.querySelector('h3')?.textContent!=='Pizza Teste')
   throw Error('Busca natural por pizza não trouxe a pizzaria cadastrada');
+ if([...pizzaNaturalCards.querySelectorAll('.store-chip')].some(el=>el.textContent==='Verificada'))throw Error('Loja Normal exibiu Verificada por causa da flag legada do COREDB');
  await guru.submitText('Gostaria de uma pizzaria que faça entrega e aceite Pix.');
  const pizzaFilteredCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
  if(pizzaFilteredCards?.querySelector('h3')?.textContent!=='Pizza Teste')
@@ -151,6 +153,7 @@ async function smoke(){
  const resultCards=[...document.querySelectorAll('.store-results-grid')];
  const lastCard=resultCards.at(-1)?.querySelector('.store-result-card');
  if(!lastCard||lastCard.querySelector('h3')?.textContent!=='Doceria Teste')throw Error('Nova categoria deixou de encontrar doceria');
+ if(![...lastCard.querySelectorAll('.store-chip')].some(el=>el.textContent==='Patrocinada'))throw Error('Destaque Patrocinada não foi preservado');
  lastCard.querySelector('.store-action.primary')?.click();
  if(guru.getState().selectedStore?.id!=='sweet')throw Error('Seleção do card não preservou a loja');
  window.smokeFailHours=true;

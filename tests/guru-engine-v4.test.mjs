@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import {taxonomy as registeredTaxonomy,categoryAliases as registeredAliases} from '../ai-taxonomy.js';
 
 import assert from 'node:assert/strict';
-import {interpret,emptyState,nextState,searchStores,explainEmptySearch,eligibleProduct,scheduleMatches,distanceKm,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
+import {interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,eligibleProduct,scheduleMatches,distanceKm,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
 
 const tax={
  Comida:{Pizzaria:['pizza','pizzaria'],Japonesa:['comida japonesa','japonesa','sushi'],Doceria:['doces','doce','doceria','confeitaria']},
@@ -798,4 +798,39 @@ test('nome próprio de loja prevalece sobre item de catálogo com palavra coinci
  assert.equal(p.kind,'search');
  assert.equal(p.productTerm,null,'palavra compartilhada com produto não deve apagar busca por loja nomeada');
  assert.deepEqual(searchStores({stores:[named,other],products:catalog,hours:[],reviews:[],knowledge:[]},nextState(emptyState(),p)).map(r=>r.store.id),['misael']);
+});
+
+
+test('destaque normal nunca mostra verificação, mesmo após aprovação legada',()=>{
+ const s=shop('normal','Comida','Pizzaria',{verified:true,sponsored:true});
+ const normal=applyStoreHighlight(s,{store_id:'normal',highlight_type:'normal',active:true});
+ assert.equal(normal.verified,false);
+ assert.equal(normal.sponsored,false);
+ assert.equal(s.verified,true,'não alterar a origem apenas para apresentar o card');
+ assert.equal(applyStoreHighlight(s).verified,false,'sem destaque não exibe verificação');
+});
+test('destaque verificada e patrocinada mantém selos mutuamente exclusivos',()=>{
+ const s=shop('store','Comida','Pizzaria',{verified:false,sponsored:false});
+ const verified=applyStoreHighlight(s,{highlight_type:'verified',active:true});
+ assert.equal(verified.verified,true);
+ assert.equal(verified.sponsored,false);
+ const sponsored=applyStoreHighlight(s,{highlight_type:'sponsored',active:true});
+ assert.equal(sponsored.verified,false);
+ assert.equal(sponsored.sponsored,true);
+});
+test('destaques desativados, futuros ou vencidos não geram selo',()=>{
+ const s=shop('store','Comida','Pizzaria',{verified:true});
+ const now=Date.parse('2026-11-04T12:00:00Z');
+ const highlights=[
+  {highlight_type:'verified',active:false},
+  {highlight_type:'verified',active:true,starts_at:'2026-12-01T00:00:00Z'},
+  {highlight_type:'sponsored',active:true,ends_at:'2026-10-01T00:00:00Z'},
+  {highlight_type:'verified',active:true,starts_at:'valor inválido'}
+ ];
+ for(const h of highlights){
+  const result=applyStoreHighlight(s,h,now);
+  assert.equal(result.verified,false);
+  assert.equal(result.sponsored,false);
+ }
+ assert.equal(applyStoreHighlight(s,{highlight_type:'verified',active:true,starts_at:'2026-11-01T00:00:00Z',ends_at:'2026-12-01T00:00:00Z'},now).verified,true);
 });

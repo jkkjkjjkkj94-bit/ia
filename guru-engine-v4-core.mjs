@@ -358,6 +358,16 @@ function storeNameTypoHit(token,name){
  return words(name).some(w=>w.length>=5&&Math.abs(w.length-t.length)<=1&&editDistance(t,w)===1);
 }
 // Explica a ausência de resultados com base na categoria disponível, sem inventar estabelecimentos.
+// O selo é um destaque editorial, separado da aprovação e da flag legada do COREDB.
+// Na ausência de um destaque explícito e ativo, não apresente selos.
+export function applyStoreHighlight(store,highlight=null,now=Date.now()){
+ const valid=highlight&&highlight.active===true
+  &&(!highlight.starts_at||Number.isFinite(Date.parse(highlight.starts_at))&&Date.parse(highlight.starts_at)<=now)
+  &&(!highlight.ends_at||Number.isFinite(Date.parse(highlight.ends_at))&&Date.parse(highlight.ends_at)>=now);
+ const type=valid?highlight.highlight_type:'normal';
+ return{...store,verified:type==='verified',sponsored:type==='sponsored'};
+}
+
 export function explainEmptySearch(data={},state={},position=null){
  const active=(data.stores||[]).filter(s=>s.active===true&&s.status==='active');
  const category=state.category,group=state.group;

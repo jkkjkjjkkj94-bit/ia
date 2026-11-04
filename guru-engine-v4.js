@@ -1,6 +1,6 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=5';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=6';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
@@ -161,7 +161,13 @@ function mergeTaxonomy(cats=[],groups=[],terms=[]){
  const byCategory=new Map(activeCats.map(x=>[x.id,x])),byGroup=new Map(activeGroups.map(x=>[x.id,x]));
  const map={},catAliases={};
  for(const cat of activeCats){map[cat.name]={};catAliases[cat.name]=[cat.name,...(fallbackAliases[cat.name]||[])]}
- for(const group of activeGroups){const cat=byCategory.get(group.category_id);if(cat)map[cat.name][group.name]=[group.name]}
+ for(const group of activeGroups){
+  const cat=byCategory.get(group.category_id);
+  if(!cat)continue;
+  // Os sinônimos locais complementam os do AIDB; não desaparecem ao carregar a taxonomia.
+  const known=fallbackTaxonomy[cat.name]?.[group.name]||[];
+  map[cat.name][group.name]=[group.name,...known];
+ }
  for(const term of activeTerms){
   const cat=byCategory.get(term.category_id);if(!cat)continue;
   const group=byGroup.get(term.group_id);

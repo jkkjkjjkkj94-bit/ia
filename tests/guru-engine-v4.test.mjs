@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {interpret,emptyState,nextState,searchStores,eligibleProduct,scheduleMatches,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
 
 const tax={
- Comida:{Pizzaria:['pizza','pizzaria'],Japonesa:['comida japonesa','japonesa','sushi'],Doceria:['doces','doce','doceria']},
+ Comida:{Pizzaria:['pizza','pizzaria'],Japonesa:['comida japonesa','japonesa','sushi'],Doceria:['doces','doce','doceria','confeitaria']},
  Roupas:{Infantil:['roupa infantil','infantil'],Feminina:['roupa feminina','feminina']},
  Tecnologia:{Celulares:['celular','smartphone']}
 };
@@ -194,4 +194,84 @@ test('troca explícita de tipo abre busca e verbos genéricos não viram requisi
  assert.deepEqual(other.semanticTerms,[]);
  const chosen={...previous,lastResults:[{store:stores[0]},{store:stores[1]}]};
  assert.equal(plan('doceria aberta segunda-feira',chosen).kind,'search');
+});
+
+test('linguagem cotidiana e termos equivalentes não eliminam lojas válidas',()=>{
+ const sweet=shop('sweet','Comida','Doceria',{name:'Doceria Teste'});
+ const pizza=shop('pizza','Comida','Pizzaria',{name:'Pizzaria Teste'});
+ const sample={stores:[sweet,pizza],products:[],reviews:[],knowledge:[],hours:[
+  {store_id:'sweet',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false},
+  {store_id:'pizza',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false}
+ ]};
+ for(const query of [
+  'existe alguma doceria',
+  'me indica uma doceria',
+  'pode me recomendar uma doceria',
+  'conhece uma doceria?',
+  'tem uma loja de doces?',
+  'confeitaria'
+ ]){
+  const p=plan(query);
+  assert.equal(p.kind,'search',query);
+  assert.equal(p.taxon?.group,'Doceria',query);
+  assert.equal(p.productTerm,null,query);
+  assert.deepEqual(p.semanticTerms,[],query);
+  assert.deepEqual(searchStores(sample,nextState(emptyState(),p)).map(x=>x.store.id),['sweet'],query);
+ }
+ const generic=plan('lojas abertas no sábado');
+ assert.equal(generic.filters.day,6);
+ assert.deepEqual(searchStores(sample,nextState(emptyState(),generic)).map(x=>x.store.id).sort(),['pizza','sweet']);
+});
+test('buscar um novo estabelecimento não se transforma em pergunta sobre produtos de loja anterior',()=>{
+ const current={...emptyState(),selectedStore:shop('pizza','Comida','Pizzaria')};
+ for(const query of ['tem uma doceria?', 'tem alguma loja de doces?']){
+  const p=plan(query,current);
+  assert.equal(p.kind,'search',query);
+  assert.equal(p.taxon?.group,'Doceria',query);
+  assert.equal(p.productTerm,null,query);
+ }
+});
+
+test('nomes de lojas completos, parciais e com uma letra incorreta',()=>{
+ const sweet=shop('sweet','Comida','Doceria',{name:'Loja do Misael Teste'});
+ const other=shop('other','Comida','Doceria',{name:'Outra Doceria'});
+ const sample={stores:[sweet,other],products:[],hours:[],reviews:[],knowledge:[]};
+ const queries=['Misael','Misa','Misaell','doceria Misael','doceria Misaell','Loja do Misael Teste'];
+ for(const query of queries){
+  const p=plan(query);
+  const found=searchStores(sample,nextState(emptyState(),p));
+  assert.deepEqual(found.map(x=>x.store.id),['sweet'],query+' / plan: '+JSON.stringify(p)+' / state: '+JSON.stringify(nextState(emptyState(),p)));
+ }
+ assert.deepEqual(searchStores(sample,nextState(emptyState(),plan('doceria'))).map(x=>x.store.id).sort(),['other','sweet']);
+});
+
+test('ordenacao de lojas por avaliacoes e preco reconhece flexoes comuns',()=>{
+ const a=shop('top','Comida','Pizzaria');
+ const b=shop('low','Comida','Pizzaria');
+ const samples={stores:[a,b],products:[row('top','Pizza A',{price:60}),row('low','Pizza B',{price:30})],hours:[],
+  reviews:[{store_id:'top',rating:5},{store_id:'low',rating:3}],knowledge:[]};
+ for(const query of ['pizzaria melhor avaliadas','pizzaria maior nota']){
+  const p=plan(query);
+  assert.equal(p.filters.sort,'rating',query);
+  assert.deepEqual(p.semanticTerms,[],query);
+  const found=searchStores(samples,nextState(emptyState(),p));
+  assert.deepEqual(found.map(x=>x.store.id),['top','low'],query);
+ }
+ for(const query of ['pizzaria mais baratas','pizzaria mais economicas']){
+  const p=plan(query);
+  assert.equal(p.filters.sort,'price',query);
+  assert.deepEqual(p.semanticTerms,[],query);
+  const found=searchStores(samples,nextState(emptyState(),p));
+  assert.deepEqual(found.map(x=>x.store.id),['low','top'],query);
+ }
+});
+test('busca por serviços reconhece sinônimos sem exigir produtos',()=>{
+ const taxService={Serviços:{Limpeza:['faxina','limpeza residencial','serviço de limpeza']}};
+ const service=shop('clean','Serviços','Limpeza',{name:'Limpeza Exemplo'});
+ const samples={stores:[service],products:[],hours:[],reviews:[],knowledge:[]};
+ for(const query of ['faxina','empresa de faxina','serviço de limpeza']){
+  const p=interpret(query,taxService,{},emptyState(),{today:2});
+  assert.equal(p.taxon?.group,'Limpeza',query);
+  assert.deepEqual(searchStores(samples,nextState(emptyState(),p)).map(x=>x.store.id),['clean'],query);
+ }
 });

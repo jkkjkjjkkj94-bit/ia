@@ -10,6 +10,7 @@
 const stores=[
  {id:'sushi',name:'Sushi Teste',category:'Comida',group:'Japonesa',groups:['Japonesa'],active:true,status:'active',address:'Rua A, Centro, Sorocaba - SP',delivery:true,delivery_fee:5,verified:true,payment_methods:['Pix']},
  {id:'pizza',name:'Pizza Teste',category:'Comida',group:'Pizzaria',groups:['Pizzaria'],active:true,status:'active',address:'Rua B, Centro, Sorocaba - SP',delivery:true,delivery_fee:6,verified:false,payment_methods:['Pix']},
+ {id:'sweet',name:'Doceria Teste',category:'Comida',group:'Doceria',groups:['Doceria'],active:true,status:'active',address:'Rua C, Centro, Sorocaba - SP',delivery:false,pickup:false},
  {id:'pending',name:'Pendente Teste',category:'Comida',group:'Pizzaria',active:false,status:'pending',address:'Sorocaba - SP',delivery:true}
 ];
 const products=[
@@ -22,7 +23,7 @@ const hours=[
 ];
 window.fetch=async url=>{
  const path=String(url),table=(path.match(/\/rest\/v1\/(local_ai_[a-z_]+)/)||[])[1];
- const values={local_ai_stores:stores,local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[{store_id:'pizza',question:'tem estacionamento?',variations:['possui estacionamento?'],answer:'Sim, tem estacionamento.',active:true}],local_ai_taxonomy_categories:[],local_ai_taxonomy_groups:[],local_ai_taxonomy_terms:[]};
+ const values={local_ai_stores:stores,local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[{store_id:'pizza',question:'tem estacionamento?',variations:['possui estacionamento?'],answer:'Sim, tem estacionamento.',active:true}],local_ai_taxonomy_categories:[{id:'c1',name:'Comida',active:true}],local_ai_taxonomy_groups:[{id:'g1',category_id:'c1',name:'Japonesa',active:true},{id:'g2',category_id:'c1',name:'Pizzaria',active:true},{id:'g3',category_id:'c1',name:'Doceria',active:true}],local_ai_taxonomy_terms:[{id:'t1',category_id:'c1',group_id:'g3',term:'doces',active:true}]};
  return new Response(JSON.stringify(values[table]||[]),{status:200,headers:{'Content-Type':'application/json'}});
 };
 </script>
@@ -61,6 +62,8 @@ async function smoke(){
  await guru.submitText('loja de comida japonesa');
  const recentCards=[...document.querySelectorAll('.store-result-card h3')];
  if(!recentCards.some(x=>x.textContent==='Sushi Teste'))throw Error('loja de comida japonesa não encontrou estabelecimento válido');
+ await guru.submitText('pode me indicar uma confeitaria?');
+ if(![...document.querySelectorAll('.store-result-card h3')].some(x=>x.textContent==='Doceria Teste'))throw Error('Sinônimo local foi perdido ao carregar taxonomia dinâmica');
  await guru.submitText('pizzaria com entrega em promoção até R$ 40');
  const cards=[...document.querySelectorAll('.store-result-card')];
  if(cards.at(-1)?.querySelector('h3')?.textContent!=='Pizza Teste')throw Error('filtro de promoção falhou');

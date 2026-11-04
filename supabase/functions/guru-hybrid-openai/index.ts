@@ -60,7 +60,32 @@ Deno.serve(async (req: Request) => {
   const results = publicResults(body?.results);
   if (!question || !results.length) return json({ error: "Dados insuficientes." }, 400);
 
-  // Cotas exclusivamente globais: nenhuma identificação ou limite por visitante.\n  let allowed = false;
+  // Cache privado: armazena somente hash e resumo, nunca o texto da pergunta.
+  const eligibleForCache = question.length <= 160 && !question.includes("@") &&
+    !/[0-9]{8,}/.test(question) && !/https?:/i.test(question);
+  const promptPayload = JSON.stringify({ pergunta: question, resultados: results });
+  let cacheKey = "";
+  if (eligibleForCache) {
+    const digest = await crypto.subtle.digest("SHA-256",
+      new TextEncoder().encode(OPENAI_MODEL + "|" + promptPayload));
+    cacheKey = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+    try {
+      const cached = await fetch(supabaseUrl + "/rest/v1/rpc/guru_hybrid_cache_read", {
+        method: "POST",
+        headers: { apikey: adminKey,
+          ...(adminKey.startsWith("eyJ") ? { Authorization: "Bearer " + adminKey } : {}),
+          "Content-Type": "application/json" },
+        body: JSON.stringify({ p_key: cacheKey }), signal: AbortSignal.timeout(1800),
+      });
+      if (cached.ok) {
+        const answer = await cached.json();
+        if (typeof answer === "string" && answer.length > 0 && answer.length <= 800)
+          return json({ answer, source: "openai-cache" });
+      }
+    } catch { /* Falha no cache não bloqueia a GURU. */ }
+  }
+  // Cotas exclusivamente globais: nenhuma identificação ou limite por visitante.
+  let allowed = false;
   try {
     const r = await fetch(supabaseUrl + "/rest/v1/rpc/guru_hybrid_claim_quota", {
       method: "POST",
@@ -75,9 +100,24 @@ Deno.serve(async (req: Request) => {
     if (!r.ok) return json({ unavailable: true }, 503);
     allowed = (await r.json()) === true;
   } catch { return json({ unavailable: true }, 503); }
+  // Métricas verificadas pelo servidor; não dependem de eventos enviados por visitantes.
+  const recordOutcome = async (outcome: string) => {
+    try {
+      await fetch(supabaseUrl + "/rest/v1/rpc/guru_hybrid_record_metric", {
+        method: "POST",
+        headers: {
+          apikey: adminKey,
+          ...(adminKey.startsWith("eyJ") ? { Authorization: "Bearer " + adminKey } : {}),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_outcome: outcome }),
+        signal: AbortSignal.timeout(1500),
+      });
+    } catch { /* Métrica não interrompe resposta ao usuário. */ }
+  };
   if (!allowed) return json({ limitReached: true }, 429);
 
-  const prompt = JSON.stringify({ pergunta: question, resultados: results });
+  const prompt = promptPayload;
   const instructions = [
     "Você é a GURU, assistente de descoberta de lojas. Sua voz é simpática, acolhedora, natural e objetiva, como alguém que adora ajudar; não seja íntima nem exagerada.",
     "Responda em português do Brasil com 2 a 4 frases curtas, preferencialmente entre 25 e 75 palavras. Use parágrafos curtos, sem formato de relatório, título, listas ou jargão técnico.",
@@ -107,11 +147,28 @@ Deno.serve(async (req: Request) => {
       }),
       signal: AbortSignal.timeout(9000),
     });
-    if (!response.ok) return json({ unavailable: true }, 502);
+    if (!response.ok) {
+      await recordOutcome("api_error");
+      return json({ unavailable: true }, 502);
+    }
     const data = await response.json();
     const answer = outputText(data);
+    await recordOutcome(answer ? "success" : "empty_response");
+    if (answer && cacheKey) {
+      try {
+        await fetch(supabaseUrl + "/rest/v1/rpc/guru_hybrid_cache_write", {
+          method: "POST",
+          headers: { apikey: adminKey,
+            ...(adminKey.startsWith("eyJ") ? { Authorization: "Bearer " + adminKey } : {}),
+            "Content-Type": "application/json" },
+          body: JSON.stringify({ p_key: cacheKey, p_answer: answer }),
+          signal: AbortSignal.timeout(1500),
+        });
+      } catch { /* Cache opcional. */ }
+    }
     return answer ? json({ answer, source: "openai" }) : json({ unavailable: true }, 502);
   } catch {
+    await recordOutcome("network_error");
     return json({ unavailable: true }, 502);
   }
 });

@@ -1,6 +1,9 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
+import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
+import {recordSearch,recordSelection} from './guru-telemetry-v5.mjs?v=1';
+import {approvedSourceProducts} from './guru-approved-products.mjs?v=1';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
@@ -381,6 +384,7 @@ function storeDetailIcon(kind){
  return svg;
 }
 function chooseStore(row){
+ recordSelection(row.store?.id);
  state.selectedStore=row.store;
  state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;
  renderContext();save();
@@ -501,8 +505,18 @@ function makeCard(row,index){
  if(row.products.length&&state.productTerm){
   card.appendChild(el('div','smart-summary',row.products.slice(0,2).map(p=>p.name+' — '+money(priceOf(p))).join(' · ')));
  }
+ const score=el('div','guru-score-line', 'Pontuação GURU: '+Number(row.rankScore||0).toFixed(0)+' pontos');
+ score.title='Classificação interna da GURU, diferente da avaliação dos clientes';
+ card.appendChild(score);
+ const quality=storeDataQuality(s,db||{});
+ if(quality.stale)card.appendChild(el('div','guru-data-alert','Informações da loja podem estar desatualizadas ('+quality.daysSinceUpdate+' dias).'));
  const why=el('button','smart-why-btn','Por que apareceu?');why.type='button';
- const panel=el('div','smart-why-panel');row.reason.forEach(t=>panel.appendChild(el('div','',t)));
+ const panel=el('div','smart-why-panel');
+ panel.appendChild(el('div','','Pontuação interna: '+Number(row.rankScore||0).toFixed(0)+' pontos. Avaliações de clientes são exibidas separadamente.'));
+ row.reason.forEach(t=>panel.appendChild(el('div','',t)));
+ const qualityInfo=storeDataQuality(s,db||{});
+ panel.appendChild(el('div','','Cadastro: '+qualityInfo.completed+' de '+qualityInfo.total+' informações essenciais preenchidas.'));
+ if(qualityInfo.updatedAt)panel.appendChild(el('div','','Atualizado em '+new Date(qualityInfo.updatedAt).toLocaleDateString('pt-BR')+'.'));
  why.onclick=()=>panel.classList.toggle('on');card.appendChild(why);card.appendChild(panel);
  const actions=el('div','store-card-actions');
  const view=el('button','store-action primary','Ver loja');view.type='button';view.onclick=()=>chooseStore(row);actions.appendChild(view);
@@ -511,11 +525,80 @@ function makeCard(row,index){
  if(phone.length>=10&&phone.length<=15){const a=el('a','store-action link','WhatsApp');a.href='https://wa.me/'+phone;a.target='_blank';a.rel='noopener noreferrer';actions.appendChild(a)}
  card.appendChild(actions);return card;
 }
+function renderNextQuestions(host,rows){
+ const questions=followupPrompts(rows,state);
+ if(!questions.length)return;
+ const panel=el('div','guru-next-questions');
+ panel.appendChild(el('div','guru-next-label','Você também pode perguntar:'));
+ const buttons=el('div','guru-next-buttons');
+ for(const question of questions){
+  const b=el('button','guru-next-button',question);b.type='button';
+  b.addEventListener('click',()=>submitText(question));buttons.appendChild(b);
+ }
+ panel.appendChild(buttons);host.appendChild(panel);
+}
+function renderComparison(indices,question){
+ const rows=indices.map(index=>(state.lastResults||[])[index]).filter(Boolean);
+ if(rows.length<2){add('Preciso de pelo menos duas opções da lista para comparar.');return}
+ const items=compareStores(rows,db||{});
+ const m=add(comparisonSummary(items,question));
+ const wrap=el('div','guru-compare-wrap'),table=el('div','guru-compare-grid');
+ const values=[
+  ['Pontuação GURU',x=>x.score==null?'Não disponível':x.score+' pontos'],
+  ['Entrega',x=>x.delivery?'Disponível':'Não cadastrada'],
+  ['Taxa de entrega',x=>x.deliveryFee==null?'Não informada':money(x.deliveryFee)],
+  ['Menor preço de produto',x=>x.price==null?'Não informado':money(x.price)],
+  ['Distância',x=>x.distance==null?'Não informada':x.distance.toFixed(1).replace('.',',')+' km'],
+  ['Avaliações',x=>x.rating==null?'Sem avaliações':x.rating.toFixed(1)+'/5 ('+x.ratingCount+')']
+ ];
+ const header=el('div','guru-compare-row');
+ header.appendChild(el('b','guru-compare-label','Informação'));
+ items.forEach(x=>header.appendChild(el('b','guru-compare-value',x.name)));
+ table.appendChild(header);
+ for(const [label,format] of values){
+  const tr=el('div','guru-compare-row');
+  tr.appendChild(el('span','guru-compare-label',label));
+  items.forEach(x=>tr.appendChild(el('span','guru-compare-value',format(x))));
+  table.appendChild(tr);
+ }
+ wrap.appendChild(table);m.appendChild(wrap);
+}
+function displayWebProducts(items=[],sources=[],searchQuery=''){
+ if(!items.length&&!sources.length)return;
+ const m=add('',false);m.classList.add('guru-web-source-message');
+ const title=el('div','guru-web-title',items.length?'Produtos encontrados em fontes cadastradas':'Fontes de lojas cadastradas');
+ m.appendChild(title);
+ const label=el('div','guru-web-note',items.length
+  ?'Os links são de sites autorizados no painel. Preço e estoque só são mostrados quando a fonte confirmou esses dados.'
+  :'A fonte está cadastrada, mas ainda não há produtos indexados que correspondam à pesquisa.');
+ m.appendChild(label);
+ if(items.length){
+  const grid=el('div','guru-web-products');
+  for(const item of items){
+   const card=el('article','guru-web-item');
+   card.appendChild(el('b','',item.name));
+   card.appendChild(el('span','guru-web-origin','Fonte cadastrada: '+item.source));
+   if(item.price!=null&&item.currency==='BRL')card.appendChild(el('span','',money(item.price)));
+   if(item.availability==='in_stock')card.appendChild(el('span','guru-web-available','Disponibilidade informada pela fonte'));
+   else card.appendChild(el('span','guru-web-unknown','Estoque não confirmado'));
+   const a=el('a','guru-web-open','Ver na loja');a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';
+   card.appendChild(a);grid.appendChild(card);
+  }
+  m.appendChild(grid);
+ }else{
+  const links=el('div','guru-next-buttons');
+  for(const source of sources.slice(0,3)){
+   const a=el('a','guru-next-button','Acessar '+source.name);
+   a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';links.appendChild(a);
+  }
+  m.appendChild(links);
+ }
+}
 function displayResults(rows){
  const m=add('',false);m.classList.add('hashtag-result-msg');
  m.appendChild(el('div','hashtag-intro',rows.length===1?'Encontrei 1 opção cadastrada:':'Encontrei '+rows.length+' opções cadastradas:'));
  const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,i)));m.appendChild(grid);
- return m;
+ renderNextQuestions(m,rows);return m;
 }
 function productListFor(store,query=''){
  const list=(db.products||[]).filter(p=>p.store_id===store.id&&eligibleProduct(p));
@@ -568,10 +651,37 @@ async function run(text){
  const routed=routeConversation(text);
  if(routed.kind==='social'){add(routed.answer);return}
  text=routed.query;
+ const broad=suggestBroadConversation(text);
+ if(broad){
+  const m=add(broad.text),panel=el('div','guru-next-buttons');
+  broad.options.forEach(q=>{const button=el('button','guru-next-button',q);button.type='button';button.onclick=()=>submitText(q);panel.appendChild(button)});
+  m.appendChild(panel);return;
+ }
  const prelim=interpret(text,taxonomy,aliases,state);
  if(prelim.kind==='reset'){state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};renderContext();add('Contexto limpo. O que você quer encontrar?');return}
  // Carregue o catálogo antes de compreender o produto solicitado.
  await loadData();
+ const follow=contextualIntent(text,state);
+ if(follow){
+  const current=state.lastResults||[];
+  if(follow.kind==='compare'){renderComparison(follow.indices,text);return}
+  let matching=[];
+  if(follow.kind==='filterPrevious'){
+   if(follow.attribute==='delivery')matching=current.filter(r=>r.store?.delivery===true);
+   else if(follow.attribute==='noDelivery')matching=current.filter(r=>r.store?.delivery!==true);
+   else if(follow.attribute==='stock')matching=current.filter(r=>(r.products||[]).length>0);
+  }else if(follow.kind==='sortPrevious'){
+   const usable=current.filter(r=>follow.attribute==='price'?r.minPrice!=null:follow.attribute==='distance'?r.distance!=null:r.reviewCount>0);
+   matching=[...usable].sort((a,b)=>follow.attribute==='price'?a.minPrice-b.minPrice:follow.attribute==='distance'?a.distance-b.distance:b.rating-a.rating);
+  }
+  if(!matching.length){
+   const reason=follow.attribute==='price'?'preços dos produtos':follow.attribute==='distance'?'distâncias confirmadas':follow.attribute==='rating'?'avaliações verificadas':follow.attribute==='delivery'?'opções com entrega':follow.attribute==='noDelivery'?'opções sem entrega':'produtos em estoque';
+   add('Ainda não tenho '+reason+' suficientes nessas opções. Posso fazer uma nova busca se você quiser.');return;
+  }
+  state.lastResults=matching.slice(0,6);save();
+  add(follow.kind==='sortPrevious'?'Organizei as opções com base nas informações cadastradas.':'Separei as opções da lista que atendem ao que você pediu.');
+  displayResults(state.lastResults);return;
+ }
  const plan=interpret(text,taxonomy,aliases,state,{products:db?.products||[]});
  if(plan.kind==='blocked'){add('“Loja” e “comércio” são tratados como varejo e não entram na categoria Comida. Pesquise por restaurante, pizzaria ou pelo tipo de comida.');return}
  if(plan.kind==='clarify'){
@@ -581,6 +691,7 @@ async function run(text){
  if(plan.kind==='select'){
   const index=plan.index<0?state.lastResults.length-1:plan.index,row=state.lastResults[index];
   if(!row){add('Essa opção não existe na lista atual.');return}
+  recordSelection(row.store?.id);
   state.selectedStore=row.store;state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;
   if(plan.ask){replyAboutStore(text,plan.ask,plan.filters);renderContext();save()}else chooseStore(row);
   return;
@@ -600,10 +711,22 @@ async function run(text){
  renderContext();save();
  const rows=searchStores(db,state,position,{limit:6});
  state.lastResults=rows;
- if(!rows.length){add(explainEmptySearch(db,state,position));save();return}
- const natural=await hybridResponse(text,rows);
- if(natural)add(natural);
- displayResults(rows);save();
+ // Consulta em paralelo a produtos públicos de fontes previamente aprovadas.
+ const web=await approvedSourceProducts(text);
+ const relevantSources=(web.sources||[]).filter(source=>
+  norm(text).includes(norm(source.name))||norm(text).includes(norm(source.name).split(' ')[0])||
+  /\\b(site|fonte|fontes|nike)\\b/.test(norm(text))
+ );
+ recordSearch(text,plan,rows);
+ if(!rows.length&&!web.items.length){add(explainEmptySearch(db,state,position));if(relevantSources.length)displayWebProducts([],relevantSources,text);save();return}
+ if(rows.length){
+  const natural=await hybridResponse(text,rows);
+  if(natural)add(natural);
+  displayResults(rows);
+ }
+ if(web.items.length)displayWebProducts(web.items,[],text);
+ else if(!rows.length&&relevantSources.length)displayWebProducts([],relevantSources,text);
+ save();
 }
 async function submitText(raw){
  const t=String(raw||'').trim();if(!t)return;

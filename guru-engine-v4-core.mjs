@@ -76,12 +76,13 @@ function parseFilters(raw,prev={},options={}){
  const maxDeliveryTime=amount(n,/\b(?:entrega|delivery)\s+(?:em\s+)?(?:ate|no maximo)\s*(\d+)\s*(?:min|mins|minutos)\b/);if(maxDeliveryTime!==null){f.maxDeliveryMinutes=maxDeliveryTime;f.delivery=true}
  const minRating=amount(n,/\b(?:nota|avaliacao)\s*(?:acima de|maior que|de pelo menos|minima|a partir de)\s*(\d(?:[.,]\d)?)\b/);if(minRating!==null)f.minRating=minRating;
  // Separe a expressão numérica da nota do preço, permitindo ambos os filtros na mesma pergunta.
- const priceText=n.replace(/\b(?:nota|avaliacao)\s*(?:acima de|maior que|de pelo menos|minima|a partir de|ate|abaixo de|menor que)\s*\d(?:[.,]\d)?\b/g,' ');
+ const priceText=n.replace(/\b(?:nota|avaliacao)\s*(?:acima de|maior que|de pelo menos|minima|a partir de|ate|abaixo de|menor que)\s*\d(?:[.,]\d)?\b/g,' ')
+  .replace(/\b(?:frete|taxa de entrega|taxa de delivery|entrega|delivery)\s+(?:em\s+)?(?:de\s+)?(?:ate|no maximo|maximo)\s*(?:r\s*)?\d+(?:[.,]\d+)?(?:\s*(?:reais?|min|mins|minutos))?\b/g,' ');
  const priceRange=priceText.match(/\bentre\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:e|a)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?)?\b/);
  if(priceRange){f.minPrice=asNum(priceRange[1]);f.maxPrice=asNum(priceRange[2])}
  else{
   const maxPrice=amount(priceText,/\b(?:ate|menos de|maximo|no maximo)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?|rs|r)?\b(?!\s*(?:h|horas|km|m|minutos)\b)/);
-  if(maxPrice!==null&&!/\b(?:frete|taxa|entrega|delivery)\s+/.test(priceText))f.maxPrice=maxPrice;
+  if(maxPrice!==null)f.maxPrice=maxPrice;
   const minPrice=amount(priceText,/\b(?:acima de|mais de|a partir de)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?)?\b/);if(minPrice!==null)f.minPrice=minPrice;
  }
  if(/\b(em promocao|promocao|com desconto|em oferta|oferta)\b/.test(n))f.promoOnly=true;

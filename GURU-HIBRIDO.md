@@ -1,19 +1,37 @@
-# GURU IA — Modo híbrido com OpenAI
+# GURU IA — Integração híbrida OpenAI, sem Cloudflare
 
-O motor `guru-engine-v4-core.mjs` permanece responsável pela interpretação e classificação. A API da OpenAI **não pesquisa no Supabase** e **não altera resultados**. Após a busca determinística, a função `guru-hybrid-openai` pode fornecer apenas um resumo textual de até 65 palavras, usado antes dos cards. Falha da API, ausência de configuração ou desafio antiabuso não resolvido = **GURU local continua normalmente**.
+O motor `guru-engine-v4-core.mjs` continua decidindo as buscas e a classificação. A OpenAI apenas resume o resultado, sem alterar a ordem, a disponibilidade ou os cards do motor local. Falha do servidor, da quota ou da OpenAI = busca local continua funcionando.
 
-## Passos para ativar (somente por quem administra as contas)
+## Preparação
 
-1. Em [Supabase AIDB → Edge Function Secrets](https://supabase.com/dashboard/project/innziuzgtpfsiywqmies/settings/functions), configure:
-   - `OPENAI_API_KEY`: chave privada da sua conta de API OpenAI; **nunca envie ou publique no GitHub/chat**.
-   - `GURU_TURNSTILE_SECRET`: chave **secreta** do Cloudflare Turnstile para o domínio `jkkjkjjkkj94-bit.github.io`.
-   - `GURU_ALLOWED_ORIGIN`: `https://jkkjkjjkkj94-bit.github.io` (sem barra final).
-   - `GURU_OPENAI_MODEL`: `gpt-6-luna` (opcional).
-2. Registre um widget Cloudflare Turnstile com o hostname `jkkjkjjkkj94-bit.github.io`. Coloque **somente a site key pública** no atributo `content` da meta `guru-turnstile-site-key` de `index.html`.
-3. Após revisar o código, publique a função `supabase/functions/guru-hybrid-openai/index.ts` no **AIDB**, com slug `guru-hybrid-openai` e `verify_jwt=false` **apenas porque o desafio Turnstile é obrigatório e validado no backend**. Evite retirar a verificação.
-4. Defina limites de orçamento e monitoramento no painel de faturamento OpenAI. Utilize proteção adicional de volume por IP/gateway se houver tráfego elevado.
-5. Teste uma busca com lojas cadastradas, verifique se o resumo não modifica os cards. Em seguida, desabilite temporariamente a função e confirme que a busca local continua operando.
+1. O segredo `OPENAI_API_KEY` deve estar configurado no projeto Supabase **AIDB** em Edge Function Secrets. Não coloque a chave no GitHub nem em mensagens de chat.
+2. O endpoint `guru-hybrid-openai` usa a chave de acesso administrativa **interna** que a plataforma fornece à própria Edge Function (`SUPABASE_SERVICE_ROLE_KEY` ou `SUPABASE_SECRET_KEYS`), apenas no servidor.
+3. A função `public.guru_hybrid_claim_quota` e a tabela `public.guru_hybrid_quota` foram configuradas no AIDB. O acesso da tabela é bloqueado por RLS e concessões SQL; a função de consumo só pode ser executada pelo papel `service_role`.
+4. Configure o orçamento mensal e alertas na plataforma OpenAI. O limite do Supabase **não equivale** a um teto financeiro exato.
 
-**Segurança:** o frontend só recebe a site key pública do Turnstile. Os segredos ficam no Supabase. O endpoint recusa chamadas sem verificação; valida hostname, origem e limites de payload. O texto enviado inclui pergunta e no máximo cinco lojas da busca atual (nome, grupo, categoria, entrega, score), sem credenciais, endereço completo ou dados do usuário. O campo `store:false` desativa armazenamento da resposta pela Responses API, respeitadas as demais políticas de tratamento e retenção do provedor.
+## Proteções sem Cloudflare
 
-**Limitações:** a resposta OpenAI é um resumo auxiliar, e não uma garantia factual; os cards do motor GURU continuam sendo a referência. A origem HTTP e Turnstile não substituem limites de taxa persistentes e monitoramento. O autocomplete, o score, a persistência Supabase e os filtros não foram substituídos. Sem chave e widget configurados, a integração permanece **inativa por segurança**.
+- Limites globais atômicos: **20 chamadas/hora** e **80 chamadas/dia**, incluindo todos os usuários.
+- Limite adicional de **4 chamadas/hora por identificador de cliente** derivado de hash, na medida em que o gateway forneça o IP.
+- A identificação por IP pode ser falsificada em determinadas infraestruturas; portanto **a quota global é indispensável**.
+- Permite somente a origem `https://jkkjkjjkkj94-bit.github.io`, requisições POST curtas, até cinco lojas por pedido e resposta resumida.
+- Origem CORS não é autenticação nem impede clientes automatizados; é apenas defesa adicional.
+- A Edge Function falha com segurança se a chave da OpenAI, a chave administrativa do servidor, a função SQL ou o banco estiverem indisponíveis.
+- Os dados enviados à OpenAI incluem pergunta e nomes, categorias, entrega e score de até cinco estabelecimentos. `store:false` é solicitado à Responses API.
+- O identificador de rede é transformado em hash no servidor, antes da persistência da quota.
+
+## Arquivos
+
+- `supabase/functions/guru-hybrid-openai/index.ts` — endpoint backend com limite por hora e dia.
+- `guru-engine-v4.js` — chama opcionalmente a função e preserva a busca antiga em caso de falha.
+- `index.html` — não precisa de Cloudflare nem de outras chaves públicas.
+
+## Teste de ponta a ponta
+
+1. Verifique que a Edge Function `guru-hybrid-openai` está implantada no AIDB e que a quota SQL existe.
+2. Confirme a publicação da versão atualizada do site pela PR.
+3. Busque uma pizzaria real na GURU; o resumo deve aparecer acima dos cards, com indicação de assistência OpenAI.
+4. Esgote o limite no ambiente de testes ou simule indisponibilidade da OpenAI; a busca e os cards devem continuar funcionando.
+5. Acompanhe uso e custos da API OpenAI após ativar o recurso.
+
+**Aviso:** as chamadas pagas só estarão operacionais quando o site atualizar para a versão híbrida e a chave estiver válida. Não é possível garantir disponibilidade de resposta em produção sem um teste integrado, com credenciais reais e monitoramento.

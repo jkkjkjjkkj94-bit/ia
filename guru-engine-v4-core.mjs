@@ -14,7 +14,9 @@ const WEEKDAY_PLURALS={domingos:'domingo',segundas:'segunda',tercas:'terca',quar
 const DIGITS={primeira:0,primeiro:0,segunda:1,segundo:1,terceira:2,terceiro:2,quarta:3,quarto:3,quinta:4,quinto:4,sexta:5,sexto:5};
 const asNum=s=>Number(String(s||'').replace(',','.'));
 export function normalizeQuery(raw){const safe=String(raw||'').replace(/(\d)[.,](\d)/g,'$1DEC$2');return words(safe).map(w=>(TYPO.get(w)||WEEKDAY_PLURALS[w]||w).replace(/(\d)dec(\d)/g,'$1.$2')).join(' ')}
-export function retailFoodConflict(raw){const n=normalizeQuery(raw);return RETAIL.test(n)&&FOOD.test(n)}
+// "Loja" ou "comércio" podem designar estabelecimentos de alimentação.
+// Não bloquear a consulta: a taxonomia identifica o grupo informado pelo usuário.
+export function retailFoodConflict(_raw){return false}
 export function buildLexicon(taxonomy={},categoryAliases={}){
  const terms=[];
  for(const[category,groups]of Object.entries(taxonomy||{})){
@@ -118,7 +120,7 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const text=String(raw||'').trim(),n=normalizeQuery(text),lexicon=buildLexicon(taxonomy,aliases);
  const reset=/\b(nova busca|nova pesquisa|novo chat|limpar contexto|limpar busca|comecar do zero|reiniciar)\b/.test(n);
  if(reset)return{kind:'reset',raw:text};
- if(retailFoodConflict(text))return{kind:'blocked',raw:text};
+
  const reference=getReference(n);
  const ask= /\b(que horas|horario|abre|fecha|funciona)\b/.test(n)?'hours':
  /\b(quanto fica com entrega|valor com entrega|preco com frete)\b/.test(n)?'total':

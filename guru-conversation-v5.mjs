@@ -1,11 +1,12 @@
 // GURU V5 — interpretação contextual complementar, comparação baseada no catálogo
+import {priceOf,eligibleProduct} from './guru-engine-v4-core.mjs';
 // e indicadores de qualidade. Sem rede, sem dados pessoais e sem alteração do ranking.
 export const canonical = text => String(text??'').toLowerCase().normalize('NFD')
   .replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 
 const references={primeira:0,primeiro:0,segunda:1,segundo:1,terceira:2,terceiro:2,quarta:3,quarto:3,quinta:4,quinto:4,sexta:5,sexto:5};
 const ordinalRe=/\b(primeira|primeiro|segunda|segundo|terceira|terceiro|quarta|quarto|quinta|quinto|sexta|sexto)\b/g;
-const askComparison=/\b(comparar|compare|comparacao|diferenca|diferencas|qual dessas|qual delas|qual e melhor|qual vale mais a pena|qual compensa mais|qual recomendaria entre|qual voce recomenda entre)\b/;
+const askComparison=/\b(comparar|compare|comparacao|diferenca|diferencas|qual e melhor|qual vale mais a pena|qual compensa mais|qual recomendaria entre|qual voce recomenda entre)\b/;
 const aboutPrevious=/\b(dessas|deles|delas|dessas lojas|das opcoes|da lista|entre elas|entre esses|entre essas|alguma delas|qual delas|qual dessas)\b/;
 const deliveryRe=/\b(entrega|delivery|frete|entregam)\b/;
 const cheaper=/\b(mais barat[oa]|menor preco|mais em conta|economica|economico|preco mais baixo)\b/;
@@ -22,7 +23,7 @@ export function contextualIntent(raw,state={}){
  }
  const prior=aboutPrevious.test(n)||/^e\s+(?:qual|com|a|tem)/.test(n)||/^(?:qual|quais|alguma|algum|tem|mostra|mostre|quero|me diga|me mostre|prefiro)\b/.test(n);
  if(prior){
-  if(deliveryRe.test(n)&&/\b(qual|quais|alguma|algum|tem|com|entrega)\b/.test(n)&&!/\b(preco|taxa|quanto|valor|horario)\b/.test(n))return{kind:'filterPrevious',attribute:'delivery'};
+  if(deliveryRe.test(n)&&/\b(qual|quais|alguma|algum|tem|com|entrega)\b/.test(n)&&!/\b(preco|taxa|quanto|valor|horario)\b/.test(n))return{kind:'filterPrevious',attribute:/\b(sem|nao)\s+(?:faz|tem|oferece)?\s*(?:entrega|delivery)\b/.test(n)?'noDelivery':'delivery'};
   if(cheaper.test(n))return{kind:'sortPrevious',attribute:'price'};
   if(closer.test(n))return{kind:'sortPrevious',attribute:'distance'};
   if(higherRated.test(n))return{kind:'sortPrevious',attribute:'rating'};
@@ -35,7 +36,7 @@ const validDate = value => {
  const date=new Date(value);return Number.isFinite(date.getTime())?date:null;
 };
 export function storeDataQuality(store={}, data={}, now=new Date()){
- const activeProducts=(data.products||[]).filter(p=>p.store_id===store.id&&p.active===true&&p.show_in_ai===true&&Number(p.stock)>0);
+ const activeProducts=(data.products||[]).filter(p=>p.store_id===store.id&&eligibleProduct(p));
  const hours=(data.hours||[]).filter(h=>h.store_id===store.id&&h.closed!==true&&h.opens_at&&h.closes_at);
  const reviews=(data.reviews||[]).filter(r=>r.store_id===store.id&&Number(r.rating)>=1&&Number(r.rating)<=5);
  const updated=validDate(store.updated_at);
@@ -58,8 +59,8 @@ export function compareStores(rows=[], data={}, currency = amount => String(amou
  const selected=rows.filter(Boolean).slice(0,3);
  const ratings=(data.reviews||[]);
  return selected.map(r=>{
-  const s=r.store||{},available=(r.products||[]).filter(p=>p.active===true&&Number(p.stock)>0);
-  const validPrices=available.map(p=>Number(p.promo_price??p.price)).filter(Number.isFinite);
+  const s=r.store||{},available=(r.products||[]).filter(p=>eligibleProduct(p));
+  const validPrices=available.map(p=>priceOf(p)).filter(Number.isFinite);
   const rated=ratings.filter(x=>x.store_id===s.id&&Number(x.rating)>=1&&Number(x.rating)<=5);
   const rating=rated.length?rated.reduce((sum,x)=>sum+Number(x.rating),0)/rated.length:null;
   const q=storeDataQuality(s,data);

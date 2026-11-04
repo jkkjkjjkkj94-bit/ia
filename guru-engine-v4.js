@@ -10,6 +10,33 @@ let replyBuffer=null;
 const minTypingMs=850;
 let taxonomy=structuredClone(fallbackTaxonomy),aliases=structuredClone(fallbackAliases);
 const memoryKey='guru_context_v4',ttl=2*60*60*1000;
+
+// Híbrido sem Cloudflare: cota atômica global e por cliente verificada no Supabase.
+const hybridEndpoint=AI.url+'/functions/v1/guru-hybrid-openai';
+// Híbrido opcional: apenas acrescenta um resumo textual; ranking e cards seguem locais.
+async function hybridResponse(question,rows){
+ if(!Array.isArray(rows)||!rows.length)return '';
+ const payload={
+  question:String(question).slice(0,380),
+  results:rows.slice(0,5).map(r=>({
+   name:r.store?.name,category:r.store?.category,group:r.store?.group,
+   reason:(Array.isArray(r.reason)?r.reason.join(', '):String(r.reason||'')).slice(0,140),
+   delivery:r.store?.delivery===true,rankScore:r.rankScore
+  }))
+ };
+ try{
+  const r=await fetch(hybridEndpoint,{
+   method:'POST',
+   headers:{'Content-Type':'application/json',apikey:AI.key},
+   body:JSON.stringify(payload),
+   signal:AbortSignal.timeout(11000),
+  });
+  if(!r.ok)return '';
+  const result=await r.json();
+  return typeof result.answer==='string'?result.answer.trim().slice(0,800):'';
+ }catch{return ''}
+}
+
 const money=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const dayNames=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 const el=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x};
@@ -100,21 +127,106 @@ async function showAssistantReply(fragment){
 }
 const notice=t=>{if(toast){toast.textContent=t;toast.classList.add('on');setTimeout(()=>toast.classList.remove('on'),3200)}};
 const msgError=err=>{console.error('[GURU v4]',err);add('Não consegui consultar os dados agora. Confira a conexão e tente novamente.')};
+const suggestions=document.getElementById('guruSuggestions');
+let visibleSuggestions=[];
+function setSuggestions(items=[]){
+ visibleSuggestions=items;
+ if(!suggestions)return;
+ suggestions.replaceChildren();
+ suggestions.hidden=!items.length;
+ input.setAttribute('aria-expanded',String(!!items.length));
+ for(const item of items){
+  const button=el('button','guru-suggestion');
+  button.type='button';button.setAttribute('role','option');
+  const label=el('span','guru-suggestion-label',item.label);
+  const type=el('small','guru-suggestion-type',item.type);
+  button.append(label,type);
+  button.addEventListener('mousedown',e=>e.preventDefault());
+  button.addEventListener('click',()=>{input.value='';setSuggestions();submitText(item.query)});
+  suggestions.appendChild(button);
+ }
+}
+function updateSuggestions(){
+ const query=String(input?.value||'').trim();
+ if(!db||query.length<2||searchBusy){setSuggestions();return}
+ const key=norm(query),matches=[],used=new Set();
+ const addItem=(label,type,queryText,score)=>{
+  const uniq=type+'|'+norm(label);
+  if(used.has(uniq))return;
+  used.add(uniq);matches.push({label,type,query:queryText,score});
+ };
+ for(const s of db.stores||[]){
+  if(s.active!==true||s.status!=='active')continue;
+  const name=norm(s.name);
+  if(name&&(name.includes(key)||key.includes(name)))addItem(s.name,'Loja','loja '+s.name,name.startsWith(key)?100:85);
+ }
+ const activeStoreIds=new Set((db.stores||[]).filter(s=>s.active===true&&s.status==='active').map(s=>s.id));
+ for(const p of db.products||[]){
+  if(!activeStoreIds.has(p.store_id)||!eligibleProduct(p))continue;
+  const name=norm(p.name);
+  if(name&&(name.includes(key)||key.includes(name)))addItem(p.name,'Produto',p.name,name.startsWith(key)?85:70);
+ }
+ const groupKeys=new Set();
+ for(const store of db.stores||[]){
+  if(store.active!==true||store.status!=='active')continue;
+  const group=String(store.group||'').trim();
+  if(group&&!groupKeys.has(norm(group))){groupKeys.add(norm(group));if(norm(group).includes(key)||key.includes(norm(group)))addItem(group,'Categoria',group,75)}
+ }
+ matches.sort((a,b)=>b.score-a.score||a.label.localeCompare(b.label,'pt-BR'));
+ setSuggestions(matches.slice(0,6));
+}
+async function refreshFilteredResults(){
+ if(searchBusy)return;
+ try{
+  await loadData();
+  const rows=searchStores(db,state,position,{limit:6});
+  state.lastResults=rows;save();
+  if(rows.length)displayResults(rows);
+  else add(explainEmptySearch(db,state,position));
+ }catch(err){msgError(err)}
+}
 function renderContext(){
- const parts=[];if(state.selectedStore)parts.push('Loja: '+state.selectedStore.name);
- if(state.category)parts.push('Categoria: '+state.category);if(state.group)parts.push('Grupo: '+state.group);
- if(state.location?.city)parts.push('Cidade: '+state.location.city);
- if(state.filters?.day!=null)parts.push('Dia: '+dayNames[state.filters.day]);
- if(Array.isArray(state.filters?.days)&&state.filters.days.includes(0)&&state.filters.days.includes(6))parts.push('Fim de semana');
- if(state.filters?.openNow)parts.push('abertas agora');
- if(state.filters?.delivery===true)parts.push('com entrega');else if(state.filters?.delivery===false)parts.push('sem entrega');
- if(state.filters?.pickup===true)parts.push('com retirada');
- if(state.filters?.maxPrice!=null)parts.push('até '+money(state.filters.maxPrice));
- if(state.filters?.maxDistance!=null)parts.push('até '+state.filters.maxDistance+' km');
- if(state.filters?.size)parts.push('tamanho '+state.filters.size);
- if(state.filters?.promoOnly)parts.push('em promoção');
- if(state.excludedGroups?.length)parts.push('Excluir: '+state.excludedGroups.join(', '));
- if(ctx)ctx.textContent=parts.length?'Contexto: '+parts.join(' · '):'';
+ if(!ctx)return;
+ ctx.replaceChildren();
+ const chips=[];
+ const chip=(label,clear)=>chips.push({label,clear});
+ if(state.selectedStore)chip('Loja: '+state.selectedStore.name,()=>{state.selectedStore=null;state.selectedProduct=null});
+ if(state.category)chip('Categoria: '+state.category,()=>{state.category=null;state.group=null;state.nameTerms=[]});
+ if(state.group)chip('Grupo: '+state.group,()=>{state.group=null});
+ if(state.location?.city)chip('Cidade: '+state.location.city,()=>{state.location={...state.location,city:null}});
+ const f=state.filters||{};
+ if(f.openNow)chip('Abertas agora',()=>{delete f.openNow});
+ if(f.day!=null)chip(dayNames[f.day],()=>{delete f.day});
+ if(f.days?.length)chip('Dias: '+f.days.map(d=>dayNames[d]).join(', '),()=>{delete f.days});
+ if(f.daysAll?.length)chip('Todos os dias selecionados',()=>{delete f.daysAll});
+ if(f.start!=null||f.end!=null)chip('Horário',()=>{delete f.start;delete f.end});
+ if(f.delivery!==undefined)chip(f.delivery?'Com entrega':'Sem entrega',()=>{delete f.delivery});
+ if(f.pickup!==undefined)chip(f.pickup?'Com retirada':'Sem retirada',()=>{delete f.pickup});
+ if(f.payment)chip('Pagamento: '+f.payment,()=>{delete f.payment;delete f.paymentsAll});
+ if(f.maxPrice!=null)chip('Até '+money(f.maxPrice),()=>{delete f.maxPrice});
+ if(f.minPrice!=null)chip('A partir de '+money(f.minPrice),()=>{delete f.minPrice});
+ if(f.maxDistance!=null)chip('Até '+f.maxDistance+' km',()=>{delete f.maxDistance});
+ if(f.size)chip('Tamanho '+f.size,()=>{delete f.size});
+ if(f.color)chip('Cor '+f.color,()=>{delete f.color});
+ if(f.promoOnly)chip('Promoções',()=>{delete f.promoOnly});
+ if(f.minRating!=null)chip('Nota mínima '+f.minRating,()=>{delete f.minRating});
+ if(f.sort)chip('Ordenar: '+({rating:'avaliação',price:'preço',distance:'distância'}[f.sort]||f.sort),()=>{delete f.sort});
+ if(state.excludedGroups?.length)chip('Excluídos: '+state.excludedGroups.join(', '),()=>{state.excludedGroups=[]});
+ if(!chips.length){ctx.hidden=true;return}
+ ctx.hidden=false;
+ for(const entry of chips){
+  const button=el('button','guru-filter-chip',entry.label+' ×');button.type='button';
+  button.setAttribute('aria-label','Remover filtro '+entry.label);
+  button.addEventListener('click',()=>{entry.clear();renderContext();save();if(db)refreshFilteredResults()});
+  ctx.appendChild(button);
+ }
+ const clear=el('button','guru-clear-filters','Limpar filtros');
+ clear.type='button';clear.addEventListener('click',()=>{
+  state.filters={};state.category=null;state.group=null;state.productTerm=null;state.semanticTerms=[];state.featureTerms=[];state.nameTerms=[];
+  state.excludedGroups=[];state.excludedCategories=[];state.excludedTerms=[];state.location={};state.query='lojas';
+  renderContext();save();if(db)refreshFilteredResults();
+ });
+ ctx.appendChild(clear);
 }
 function save(){
  try{
@@ -212,7 +324,7 @@ async function loadData(force=false){
   const now=Date.now();
   // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
   db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
-  lastLoad=Date.now();rehydrate();return db;
+  lastLoad=Date.now();rehydrate();if(input?.value)updateSuggestions();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;
 }
@@ -485,12 +597,16 @@ async function run(text){
  const rows=searchStores(db,state,position,{limit:6});
  state.lastResults=rows;
  if(!rows.length){add(explainEmptySearch(db,state,position));save();return}
+ const natural=await hybridResponse(text,rows);
+ if(natural)add('GURU · Resumo com OpenAI\n'+natural);
  displayResults(rows);save();
 }
 async function submitText(raw){
  const t=String(raw||'').trim();if(!t)return;
+ setSuggestions();
  if(searchBusy){notice('Aguarde a conclusão da busca atual.');return}
  searchBusy=true;input.disabled=true;
+ document.body.classList.add('chat-started');
  add(t,true);
  const typing=showTypingIndicator();
  const start=performance.now();
@@ -509,14 +625,15 @@ async function submitText(raw){
  }
 }
 function resetConversation(){
- state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};renderContext();
- add('Pronto. Limpei o contexto da busca. O que você procura agora?');
+ state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};
+ msgs.replaceChildren(el('div','msg bot','Olá! Diga o que você procura.'));
+ document.body.classList.remove('chat-started');
+ input.value='';setSuggestions();renderContext();input.focus();
 }
 function initShell(){
  const body=document.body,side=document.querySelector('.app-sidebar');
  const hero=document.querySelector('.hero h1');
- const phrases=['O que você procura?','O que você quer encontrar?','Onde você quer ir?','Que tipo de lugar você procura?'];
- if(hero)hero.textContent=phrases[Math.floor(Math.random()*phrases.length)];
+ if(hero)hero.textContent='O que você quer encontrar?';
  if(msgs)new MutationObserver(()=>body.classList.toggle('chat-started',!!msgs.querySelector('.msg.user'))).observe(msgs,{childList:true});
  side?.querySelector('.sidebar-collapse')?.addEventListener('click',()=>body.classList.toggle('sidebar-collapsed'));
  side?.addEventListener('click',e=>{const b=e.target.closest('[data-shell-action]');if(!b)return;if(b.dataset.shellAction==='new')resetConversation();if(b.dataset.shellAction==='location')locate()});
@@ -525,7 +642,10 @@ function initShell(){
  document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>submitText(b.dataset.q||'')));
 }
 if(form&&input&&msgs){
- form.addEventListener('submit',e=>{e.preventDefault();const q=input.value.trim();if(q){input.value='';submitText(q)}});
+ form.addEventListener('submit',e=>{e.preventDefault();const q=input.value.trim();if(q){input.value='';setSuggestions();submitText(q)}});
+ input.addEventListener('input',updateSuggestions);
+ input.addEventListener('keydown',e=>{if(e.key==='Escape')setSuggestions();if(e.key==='ArrowDown'&&visibleSuggestions.length){e.preventDefault();suggestions?.querySelector('button')?.focus()}});
+ input.addEventListener('blur',()=>setTimeout(()=>{if(!suggestions?.contains(document.activeElement))setSuggestions()},100));
  restore();initShell();renderContext();
  loadData().catch(err=>console.warn('[GURU v4] Carregamento inicial não concluído:',err));
  window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state,{products:db?.products||[]}),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state};

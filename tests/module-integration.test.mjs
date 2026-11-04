@@ -19,7 +19,7 @@ const deleted=[
  'real-location.js','regular-results-ui.js','response-variations.js',
  'semantic-db-resolver.js','semantic-query-guard.js','smart-ranking-v2.js',
  'taxonomy-db-runtime.js','tests/semantic-regression.mjs','typing-indicator.js',
- 'verified-store-badge.js','zero-result-responses.js'
+ 'verified-store-badge.js','zero-result-responses.js','guru-store-groups.js','admin-runtime-v2.js','admin-merchant-details.js'
 ];
 
 test('a IA pública executa apenas o GURU V4',()=>{
@@ -30,8 +30,8 @@ test('a IA pública executa apenas o GURU V4',()=>{
 });
 
 test('Admin tem interface única e autenticação isolada',()=>{
- const html=source('admin.html'),runtime=source('admin-runtime-v2.js');
- assert.match(html,/admin-post-login-loader\.js\?v=5/);
+ const html=source('admin.html'),runtime=source('admin-post-login-loader.js');
+ assert.match(html,/admin-post-login-loader\.js\?v=6/);
  assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
  assert.match(runtime,/admin-ui\.js\?v=\d+/);
  assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
@@ -47,9 +47,9 @@ test('Lojista usa módulo único de atividade e classificação compartilhada',(
  assert.equal((activity.match(/createClient\(/g)||[]).length,1);
  assert.match(activity,/refreshReviews:refresh/);
  assert.match(activity,/updatePresence:touch/);
- assert.match(source('guru-store-groups.js'),/export const groupsByCategory/);
+ assert.match(source('ai-taxonomy.js'),/export const groupsByCategory/);
  for(const path of ['admin-store-group.js','lojista-store-group.js']){
-  assert.match(source(path),/guru-store-groups\.js\?v=1/);
+  assert.match(source(path),/ai-taxonomy\.js\?v=7/);
  }
 });
 
@@ -101,8 +101,8 @@ test('a classificação administrativa salva apenas pela função segura do CORE
  assert.doesNotMatch(admin,/from\('local_ai_stores'\)\.update\(/);
  assert.match(admin,/Salvando\.\.\./);
  assert.match(admin,/Erro ao salvar/);
- assert.match(source('admin-runtime-v2.js'),/admin-store-group\.js\?v=4/);
- assert.match(source('admin-post-login-loader.js'),/admin-runtime-v2\.js\?v=\d+/);
+ assert.match(source('admin-post-login-loader.js'),/admin-store-group\.js\?v=4/);
+ assert.match(source('admin-post-login-loader.js'),/loadAdminModules\(\)/);
 });
 
 
@@ -118,4 +118,45 @@ test('pontuação do ranking é compartilhada entre Admin e busca pública',()=>
  assert.match(admin,/data-ranking-score=/);
  assert.match(ui,/admin-score-number/);
  assert.match(ui,/Score<\/span>/);
+});
+
+
+test('painel de qualidade ignora confiança ausente sem descartar zero válido',()=>{
+ const code=source('guru-quality-admin.js');
+ const expression=code.match(/rows\.map\(r=>r\.confidence\)\.filter\(v=>v!==null&&v!==undefined&&v!==''&&Number\.isFinite\(Number\(v\)\)\)\.map\(Number\)/)?.[0];
+ assert.ok(expression,'filtro da confiança média não localizado');
+ const values=Function('rows','return '+expression);
+ assert.deepEqual(values([{confidence:null},{confidence:undefined},{confidence:''},{confidence:'0.9'},{confidence:0},{confidence:'invalid'}]),[0.9,0]);
+});
+
+test('admin carrega somente um módulo consolidado de lojistas',()=>{
+ const loader=source('admin-post-login-loader.js');
+ const merchant=source('admin-merchant-enhancements.js');
+ assert.match(loader,/admin-merchant-enhancements\.js\?v=3/);
+ assert.doesNotMatch(loader,/admin-merchant-details\.js/);
+ assert.equal((merchant.match(/createClient\(HU,HK\)/g)||[]).length,1);
+ assert.match(merchant,/window\.GuruMerchantEnhancements=/);
+ assert.match(merchant,/window\.GuruMerchantDetails=/);
+ assert.match(merchant,/data-merchant-details/);
+ assert.match(merchant,/merchant-detailed-list/);
+ assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=6/);
+});
+
+
+test('GURU híbrida nunca exige OpenAI para buscar nem expõe chave privada no frontend',()=>{
+ const ui=source('guru-engine-v4.js');
+ const html=source('index.html');
+ const edge=source('supabase/functions/guru-hybrid-openai/index.ts');
+ assert.doesNotMatch(html,/guru-turnstile-site-key/);
+ assert.match(ui,/if\(!Array\.isArray\(rows\)\|\|!rows\.length\)return ''/);
+ assert.match(ui,/const natural=await hybridResponse\(text,rows\)/);
+ assert.match(ui,/displayResults\(rows\);save\(\)/);
+ assert.doesNotMatch(ui,/OPENAI_API_KEY|sk-proj-|Bearer sk-|turnstile/i);
+ assert.match(edge,/Deno\.env\.get\("OPENAI_API_KEY"\)/);
+ assert.match(edge,/guru_hybrid_claim_quota/);
+ assert.doesNotMatch(edge,/turnstile/i);
+ assert.match(edge,/SUPABASE_SERVICE_ROLE_KEY/);
+ assert.match(edge,/store: false/);
+ assert.match(edge,/max_output_tokens: 180/);
+ assert.match(edge,/if \(!apiKey \|\| !adminKey \|\| !supabaseUrl\)/);
 });

@@ -9,14 +9,14 @@ O repositório foi consolidado em 3 áreas, sem alterar os dados do Supabase.
 
 ## Administrador
 - `admin.html` → `core-data-router.js`, `admin.js`, `admin-post-login-loader.js`.
-- Após autenticar o perfil `admin`, o loader chama `admin-runtime-v2.js`.
+- Após autenticar o perfil `admin`, `admin-post-login-loader.js` carrega sequencialmente os módulos autorizados, sem um segundo arquivo de runtime.
 - O único módulo visual ativo é `admin-ui.js`, com estilos em `admin-ui.css`.
-- Módulos de funções separados: `admin-ai-editor.js`, `admin-store-group.js`, `admin-pending-core.js`, `admin-synonym-suggestions.js`, `guru-quality-admin.js`, `admin-delete-controls.js`, `admin-merchant-enhancements.js`, `admin-merchant-details.js`, `admin-taxonomy-db.js`.
+- Módulos de funções separados: `admin-ai-editor.js`, `admin-store-group.js`, `admin-pending-core.js`, `admin-synonym-suggestions.js`, `guru-quality-admin.js`, `admin-delete-controls.js`, `admin-merchant-enhancements.js` (listagem e detalhes), `admin-taxonomy-db.js`.
 
 ## Lojista
 - `lojista.html` → `core-data-router.js`, `lojista.js`, `lojista-store-group.js`, `address-validation.js`, `lojista-activity.js`.
 - `lojista-activity.js` administra presença e avaliações.
-- `guru-store-groups.js` é compartilhado com o Admin.
+- Os grupos são derivados diretamente de `ai-taxonomy.js`, compartilhado entre Admin e Lojista.
 
 ## Arquivos antigos excluídos
 Foram removidos controladores antigos da IA pública, menus legados, versões anteriores da UI, folhas de estilo duplicadas e testes substituídos pelo GURU V4. As versões anteriores podem ser recuperadas no **histórico de commits do GitHub**, sem continuar disponíveis como scripts executáveis no site.

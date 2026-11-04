@@ -500,7 +500,7 @@ export function searchStores(data={},state={},position=null,options={}){
   if(f.openNow){score+=10;reasons.push('aberta agora')}
   if(km!=null){score+=Math.max(0,25-km*3);reasons.push('a '+km.toFixed(1).replace('.',',')+' km')}
   if(rv){score+=Math.min(10,avg*2);reasons.push('avaliação '+avg.toFixed(1)+'/5')}
-  if(norm(state.query).includes(norm(store.name))){score+=45;reasons.unshift('loja citada')}
+  if(norm(store.name)&&has(state.query,store.name)){score+=45;reasons.unshift('loja citada')}
   if(store.verified)score+=2;
   if(!score){const generic=STOP.has(norm(state.query))||/^(lojas?|comercios?|negocios?|estabelecimentos?|lugares?)\b/.test(norm(state.query));if(!generic)continue;score=1}
   const ranking=storeRankingPoints(store,{products:byStore.get(store.id)||[],hours:hoursByStore.get(store.id)||[],reviews:reviewsByStore.get(store.id)||[]});

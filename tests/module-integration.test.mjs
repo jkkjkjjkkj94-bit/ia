@@ -172,3 +172,36 @@ test('Respostas híbridas soam conversacionais sem confundir score com avaliaç�
  assert.match(frontend,/if\(natural\)add\(natural\)/);
  assert.doesNotMatch(frontend,/GURU · Resumo com OpenAI/);
 });
+
+
+test('Conversação natural: saudações, agradecimentos e respostas sociais sem busca',async()=>{
+ const {routeConversation}=await import('../guru-smalltalk.mjs');
+ for(const phrase of ['Oi','Olá!','Oi, tudo bem?','Bom dia','Boa tarde!','Boa noite','Como você está?','Tudo bem e você?','Obrigado pela ajuda','Obrigada','Valeu!','Tchau','Até mais','Estou bem, e você?','Quem é você?','O que você faz?','Você pode me ajudar?']){
+  const r=routeConversation(phrase);
+  assert.equal(r.kind,'social',phrase);
+  assert.ok(r.answer.length>15,phrase);
+ }
+});
+test('Conversação natural não bloqueia buscas nem altera os termos essenciais',async()=>{
+ const {routeConversation}=await import('../guru-smalltalk.mjs');
+ const checks=[
+  ['Oi, quero uma pizzaria com entrega','quero uma pizzaria com entrega'],
+  ['Olá! Onde encontro pizza?','Onde encontro pizza?'],
+  ['Bom dia, consegue achar uma farmácia?','consegue achar uma farmácia?'],
+  ['Oi, tudo bem? Pode recomendar uma pizzaria?','Pode recomendar uma pizzaria?'],
+  ['Boa noite! Tem alguma loja de roupas?','Tem alguma loja de roupas?'],
+  ['Obrigado, quero uma pizzaria com entrega','Obrigado, quero uma pizzaria com entrega'],
+  ['A primeira faz entrega?','A primeira faz entrega?'],
+  ['Pode me indicar uma loja chamada Oi?','Pode me indicar uma loja chamada Oi?'],
+  ['Quero pizza','Quero pizza']
+ ];
+ for(const [question,expected] of checks){
+  const r=routeConversation(question);
+  assert.equal(r.kind,'search',question);
+  assert.equal(r.query,expected,question);
+ }
+ const engine=source('guru-engine-v4.js');
+ assert.match(engine,/const routed=routeConversation\(text\)/);
+ assert.match(engine,/if\(routed.kind==='social'\)\{add\(routed.answer\);return\}/);
+ assert.ok(engine.indexOf("const routed=routeConversation(text)")<engine.indexOf("await loadData();",engine.indexOf("async function run(text)")));
+});

@@ -11,61 +11,13 @@ const minTypingMs=850;
 let taxonomy=structuredClone(fallbackTaxonomy),aliases=structuredClone(fallbackAliases);
 const memoryKey='guru_context_v4',ttl=2*60*60*1000;
 
-const hybridSiteKey=document.querySelector('meta[name="guru-turnstile-site-key"]')?.content?.trim()||'';
+// Híbrido sem Cloudflare: cota atômica global e por cliente verificada no Supabase.
 const hybridEndpoint=AI.url+'/functions/v1/guru-hybrid-openai';
-let turnstileScript=null;
-async function turnstileReady(){
- if(window.turnstile)return window.turnstile;
- if(!turnstileScript){
-  turnstileScript=new Promise((resolve,reject)=>{
-   const script=document.createElement('script');
-   script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-   script.async=true;script.onload=()=>resolve(window.turnstile);script.onerror=()=>reject(Error('Turnstile indisponível'));
-   document.head.appendChild(script);
-  });
- }
- return turnstileScript;
-}
-async function hybridChallengeToken(){
- if(!hybridSiteKey)return null;
- let widget=null,timer=null;
- try{
-  const turnstile=await turnstileReady();
-  if(!turnstile?.render)return null;
-  return await new Promise(resolve=>{
-   let done=false;
-   const container=document.createElement('div');
-   container.className='guru-hybrid-verification';
-   document.body.appendChild(container);
-   const finish=token=>{
-    if(done)return;done=true;
-    clearTimeout(timer);
-    try{if(widget!==null)turnstile.remove(widget)}catch{}
-    container.remove();resolve(token||null);
-   };
-   timer=setTimeout(()=>finish(null),12000);
-   try{
-    widget=turnstile.render(container,{
-     sitekey:hybridSiteKey,
-     size:'invisible',
-     execution:'execute',
-     appearance:'interaction-only',
-     callback:token=>finish(token),
-     'error-callback':()=>finish(null),
-     'expired-callback':()=>finish(null),
-    });
-    turnstile.execute(widget);
-   }catch{finish(null)}
-  });
- }catch{return null}
-}
 // Híbrido opcional: apenas acrescenta um resumo textual; ranking e cards seguem locais.
 async function hybridResponse(question,rows){
- if(!hybridSiteKey||!Array.isArray(rows)||!rows.length)return '';
- const challenge=await hybridChallengeToken();
- if(!challenge)return '';
+ if(!Array.isArray(rows)||!rows.length)return '';
  const payload={
-  question:String(question).slice(0,380),turnstileToken:challenge,
+  question:String(question).slice(0,380),
   results:rows.slice(0,5).map(r=>({
    name:r.store?.name,category:r.store?.category,group:r.store?.group,
    reason:(r.reason||[]).join(', ').slice(0,140),

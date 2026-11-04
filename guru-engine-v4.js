@@ -697,8 +697,8 @@ async function run(text){
  recordSearch(text,plan,rows);
  if(!rows.length){
   const guidance=noResultGuidance(text,db,taxonomy,aliases);
-  add(explainEmptySearch(db,state,position));
-  const m=add(guidance.message),candidates=guidance.suggestions||[];
+  const m=add(explainEmptySearch(db,state,position),false),candidates=guidance.suggestions||[];
+  if(candidates.length)m.appendChild(el('div','guru-next-label','Outras pesquisas que você pode tentar:'));
   if(candidates.length){
    const panel=el('div','guru-next-buttons');
    for(const candidate of candidates){

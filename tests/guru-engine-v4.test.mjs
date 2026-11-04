@@ -240,7 +240,7 @@ test('nomes de lojas completos, parciais e com uma letra incorreta',()=>{
  for(const query of queries){
   const p=plan(query);
   const found=searchStores(sample,nextState(emptyState(),p));
-  assert.deepEqual(found.map(x=>x.store.id),['sweet'],query);
+  assert.deepEqual(found.map(x=>x.store.id),['sweet'],query+' / plan: '+JSON.stringify(p)+' / state: '+JSON.stringify(nextState(emptyState(),p)));
  }
  assert.deepEqual(searchStores(sample,nextState(emptyState(),plan('doceria'))).map(x=>x.store.id).sort(),['other','sweet']);
 });

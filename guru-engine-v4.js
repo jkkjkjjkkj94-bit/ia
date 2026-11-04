@@ -1,6 +1,6 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=11';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=11';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
@@ -475,7 +475,7 @@ async function run(text){
  renderContext();save();
  const rows=searchStores(db,state,position,{limit:6});
  state.lastResults=rows;
- if(!rows.length){add('Não encontrei estabelecimentos cadastrados que atendam a todos esses critérios. Você pode ampliar a região, retirar algum filtro ou tentar outro termo.');save();return}
+ if(!rows.length){add(explainEmptySearch(db,state));save();return}
  displayResults(rows);save();
 }
 async function submitText(raw){

@@ -30,8 +30,8 @@ test('a IA pública executa apenas o GURU V4',()=>{
 });
 
 test('Admin tem interface única e autenticação isolada',()=>{
- const html=source('admin.html'),runtime=source('admin-runtime-v2.js');
- assert.match(html,/admin-post-login-loader\.js\?v=5/);
+ const html=source('admin.html'),runtime=source('admin-post-login-loader.js');
+ assert.match(html,/admin-post-login-loader\.js\?v=6/);
  assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
  assert.match(runtime,/admin-ui\.js\?v=\d+/);
  assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
@@ -101,8 +101,8 @@ test('a classificação administrativa salva apenas pela função segura do CORE
  assert.doesNotMatch(admin,/from\('local_ai_stores'\)\.update\(/);
  assert.match(admin,/Salvando\.\.\./);
  assert.match(admin,/Erro ao salvar/);
- assert.match(source('admin-runtime-v2.js'),/admin-store-group\.js\?v=4/);
- assert.match(source('admin-post-login-loader.js'),/admin-runtime-v2\.js\?v=\d+/);
+ assert.match(source('admin-post-login-loader.js'),/admin-store-group\.js\?v=4/);
+ assert.match(source('admin-post-login-loader.js'),/loadAdminModules\(\)/);
 });
 
 

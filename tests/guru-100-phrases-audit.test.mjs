@@ -815,7 +815,7 @@ function run(spec,i){
  const found=searchStores(data,next,position,{now,limit:90});
  const ids=found.map(x=>x.store.id);
  if(spec.ids){
-  assert.deepEqual(ids.slice().sort(),spec.ids.slice().sort(),'Estabelecimentos encontrados incorretamente');
+  assert.deepEqual(ids.slice().sort(),spec.ids.slice().sort(),'Estabelecimentos encontrados incorretamente / '+spec.q+' / '+JSON.stringify({plan:p,state:next,available:products.map(x=>({name:x.name,store:x.store_id,stock:x.stock}))}));
   if(spec.first)assert.equal(ids[0],spec.first,'Ordenação incorreta');
  }else{
   const target=spec.group==='Pizzaria'?'pizza-entrega':spec.group==='Doceria'?'doce':

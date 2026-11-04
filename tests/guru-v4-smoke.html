@@ -94,6 +94,8 @@ async function smoke(){
   throw Error('Sabor de pizza não gerou exigência de produto');
  if(guru.interpret('Tem pizza de chocolate nessas pizzarias?').productTerm!=='chocolate')
   throw Error('Produto inexistente pode gerar falso positivo');
+ const checkPix=guru.interpret('Pizzaria que aceita Pix e cartão.');
+ if(!checkPix.filters.paymentsAll || checkPix.filters.paymentsAll.length!==2)throw Error('Filtros de pagamento cumulativo falharam');
  await guru.submitText('Tem algum lugar que prepare pizzas?');
  const pizzaNaturalCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
  if(pizzaNaturalCards?.querySelector('h3')?.textContent!=='Pizza Teste')

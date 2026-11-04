@@ -10,6 +10,81 @@ let replyBuffer=null;
 const minTypingMs=850;
 let taxonomy=structuredClone(fallbackTaxonomy),aliases=structuredClone(fallbackAliases);
 const memoryKey='guru_context_v4',ttl=2*60*60*1000;
+
+const hybridSiteKey=document.querySelector('meta[name="guru-turnstile-site-key"]')?.content?.trim()||'';
+const hybridEndpoint=AI.url+'/functions/v1/guru-hybrid-openai';
+let turnstileScript=null;
+async function turnstileReady(){
+ if(window.turnstile)return window.turnstile;
+ if(!turnstileScript){
+  turnstileScript=new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+   script.async=true;script.onload=()=>resolve(window.turnstile);script.onerror=()=>reject(Error('Turnstile indisponível'));
+   document.head.appendChild(script);
+  });
+ }
+ return turnstileScript;
+}
+async function hybridChallengeToken(){
+ if(!hybridSiteKey)return null;
+ let widget=null,timer=null;
+ try{
+  const turnstile=await turnstileReady();
+  if(!turnstile?.render)return null;
+  return await new Promise(resolve=>{
+   let done=false;
+   const container=document.createElement('div');
+   container.className='guru-hybrid-verification';
+   document.body.appendChild(container);
+   const finish=token=>{
+    if(done)return;done=true;
+    clearTimeout(timer);
+    try{if(widget!==null)turnstile.remove(widget)}catch{}
+    container.remove();resolve(token||null);
+   };
+   timer=setTimeout(()=>finish(null),12000);
+   try{
+    widget=turnstile.render(container,{
+     sitekey:hybridSiteKey,
+     size:'invisible',
+     execution:'execute',
+     appearance:'interaction-only',
+     callback:token=>finish(token),
+     'error-callback':()=>finish(null),
+     'expired-callback':()=>finish(null),
+    });
+    turnstile.execute(widget);
+   }catch{finish(null)}
+  });
+ }catch{return null}
+}
+// Híbrido opcional: apenas acrescenta um resumo textual; ranking e cards seguem locais.
+async function hybridResponse(question,rows){
+ if(!hybridSiteKey||!Array.isArray(rows)||!rows.length)return '';
+ const challenge=await hybridChallengeToken();
+ if(!challenge)return '';
+ const payload={
+  question:String(question).slice(0,380),turnstileToken:challenge,
+  results:rows.slice(0,5).map(r=>({
+   name:r.store?.name,category:r.store?.category,group:r.store?.group,
+   reason:(r.reason||[]).join(', ').slice(0,140),
+   delivery:r.store?.delivery===true,rankScore:r.rankScore
+  }))
+ };
+ try{
+  const r=await fetch(hybridEndpoint,{
+   method:'POST',
+   headers:{'Content-Type':'application/json',apikey:AI.key},
+   body:JSON.stringify(payload),
+   signal:AbortSignal.timeout(11000),
+  });
+  if(!r.ok)return '';
+  const result=await r.json();
+  return typeof result.answer==='string'?result.answer.trim().slice(0,800):'';
+ }catch{return ''}
+}
+
 const money=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const dayNames=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 const el=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x};
@@ -570,6 +645,8 @@ async function run(text){
  const rows=searchStores(db,state,position,{limit:6});
  state.lastResults=rows;
  if(!rows.length){add(explainEmptySearch(db,state,position));save();return}
+ const natural=await hybridResponse(text,rows);
+ if(natural)add(natural);
  displayResults(rows);save();
 }
 async function submitText(raw){

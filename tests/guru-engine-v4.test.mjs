@@ -458,3 +458,39 @@ test('filtros simultâneos de nota e preço aplicam quantias separadamente',()=>
  const tooCheap=plan('doceria com entrega nota acima de 4 e bolo até R$ 20');
  assert.deepEqual(searchStores(ds,nextState(emptyState(),tooCheap)).map(r=>r.store.id),[]);
 });
+
+
+test('expressões de cortesia não impedem doceria realmente aberta no sábado',()=>{
+ const store=shop('misael','Comida','Doceria',{name:'Loja do Misael Teste'});
+ const hours=[{store_id:'misael',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false}];
+ const samples={stores:[store],hours,products:[],reviews:[],knowledge:[]};
+ const queries=[
+  'Por favor, quero uma doceria aberta no sábado',
+  'Quero uma doceria aberta no sábado, por favor',
+  'Pode me indicar, por gentileza, uma doceria aberta aos sábados?',
+  'Se possível, quero uma doceria aberta no sábado',
+  'Quero uma doceria aberta no sábado, obrigado',
+  'pfv, uma doceria aberta no sábado'
+ ];
+ for(const query of queries){
+  const p=plan(query);
+  assert.equal(p.kind,'search',query);
+  assert.equal(p.taxon?.group,'Doceria',query);
+  assert.equal(p.filters.day,6,query);
+  assert.deepEqual(p.semanticTerms,[],query);
+  assert.equal(p.productTerm,null,query);
+  const rows=searchStores(samples,nextState(emptyState(),p),null,{now:new Date('2026-11-07T12:00:00')});
+  assert.deepEqual(rows.map(r=>r.store.id),['misael'],query);
+ }
+ const closed={...samples,hours:[{...hours[0],closed:true}]};
+ const q=plan(queries[0]);
+ assert.deepEqual(searchStores(closed,nextState(emptyState(),q)).map(r=>r.store.id),[],
+  'A correção de cortesia não pode incluir lojas fechadas');
+});
+test('o nome Favor continua pesquisável quando não é uma expressão de cortesia',()=>{
+ const shopNamedFavor=shop('favor','Serviços','Limpeza',{name:'Casa Favor'});
+ const p=plan('Favor');
+ assert.deepEqual(p.semanticTerms,['favor']);
+ const results=searchStores({stores:[shopNamedFavor],products:[],reviews:[],hours:[],knowledge:[]},nextState(emptyState(),p));
+ assert.deepEqual(results.map(x=>x.store.id),['favor']);
+});

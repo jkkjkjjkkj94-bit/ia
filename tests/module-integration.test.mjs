@@ -217,3 +217,51 @@ test('GURU híbrida tem cota global sem limitar individualmente visitantes',()=>
  assert.match(docs,/300 chamadas\/dia/);
  assert.match(docs,/Sem limite individual por visitante/);
 });
+
+
+test('V5 entende comparações e perguntas sobre resultados anteriores',async()=>{
+ const {contextualIntent,comparisonSummary,compareStores}=await import('../guru-conversation-v5.mjs');
+ const st={lastResults:[
+  {store:{id:'a',name:'Pizza A',delivery:true,delivery_fee:6},products:[],rankScore:85,minPrice:30,rating:4.5,reviewCount:2,distance:3},
+  {store:{id:'b',name:'Pizza B',delivery:false},products:[],rankScore:70,minPrice:40,rating:3.5,reviewCount:2,distance:7}
+ ]};
+ assert.deepEqual(contextualIntent('Compare a primeira e a segunda',st),{kind:'compare',indices:[0,1]});
+ assert.deepEqual(contextualIntent('Qual dessas tem entrega?',st),{kind:'filterPrevious',attribute:'delivery'});
+ assert.deepEqual(contextualIntent('E qual é mais barata?',st),{kind:'sortPrevious',attribute:'price'});
+ assert.deepEqual(contextualIntent('Qual fica mais perto?',st),{kind:'sortPrevious',attribute:'distance'});
+ assert.equal(contextualIntent('Encontre uma farmácia',st),null);
+ const compared=compareStores(st.lastResults,{reviews:[],products:[],hours:[]});
+ assert.equal(compared[0].score,85);
+ assert.equal(compared[1].rating,null);
+ assert.match(comparisonSummary(compared),/classificação interna/);
+});
+test('V5 mostra transparência de qualidade e recomendações sem dados inventados',async()=>{
+ const {storeDataQuality,followupPrompts,suggestBroadConversation}=await import('../guru-conversation-v5.mjs');
+ const stale=storeDataQuality({id:'a',name:'Loja A',updated_at:'2020-01-01T00:00:00Z'}, {products:[],hours:[],reviews:[]},new Date('2026-11-04T00:00:00Z'));
+ assert.equal(stale.stale,true);
+ assert.equal(stale.activeProducts,0);
+ assert.ok(stale.missing.includes('photo'));
+ assert.ok(suggestBroadConversation('Estou com fome mas não sei o que comer'));
+ assert.equal(suggestBroadConversation('Encontre uma pizzaria'),null);
+ const p=followupPrompts([{store:{delivery:true},minPrice:25,distance:2},{store:{delivery:false},minPrice:30,distance:3}]);
+ assert.ok(p.includes('Compare a primeira e a segunda'));
+ assert.ok(p.includes('Qual dessas tem entrega?'));
+ const ui=source('guru-engine-v4.js');
+ assert.match(ui,/recordSearch\(text,plan,rows\)/);
+ assert.match(ui,/Pontuação GURU:/);
+ assert.match(ui,/renderNextQuestions\(m,rows\)/);
+ assert.match(ui,/renderComparison\(follow.indices,text\)/);
+});
+test('V5 sanitiza pesquisas para métricas e protege métricas no servidor',async()=>{
+ const {safeSearchLabel}=await import('../guru-telemetry-v5.mjs');
+ assert.equal(safeSearchLabel('Me ligue no 11999998888','Pizzaria'),'Pizzaria');
+ assert.equal(safeSearchLabel('meu email teste@example.com','Pizza'),'Pizza');
+ assert.equal(safeSearchLabel('ENCONTRE uma Pizzaria!'),'encontre uma pizzaria');
+ const fn=source('supabase/functions/guru-hybrid-openai/index.ts');
+ assert.match(fn,/guru_hybrid_record_metric/);
+ assert.match(fn,/recordOutcome\("success"\)/);
+ const admin=source('guru-quality-admin.js');
+ assert.match(admin,/guru_hybrid_metrics/);
+ assert.match(admin,/guru_hybrid_quota/);
+ assert.match(admin,/gqPendingSuggestions/);
+});

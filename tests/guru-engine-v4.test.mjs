@@ -494,3 +494,5 @@ test('o nome Favor continua pesquisável quando não é uma expressão de cortes
  const results=searchStores({stores:[shopNamedFavor],products:[],reviews:[],hours:[],knowledge:[]},nextState(emptyState(),p));
  assert.deepEqual(results.map(x=>x.store.id),['favor']);
 });
+
+test('pedido simples me diga uma doceria',()=>{ const p=plan('Por favor, me diga uma doceria'); assert.equal(p.taxon?.group,'Doceria'); assert.deepEqual(p.semanticTerms,[]); });

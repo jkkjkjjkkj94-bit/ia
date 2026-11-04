@@ -646,7 +646,7 @@ async function run(text){
  state.lastResults=rows;
  if(!rows.length){add(explainEmptySearch(db,state,position));save();return}
  const natural=await hybridResponse(text,rows);
- if(natural)add(natural);
+ if(natural)add('GURU · Resumo com OpenAI\n'+natural);
  displayResults(rows);save();
 }
 async function submitText(raw){

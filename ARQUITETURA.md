@@ -9,9 +9,9 @@ O repositório foi consolidado em 3 áreas, sem alterar os dados do Supabase.
 
 ## Administrador
 - `admin.html` → `core-data-router.js`, `admin.js`, `admin-post-login-loader.js`.
-- Após autenticar o perfil `admin`, o loader chama `admin-runtime-v2.js`.
+- Após autenticar o perfil `admin`, `admin-post-login-loader.js` carrega sequencialmente os módulos autorizados, sem um segundo arquivo de runtime.
 - O único módulo visual ativo é `admin-ui.js`, com estilos em `admin-ui.css`.
-- Módulos de funções separados: `admin-ai-editor.js`, `admin-store-group.js`, `admin-pending-core.js`, `admin-synonym-suggestions.js`, `guru-quality-admin.js`, `admin-delete-controls.js`, `admin-merchant-enhancements.js`, `admin-merchant-details.js`, `admin-taxonomy-db.js`.
+- Módulos de funções separados: `admin-ai-editor.js`, `admin-store-group.js`, `admin-pending-core.js`, `admin-synonym-suggestions.js`, `guru-quality-admin.js`, `admin-delete-controls.js`, `admin-merchant-enhancements.js` (listagem e detalhes), `admin-taxonomy-db.js`.
 
 ## Lojista
 - `lojista.html` → `core-data-router.js`, `lojista.js`, `lojista-store-group.js`, `address-validation.js`, `lojista-activity.js`.

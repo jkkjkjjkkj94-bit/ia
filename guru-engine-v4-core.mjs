@@ -3,7 +3,7 @@
 export const norm = value => String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s#]/g,' ').replace(/\s+/g,' ').trim();
 const has=(text,term)=>(' '+norm(text)+' ').includes(' '+norm(term)+' ');
 const words=text=>norm(text).split(' ').filter(Boolean);
-const STOP=new Set('quero queria preciso preciso de procuro procurando procurar encontre encontrar achar onde como qual quais uma um uns umas de da do das dos em no na nos nas aos todos todas cada com para por que meu minha seus suas me mostre mostra mostre indique indicar indica indicam indiquei indicaria recomende recomenda recomendar recomendaria recomendacoes recomendacao sugestao sugestoes sugira existe existem existiria sabe saber conhece conhecer conhecem pode poderia poderia-se acha acham achou me aconselha negocio negocios comercio comercios loja lojas lugar lugares local locais estabelecimento estabelecimentos empresa empresas ponto pontos aberto aberta abertos abertas agora hoje amanha depois antes ate mais menos real reais preco precos custa custam tem vende vendem fique fiquem ficar fica ficam esteja estejam estar esta estao funcione funcionem funciona funcionam abram abrem abre abrir aberto abertos me me da ai tipo generico qualquer algo algum alguma coisa comer comida almoco jantar refeicao restaurante restaurantes horario funciona funcionamento funcionando funcionando-se funcionando agora tenha tenham tendo que tenha disponivel disponiveis perto longe proximo proximos proxima proximas melhor melhores maior maiores avaliada avaliadas avaliado avaliados baratos baratas economicos economicas boa boas bom bons mim aqui entrega frete taxa quanto fica eu gostaria'.split(' '));
+const STOP=new Set('quero queria preciso preciso de procuro procurando procurar procure encontre encontrar achar onde como qual quais uma um uns umas de da do das dos em no na nos nas aos todos todas cada com para por que meu minha seus suas me mostre mostra mostre indique indicar indica indicam indiquei indicaria recomende recomenda recomendar recomendaria recomendacoes recomendacao sugestao sugestoes sugira existe existem existiria sabe saber conhece conhecer conhecem pode poderia poderia-se acha acham achou me aconselha negocio negocios comercio comercios loja lojas lugar lugares local locais estabelecimento estabelecimentos empresa empresas ponto pontos aberto aberta abertos abertas agora hoje amanha depois antes ate mais menos real reais preco precos custa custam tem vende vendem fique fiquem ficar fica ficam esteja estejam estar esta estao funcione funcionem funciona funcionam abram abrem abre abrir aberto abertos me me da ai tipo generico qualquer algo algum alguma coisa comer comida almoco jantar refeicao restaurante restaurantes horario funciona funcionamento funcionando funcionando-se funcionando agora fim semana tenha tenham tendo que tenha disponivel disponiveis perto longe proximo proximos proxima proximas melhor melhores maior maiores avaliada avaliadas avaliado avaliados baratos baratas economicos economicas boa boas bom bons mim aqui entrega frete taxa quanto fica eu gostaria'.split(' '));
 const COLORS=['preto','preta','branco','branca','azul','vermelho','vermelha','verde','amarelo','amarela','rosa','roxo','roxa','cinza','bege','marrom'];
 const GROUP_HINTS=new Set('pizza pizzaria sushi japonesa japones oriental hamburguer hamburgueria doceria doce acai sorveteria sorvete marmita padaria pastelaria churrascaria cafeteria restaurante'.split(' '));
 const RETAIL=/\b(loja|lojas|comercio|comercios|empresa|empresas|ponto|pontos)\b/;
@@ -19,16 +19,19 @@ export function normalizeQuery(raw){const safe=String(raw||'').replace(/(\d)[.,]
 export function retailFoodConflict(_raw){return false}
 export function buildLexicon(taxonomy={},categoryAliases={}){
  const terms=[];
+ const forms=term=>{const n=norm(term);return n&&!n.includes(' ')&&n.length>=5&&/[aeiou]$/.test(n)?[n,n+'s']:[n]};
  for(const[category,groups]of Object.entries(taxonomy||{})){
-  for(const term of [category,...categoryAliases[category]||[]])if(norm(term))terms.push({term:norm(term),category,group:null});
-  for(const[group,aliases]of Object.entries(groups||{}))for(const term of [group,...(Array.isArray(aliases)?aliases:[])])if(norm(term))terms.push({term:norm(term),category,group});
+  for(const term of [category,...categoryAliases[category]||[]])for(const form of forms(term))if(form)terms.push({term:form,category,group:null});
+  for(const[group,aliases]of Object.entries(groups||{}))for(const term of [group,...(Array.isArray(aliases)?aliases:[])])for(const form of forms(term))if(form)terms.push({term:form,category,group});
  }
  return [...new Map(terms.map(x=>[x.category+'|'+x.group+'|'+x.term,x])).values()].sort((a,b)=>b.term.length-a.term.length);
 }
 export function getTaxon(text,lexicon){
  const n=normalizeQuery(text),hits=(lexicon||[]).filter(x=>has(n,x.term));
  const groups=hits.filter(x=>x.group);
- if(groups.length)return groups[0];
+ // Em grupos homônimos, dê prioridade à categoria explicitamente informada.
+ const categoryHit=hits.find(x=>!x.group&&has(n,x.category))||hits.find(x=>!x.group);
+ if(groups.length)return (categoryHit&&groups.find(x=>x.category===categoryHit.category))||groups[0];
  if(hits.length)return hits[0];
  // Fuzzy match only long single terms, not broad category labels.
  const ts=words(n).filter(x=>x.length>=5&&!STOP.has(x));
@@ -57,8 +60,10 @@ const mins=(h,m)=>Number(h)*60+Number(m||0);
 const amount=(n,re)=>{const m=n.match(re);return m?asNum(m[1]):null};
 function parseFilters(raw,prev={},options={}){
  const n=normalizeQuery(raw),f={...prev};
- if(/\b(abert[oa]s?\s+agora|funcionando agora)\b/.test(n)){f.openNow=true;f.day=null;f.start=null;f.end=null}
- const day=dayOf(n,options.today??new Date().getDay());if(day!==null){f.day=day;f.openNow=false}
+ if(/\b(abert[oa]s?\s+agora|funcionando agora)\b/.test(n)){f.openNow=true;f.day=null;f.days=null;f.start=null;f.end=null}
+ // 'Fim de semana' significa sábado OU domingo, não a data de hoje.
+ if(/\bfim de semana\b/.test(n)){f.days=[0,6];f.day=null;f.openNow=false}
+ const day=dayOf(n,options.today??new Date().getDay());if(day!==null){f.day=day;f.days=null;f.openNow=false}
  if(/\b(sem entrega|sem delivery|nao quero entrega|nao quero delivery)\b/.test(n))f.delivery=false;
  else if(/\b(com entrega|delivery|faz entrega|entrega rapida|entrega hoje)\b/.test(n))f.delivery=true;
  if(/\b(para retirar|com retirada|retirada na loja|buscar na loja)\b/.test(n))f.pickup=true;
@@ -218,14 +223,15 @@ function intervalsFor(hours,storeId,weekday){
  return intervals;
 }
 export function scheduleMatches(store,hours,f={},now=new Date()){
- if(!f.openNow&&f.day==null&&f.start==null&&f.end==null)return true;
- const weekday=f.openNow?now.getDay():f.day??now.getDay();
- const intervals=intervalsFor(hours,store.id,weekday);
- if(!intervals.length)return false;
- if(f.openNow){const m=now.getHours()*60+now.getMinutes();return intervals.some(([a,b])=>a<=m&&m<b)}
+ if(!f.openNow&&f.day==null&&!(Array.isArray(f.days)&&f.days.length)&&f.start==null&&f.end==null)return true;
+ const days=Array.isArray(f.days)&&f.days.length?f.days:[f.openNow?now.getDay():f.day??now.getDay()];
  const a=f.start??0,b=f.end??1439;
- if(a===b)return intervals.some(([from,to])=>from<=a&&to>a);
- return intervals.some(([from,to])=>from<=b&&to>a);
+ return days.some(weekday=>{
+  const intervals=intervalsFor(hours,store.id,weekday);
+  if(f.openNow){const m=now.getHours()*60+now.getMinutes();return intervals.some(([from,to])=>from<=m&&m<to)}
+  if(a===b)return intervals.some(([from,to])=>from<=a&&to>a);
+  return intervals.some(([from,to])=>from<=b&&to>a);
+ });
 }
 export function distanceKm(a,b){
  if(!a||b.latitude==null||b.longitude==null)return null;

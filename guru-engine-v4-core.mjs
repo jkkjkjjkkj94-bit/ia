@@ -156,7 +156,7 @@ function requestedStoreNameTerms(raw,taxon,semanticTerms){
  
  const nameCues=new Set('nome chamada chamado denominada denominado apelidada apelidado'.split(' '));
  if(/\b(?:de nome|com o nome|chamad[oa]|denominad[oa])\b/.test(n))return semanticTerms.filter(t=>!nameCues.has(t));
- if(!taxon.group)return [];
+ if(!taxon?.group)return [];
  const originalWords=String(raw||'').match(/[\p{L}\p{N}]+/gu)||[];
  const normalizedWords=originalWords.map(w=>norm(w));
  const groupWords=words(taxon.term||taxon.group);

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import {taxonomy as registeredTaxonomy,categoryAliases as registeredAliases} from '../ai-taxonomy.js';
 
 import assert from 'node:assert/strict';
-import {interpret,emptyState,nextState,searchStores,eligibleProduct,scheduleMatches,distanceKm,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
+import {interpret,emptyState,nextState,searchStores,explainEmptySearch,eligibleProduct,scheduleMatches,distanceKm,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
 
 const tax={
  Comida:{Pizzaria:['pizza','pizzaria'],Japonesa:['comida japonesa','japonesa','sushi'],Doceria:['doces','doce','doceria','confeitaria']},
@@ -568,4 +568,33 @@ test('atributos reconhecidos e produtos em estoque permanecem exigências reais'
  const noPizza=plan('Quero comprar uma camiseta tamanho M');
  const shirts={stores:[shop('clothes','Roupas','Infantil')],products:[row('clothes','Camiseta Infantil',{sizes:['M'],stock:0})],hours:[],reviews:[],knowledge:[]};
  assert.deepEqual(searchStores(shirts,nextState(emptyState(),noPizza)).map(r=>r.store.id),[]);
+});
+
+
+test('categoria reconhecida com banco sem docerias informa ausência de cadastro, não falha do interpretador',()=>{
+ const pizza=shop('pizza','Comida','Pizzaria',{name:'Loja do Misael Teste'});
+ const other=shop('other','Comida','Pizzaria',{name:'Pizzaria'});
+ const data={stores:[pizza,other],products:[],hours:[],reviews:[],knowledge:[]};
+ const query='Por favor, poderia me recomendar uma doceria';
+ const planResult=plan(query);
+ assert.equal(planResult.kind,'search');
+ assert.equal(planResult.taxon?.category,'Comida');
+ assert.equal(planResult.taxon?.group,'Doceria');
+ const state=nextState(emptyState(),planResult);
+ assert.equal(state.group,'Doceria');
+ assert.deepEqual(searchStores(data,state).map(x=>x.store.id),[]);
+ assert.match(explainEmptySearch(data,state),/Não há estabelecimentos ativos cadastrados como Doceria/);
+ const pizzaPlan=plan('Por favor, poderia me recomendar uma pizzaria');
+ assert.deepEqual(searchStores(data,nextState(emptyState(),pizzaPlan)).map(x=>x.store.id).sort(),['other','pizza']);
+});
+test('retorno vazio por filtro distingue lojas disponíveis de categoria sem cadastro',()=>{
+ const sweet=shop('sweet','Comida','Doceria',{delivery:false});
+ const data={stores:[sweet],products:[],hours:[],reviews:[],knowledge:[]};
+ const state=nextState(emptyState(),plan('doceria com entrega'));
+ assert.deepEqual(searchStores(data,state),[]);
+ assert.match(explainEmptySearch(data,state),/Há estabelecimentos cadastrados em Doceria, mas nenhum atende/);
+ const missingCategory=nextState(emptyState(),plan('pizzaria'));
+ assert.match(explainEmptySearch(data,missingCategory),/Não há estabelecimentos ativos cadastrados como Pizzaria/);
+ const disabled={...data,stores:[{...sweet,active:false}]};
+ assert.match(explainEmptySearch(disabled,state),/Não há estabelecimentos ativos disponíveis/);
 });

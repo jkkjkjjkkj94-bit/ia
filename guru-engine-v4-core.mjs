@@ -300,6 +300,23 @@ function storeNameTypoHit(token,name){
  if(t.length<5)return false;
  return words(name).some(w=>w.length>=5&&Math.abs(w.length-t.length)<=1&&editDistance(t,w)===1);
 }
+// Explica a ausência de resultados com base na categoria disponível, sem inventar estabelecimentos.
+export function explainEmptySearch(data={},state={}){
+ const active=(data.stores||[]).filter(s=>s.active===true&&s.status==='active');
+ const category=state.category,group=state.group;
+ if(!active.length)return 'Não há estabelecimentos ativos disponíveis no cadastro neste momento.';
+ if(category&&!active.some(s=>norm(s.category)===norm(category))){
+  return 'Não há estabelecimentos ativos cadastrados na categoria '+category+' no momento. Você pode pesquisar outra categoria.';
+ }
+ if(group&&!active.some(s=>(!category||norm(s.category)===norm(category))&&storeGroups(s).includes(norm(group)))){
+  return 'Não há estabelecimentos ativos cadastrados como '+group+' no momento. Você pode pesquisar outro tipo de estabelecimento.';
+ }
+ if(category||group){
+  const label=group||category;
+  return 'Há estabelecimentos cadastrados em '+label+', mas nenhum atende a todos os critérios desta pesquisa. Você pode retirar um filtro ou ampliar a região.';
+ }
+ return 'Não encontrei estabelecimentos ativos que atendam aos critérios informados. Você pode ampliar a região, retirar um filtro ou tentar outro termo.';
+}
 export function searchStores(data={},state={},position=null,options={}){
  const stores=data.stores||[],products=data.products||[],hours=data.hours||[],reviews=data.reviews||[],knowledge=data.knowledge||[],f=state.filters||{};
  const rating=ratingsMap(reviews),max=options.limit??6,now=options.now||new Date(),output=[];

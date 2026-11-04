@@ -3,6 +3,7 @@ import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from '.
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
 import {recordSearch,recordSelection} from './guru-telemetry-v5.mjs?v=1';
+import {approvedSourceProducts} from './guru-approved-products.mjs?v=1';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
@@ -562,6 +563,37 @@ function renderComparison(indices,question){
  }
  wrap.appendChild(table);m.appendChild(wrap);
 }
+function displayWebProducts(items=[],sources=[],searchQuery=''){
+ if(!items.length&&!sources.length)return;
+ const m=add('',false);m.classList.add('guru-web-source-message');
+ const title=el('div','guru-web-title',items.length?'Produtos encontrados em fontes cadastradas':'Fontes de lojas cadastradas');
+ m.appendChild(title);
+ const label=el('div','guru-web-note',items.length
+  ?'Os links são de sites autorizados no painel. Preço e estoque só são mostrados quando a fonte confirmou esses dados.'
+  :'A fonte está cadastrada, mas ainda não há produtos indexados que correspondam à pesquisa.');
+ m.appendChild(label);
+ if(items.length){
+  const grid=el('div','guru-web-products');
+  for(const item of items){
+   const card=el('article','guru-web-item');
+   card.appendChild(el('b','',item.name));
+   card.appendChild(el('span','guru-web-origin','Fonte cadastrada: '+item.source));
+   if(item.price!=null&&item.currency==='BRL')card.appendChild(el('span','',money(item.price)));
+   if(item.availability==='in_stock')card.appendChild(el('span','guru-web-available','Disponibilidade informada pela fonte'));
+   else card.appendChild(el('span','guru-web-unknown','Estoque não confirmado'));
+   const a=el('a','guru-web-open','Ver na loja');a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';
+   card.appendChild(a);grid.appendChild(card);
+  }
+  m.appendChild(grid);
+ }else{
+  const links=el('div','guru-next-buttons');
+  for(const source of sources.slice(0,3)){
+   const a=el('a','guru-next-button','Acessar '+source.name);
+   a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';links.appendChild(a);
+  }
+  m.appendChild(links);
+ }
+}
 function displayResults(rows){
  const m=add('',false);m.classList.add('hashtag-result-msg');
  m.appendChild(el('div','hashtag-intro',rows.length===1?'Encontrei 1 opção cadastrada:':'Encontrei '+rows.length+' opções cadastradas:'));
@@ -679,11 +711,22 @@ async function run(text){
  renderContext();save();
  const rows=searchStores(db,state,position,{limit:6});
  state.lastResults=rows;
+ // Consulta em paralelo a produtos públicos de fontes previamente aprovadas.
+ const web=await approvedSourceProducts(text);
+ const relevantSources=(web.sources||[]).filter(source=>
+  norm(text).includes(norm(source.name))||norm(text).includes(norm(source.name).split(' ')[0])||
+  /\\b(site|fonte|fontes|nike)\\b/.test(norm(text))
+ );
  recordSearch(text,plan,rows);
- if(!rows.length){add(explainEmptySearch(db,state,position));save();return}
- const natural=await hybridResponse(text,rows);
- if(natural)add(natural);
- displayResults(rows);save();
+ if(!rows.length&&!web.items.length){add(explainEmptySearch(db,state,position));if(relevantSources.length)displayWebProducts([],relevantSources,text);save();return}
+ if(rows.length){
+  const natural=await hybridResponse(text,rows);
+  if(natural)add(natural);
+  displayResults(rows);
+ }
+ if(web.items.length)displayWebProducts(web.items,[],text);
+ else if(!rows.length&&relevantSources.length)displayWebProducts([],relevantSources,text);
+ save();
 }
 async function submitText(raw){
  const t=String(raw||'').trim();if(!t)return;

@@ -1,4 +1,6 @@
 import {test} from 'node:test';
+import {taxonomy as registeredTaxonomy,categoryAliases as registeredAliases} from '../ai-taxonomy.js';
+
 import assert from 'node:assert/strict';
 import {interpret,emptyState,nextState,searchStores,eligibleProduct,scheduleMatches,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
 
@@ -273,5 +275,79 @@ test('busca por serviços reconhece sinônimos sem exigir produtos',()=>{
   const p=interpret(query,taxService,{},emptyState(),{today:2});
   assert.equal(p.taxon?.group,'Limpeza',query);
   assert.deepEqual(searchStores(samples,nextState(emptyState(),p)).map(x=>x.store.id),['clean'],query);
+ }
+});
+
+test('sete formas de perguntar por docerias preservam intenção e horários corretos',()=>{
+ const saturday=shop('sweet','Comida','Doceria',{name:'Doceria Exemplo'});
+ const weekdayOnly=shop('weekday','Comida','Doceria',{name:'Doceria Fechada no Fim de Semana'});
+ const dataset={stores:[saturday,weekdayOnly],products:[],reviews:[],knowledge:[],hours:[
+  {store_id:'sweet',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false},
+  {store_id:'sweet',weekday:0,opens_at:'09:00',closes_at:'18:00',closed:true},
+  {store_id:'weekday',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:true},
+  {store_id:'weekday',weekday:0,opens_at:'09:00',closes_at:'18:00',closed:true},
+  {store_id:'weekday',weekday:2,opens_at:'09:00',closes_at:'18:00',closed:false}
+ ]};
+ const cases=[
+  ['Quero encontrar uma doceria.',null],
+  ['Procure uma loja de doces.',null],
+  ['Existe alguma confeitaria?',null],
+  ['Quero uma doceria aberta no sábado.',6],
+  ['Encontre uma doceria que funcione aos sábados.',6],
+  ['Tem alguma loja de doces funcionando no fim de semana?','weekend'],
+  ['Quais docerias estão abertas agora?','now']
+ ];
+ const now=new Date(2026,10,7,11,0,0); // sábado, 11h (hora local do browser)
+ for(const [query,when] of cases){
+  const p=interpret(query,registeredTaxonomy,registeredAliases,emptyState(),{today:6});
+  assert.equal(p.kind,'search',query);
+  assert.equal(p.taxon?.category,'Comida',query);
+  assert.equal(p.taxon?.group,'Doceria',query);
+  assert.equal(p.productTerm,null,query);
+  assert.deepEqual(p.semanticTerms,[],query);
+  if(when===6)assert.equal(p.filters.day,6,query);
+  if(when==='weekend')assert.deepEqual(p.filters.days,[0,6],query);
+  if(when==='now')assert.equal(p.filters.openNow,true,query);
+  const matches=searchStores(dataset,nextState(emptyState(),p),null,{now});
+  assert.deepEqual(matches.map(x=>x.store.id),when===null?['sweet','weekday']:['sweet'],query);
+ }
+});
+test('fim de semana considera sábado OU domingo sem incluir lojas fechadas em ambos',()=>{
+ const sunday=shop('sunday','Comida','Doceria',{name:'Domingo'});
+ const saturday=shop('saturday','Comida','Doceria',{name:'Sabado'});
+ const closed=shop('closed','Comida','Doceria',{name:'Fechado'});
+ const ds={stores:[sunday,saturday,closed],products:[],reviews:[],knowledge:[],hours:[
+  {store_id:'sunday',weekday:0,opens_at:'08:00',closes_at:'20:00',closed:false},
+  {store_id:'saturday',weekday:6,opens_at:'08:00',closes_at:'20:00',closed:false}
+ ]};
+ const p=interpret('docerias abertas no fim de semana',registeredTaxonomy,registeredAliases);
+ assert.deepEqual(p.filters.days,[0,6]);
+ assert.deepEqual(searchStores(ds,nextState(emptyState(),p)).map(x=>x.store.id).sort(),['saturday','sunday']);
+});
+test('todas as 10 categorias e 50 grupos da taxonomia são reconhecidos com contexto explícito',()=>{
+ const groups=Object.entries(registeredTaxonomy).flatMap(([category,subgroups])=>Object.keys(subgroups).map(group=>({category,group})));
+ assert.equal(Object.keys(registeredTaxonomy).length,10,'quantidade de categorias no AIDB');
+ assert.equal(groups.length,50,'quantidade de grupos ativos no AIDB');
+ const storesByGroup=groups.map(({category,group},i)=>shop('g'+i,category,group,{name:category+' '+group}));
+ const dataByGroup={stores:storesByGroup,products:[],reviews:[],knowledge:[],hours:[]};
+ for(let i=0;i<groups.length;i++){
+  const {category,group}=groups[i];
+  const firstAlias=registeredTaxonomy[category][group].find(alias=>alias!==group);
+  const variants=[
+   'Quero encontrar '+category+' '+group,
+   'Onde encontro '+category+' '+group+'?',
+   'Existem estabelecimentos de '+category+' '+group+'?'
+  ];
+  if(firstAlias)variants.push('Procure '+category+' '+firstAlias);
+  for(const question of variants){
+   const p=interpret(question,registeredTaxonomy,registeredAliases);
+   assert.equal(p.kind,'search',question);
+   assert.equal(p.taxon?.category,category,question);
+   assert.equal(p.taxon?.group,group,question);
+   assert.deepEqual(p.semanticTerms,[],question);
+   assert.equal(p.productTerm,null,question);
+   const results=searchStores(dataByGroup,nextState(emptyState(),p),null,{limit:60});
+   assert.deepEqual(results.map(r=>r.store.id),['g'+i],question);
+  }
  }
 });

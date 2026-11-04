@@ -64,6 +64,11 @@ async function smoke(){
  if(!recentCards.some(x=>x.textContent==='Sushi Teste'))throw Error('loja de comida japonesa não encontrou estabelecimento válido');
  await guru.submitText('pode me indicar uma confeitaria?');
  if(![...document.querySelectorAll('.store-result-card h3')].some(x=>x.textContent==='Doceria Teste'))throw Error('Sinônimo local foi perdido ao carregar taxonomia dinâmica');
+ // As consultas em português devem conservar categoria, grupo e dias pretendidos.
+ const weekend=guru.interpret('Tem alguma loja de doces funcionando no fim de semana?');
+ if(weekend.kind!=='search'||weekend.taxon?.group!=='Doceria'||JSON.stringify(weekend.filters?.days)!=='[0,6]')throw Error('Consulta de fim de semana não foi interpretada corretamente');
+ const openNow=guru.interpret('Quais docerias estão abertas agora?');
+ if(openNow.kind!=='search'||openNow.taxon?.group!=='Doceria'||openNow.filters?.openNow!==true)throw Error('Busca de docerias abertas agora não foi interpretada corretamente');
  await guru.submitText('pizzaria com entrega em promoção até R$ 40');
  const cards=[...document.querySelectorAll('.store-result-card')];
  if(cards.at(-1)?.querySelector('h3')?.textContent!=='Pizza Teste')throw Error('filtro de promoção falhou');

@@ -41,8 +41,10 @@ test('corrige erros de digitação e mantém negócio genérico',()=>{
  assert.equal(normalizeQuery('pizaria'),'pizzaria');
  assert.equal(plan('negócio de comida japonesa').taxon?.group,'Japonesa');
  assert.equal(plan('negócio de comida japonesa').taxon?.category,'Comida');
- assert.equal(plan('loja de comida japonesa').kind,'blocked');
- assert.equal(plan('comércio de comida japonesa').kind,'blocked');
+ assert.equal(plan('loja de comida japonesa').kind,'search');
+ assert.equal(plan('loja de comida japonesa').taxon?.group,'Japonesa');
+ assert.equal(plan('comércio de comida japonesa').kind,'search');
+ assert.equal(plan('comércio de comida japonesa').taxon?.group,'Japonesa');
  assert.equal(retailFoodConflict('negócio de comida japonesa'),false);
 });
 test('interpreta categorias, grupos e exclusões',()=>{

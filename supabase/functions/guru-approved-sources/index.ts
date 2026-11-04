@@ -141,20 +141,15 @@ async function syncSource(sourceId:string){
    }
    const rows=found.map(x=>({...x,source_id:s.id,last_checked_at:new Date().toISOString()}));
    const write=await rest("guru_web_products?on_conflict=source_id,product_url",{
-      method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},
+      method:"POST",headers:{Prefer:"resolution=ignore-duplicates,return=minimal"},
       body:JSON.stringify(rows)
    });
    if(!write.ok)throw Error("Falha ao gravar produtos da página "+nextPage+".");
    imported+=rows.length;
    nextPage++;
    status="ok";
-   if(!/\\b(?:rel|aria-label)\\s*=\\s*["'][^"']*(?:next|pr[oó]xim)/i.test(html)
-      && !new RegExp("page="+nextPage+"(?:[\\\\"'&]|$)").test(html)){
-      // Alguns catálogos não mostram a próxima página no HTML. Continua só se a
-      // listagem indicar explicitamente múltiplas páginas ou próximo link.
-      const pages=html.match(/P[aá]gina:\\s*\\d+\\s*de\\s*(\\d+)/i);
-      if(pages&&nextPage>Number(pages[1])){completed=true;break;}
-   }
+   // Continuação limitada ao catálogo previamente autorizado.
+   if(nextPage>MAX_PAGE){completed=true;break;}
   }
   if(status==="ok")note=imported+" links encontrados em "+scanned+" páginas nesta execução; próxima página "+nextPage+". Preço e estoque não foram presumidos.";
  }catch(e){

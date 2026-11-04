@@ -787,3 +787,15 @@ test('pedido de produto sem descrição concreta não inventa catálogo nem bloq
  assert.equal(noStore.kind,'search');
  assert.equal(noStore.taxon?.group,'Hamburgueria');
 });
+
+
+test('nome próprio de loja prevalece sobre item de catálogo com palavra coincidente',()=>{
+ const named=shop('misael','Serviços','Limpeza',{name:'Loja do Misael Teste'});
+ const other=shop('other','Comida','Pizzaria',{name:'Pizza Teste'});
+ const catalog=[row('other','Teste',{stock:2})];
+ const query='Por favor, encontre a Loja do Misael Teste';
+ const p=interpret(query,{}, {},emptyState(),{products:catalog});
+ assert.equal(p.kind,'search');
+ assert.equal(p.productTerm,null,'palavra compartilhada com produto não deve apagar busca por loja nomeada');
+ assert.deepEqual(searchStores({stores:[named,other],products:catalog,hours:[],reviews:[],knowledge:[]},nextState(emptyState(),p)).map(r=>r.store.id),['misael']);
+});

@@ -123,6 +123,8 @@ async function smoke(){
  window.smokeDisableStore='sweet';
  await guru.refresh();
  if(guru.getState().selectedStore||guru.getState().lastResults.some(r=>r.store.id==='sweet'))throw Error('Loja removida do banco permaneceu selecionável após atualização');
+ await guru.submitText('Por favor, poderia me recomendar uma doceria');
+ if(!document.getElementById('msgs').textContent.includes('Não há estabelecimentos ativos cadastrados como Doceria'))throw Error('Falta de docerias foi descrita incorretamente como erro de filtros');
  window.smokeDisableStore=null;await guru.refresh();
  const input=document.getElementById('q');
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();

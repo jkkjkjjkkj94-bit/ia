@@ -134,10 +134,20 @@ function restore(){
 }
 function rehydrate(){
  if(!db)return;
- if(state._selectedId)state.selectedStore=db.stores.find(s=>s.id===state._selectedId)||null;
- if(state._productId)state.selectedProduct=db.products.find(p=>p.id===state._productId)||null;
- if(state._lastIds?.length)state.lastResults=state._lastIds.map(id=>{const st=db.stores.find(s=>s.id===id);return st?{store:st,products:db.products.filter(p=>p.store_id===id&&eligibleProduct(p)),reason:[],rating:0,distance:distanceKm(position,st)}:null}).filter(Boolean);
+ // Em toda atualização, referências da conversa precisam refletir apenas dados ativos.
+ const currentStore=id=>id?(db.stores||[]).find(s=>s.id===id&&s.active===true&&s.status==='active')||null:null;
+ const selectedId=state._selectedId||state.selectedStore?.id;
+ state.selectedStore=currentStore(selectedId);
+ const productId=state._productId||state.selectedProduct?.id;
+ state.selectedProduct=state.selectedStore&&productId?(db.products||[]).find(p=>p.id===productId&&p.store_id===state.selectedStore.id&&eligibleProduct(p))||null:null;
+ const ids=Array.isArray(state._lastIds)?state._lastIds:(state.lastResults||[]).map(r=>r.store?.id).filter(Boolean);
+ if(ids.length){
+  // Reaplica todos os filtros para impedir seleção de loja desativada ou sem requisito obrigatório.
+  const valid=new Map(searchStores(db,state,position,{limit:db.stores.length}).map(row=>[row.store.id,row]));
+  state.lastResults=ids.map(id=>valid.get(id)).filter(Boolean);
+ }else state.lastResults=[];
  delete state._lastIds;delete state._selectedId;delete state._productId;
+ renderContext();
 }
 async function read(project,table,query=''){
  // Pagina resultados com ordenação estável: a API pode limitar respostas a 1.000 registros.

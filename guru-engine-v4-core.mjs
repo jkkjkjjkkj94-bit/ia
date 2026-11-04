@@ -250,6 +250,11 @@ function semanticHit(token,text){
  };
  return families[n]?families[n].test(text):text.includes(n);
 }
+function storeNameTypoHit(token,name){
+ const t=norm(token);
+ if(t.length<5)return false;
+ return words(name).some(w=>w.length>=5&&Math.abs(w.length-t.length)<=1&&editDistance(t,w)===1);
+}
 export function searchStores(data={},state={},position=null,options={}){
  const stores=data.stores||[],products=data.products||[],hours=data.hours||[],reviews=data.reviews||[],knowledge=data.knowledge||[],f=state.filters||{};
  const rating=ratingsMap(reviews),max=options.limit??6,now=options.now||new Date(),output=[];
@@ -282,7 +287,7 @@ export function searchStores(data={},state={},position=null,options={}){
   if(mustHaveProduct&&!eligible.length)continue;
   const text=norm([store.name,store.address,store.category,store.group,(store.groups||[]).join(' '),(store.specialties||[]).join(' '),store.description,...eligible.flatMap(p=>[p.name,p.description,p.category,p.brand]),...(kByStore.get(store.id)||[]).flatMap(k=>[k.question,(k.variations||[]).join(' '),k.answer])].join(' '));
   const semanticTerms=state.semanticTerms||[],featureTerms=state.featureTerms||[];
-  const hits=semanticTerms.filter(t=>semanticHit(t,text));
+  const hits=semanticTerms.filter(t=>semanticHit(t,text)||storeNameTypoHit(t,store.name));
   // A mandatory feature requested in prose must be present in store/catalog information.
   if(featureTerms.length&&!featureTerms.every(t=>semanticHit(t,text)))continue;
   if(semanticTerms.length&&!hits.length)continue;

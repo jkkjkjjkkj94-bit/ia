@@ -496,3 +496,20 @@ test('o nome Favor continua pesquisável quando não é uma expressão de cortes
 });
 
 test('pedido simples me diga uma doceria',()=>{ const p=plan('Por favor, me diga uma doceria'); assert.equal(p.taxon?.group,'Doceria'); assert.deepEqual(p.semanticTerms,[]); });
+
+test('formas equivalentes de pedir indicação não acrescentam palavras obrigatórias',()=>{
+ const qs=['Por favor, me diga uma doceria','Me fale de uma doceria','Pode me dizer uma doceria?','Você consegue me indicar uma doceria?','Poderia me informar uma doceria?','Me sugira uma doceria','Por gentileza, me conte uma doceria'];
+ const s=shop('s','Comida','Doceria',{name:'Doceria Teste'});
+ const data={stores:[s],hours:[],products:[],reviews:[],knowledge:[]};
+ for(const query of qs){
+  const p=plan(query);
+  assert.equal(p.kind,'search',query);
+  assert.equal(p.taxon?.group,'Doceria',query);
+  assert.deepEqual(p.semanticTerms,[],query);
+  assert.deepEqual(searchStores(data,nextState(emptyState(),p)).map(r=>r.store.id),['s'],query);
+ }
+ const named=shop('d','Serviços','Limpeza',{name:'Diga Serviços'});
+ const p=plan('Diga');
+ assert.deepEqual(p.semanticTerms,['diga']);
+ assert.deepEqual(searchStores({...data,stores:[named]},nextState(emptyState(),p)).map(r=>r.store.id),['d']);
+});

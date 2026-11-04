@@ -3,7 +3,7 @@
 export const norm = value => String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s#]/g,' ').replace(/\s+/g,' ').trim();
 const has=(text,term)=>(' '+norm(text)+' ').includes(' '+norm(term)+' ');
 const words=text=>norm(text).split(' ').filter(Boolean);
-const STOP=new Set('quero queria preciso preciso de procuro procurando procurar encontre encontrar achar onde como qual quais uma um uns umas de da do das dos em no na nos nas aos todos todas cada com para por que meu minha seus suas me mostre mostra mostre negocio negocios comercio comercios loja lojas lugar lugares local locais estabelecimento estabelecimentos empresa empresas ponto pontos aberto aberta abertos abertas agora hoje amanha depois antes ate mais menos real reais preco precos custa custam tem vende vendem fique fiquem ficar fica ficam esteja estejam estar esta estao funcione funcionem funciona funcionam abram abrem abre abrir aberto abertos me me da ai tipo generico qualquer algo algum alguma coisa comer comida almoco jantar refeicao restaurante restaurantes horario funciona funcionamento perto longe mim aqui entrega frete taxa quanto fica eu gostaria'.split(' '));
+const STOP=new Set('quero queria preciso preciso de procuro procurando procurar encontre encontrar achar onde como qual quais uma um uns umas de da do das dos em no na nos nas aos todos todas cada com para por que meu minha seus suas me mostre mostra mostre negocio negocios comercio comercios loja lojas lugar lugares local locais estabelecimento estabelecimentos empresa empresas ponto pontos aberto aberta abertos abertas agora hoje amanha depois antes ate mais menos real reais preco precos custa custam tem vende vendem fique fiquem ficar fica ficam esteja estejam estar esta estao funcione funcionem funciona funcionam abram abrem abre abrir aberto abertos me me da ai tipo generico qualquer algo algum alguma coisa comer comida almoco jantar refeicao restaurante restaurantes horario funciona funcionamento funcionando funcionando-se funcionando agora tenha tenham tendo que tenha disponivel disponiveis perto longe mim aqui entrega frete taxa quanto fica eu gostaria'.split(' '));
 const COLORS=['preto','preta','branco','branca','azul','vermelho','vermelha','verde','amarelo','amarela','rosa','roxo','roxa','cinza','bege','marrom'];
 const GROUP_HINTS=new Set('pizza pizzaria sushi japonesa japones oriental hamburguer hamburgueria doceria doce acai sorveteria sorvete marmita padaria pastelaria churrascaria cafeteria restaurante'.split(' '));
 const RETAIL=/\b(loja|lojas|comercio|comercios|empresa|empresas|ponto|pontos)\b/;
@@ -104,7 +104,13 @@ function parseFilters(raw,prev={},options={}){
 function getReference(n){
  const num=n.match(/^(?:a |o |opcao |numero )?([1-6])(?:\b|$)/);
  if(num)return Number(num[1])-1;
- for(const[k,v]of Object.entries(DIGITS))if(new RegExp('(?:^|\\s)(?:a |o )?'+k+'\\b').test(n))return v;
+ // "segunda-feira" e "quarta-feira" indicam dias, não opções da lista.
+ const withoutWeekdays=n.replace(/\b(?:segunda|terca|quarta|quinta|sexta)\s+feira\b/g,' ');
+ for(const [k,v] of Object.entries(DIGITS)){
+  if(['segunda','quarta','quinta','sexta'].includes(k)&&
+     !new RegExp('(?:^|\\s)(?:a|opcao|numero)\\s+'+k+'\\b').test(withoutWeekdays))continue;
+  if(new RegExp('(?:^|\\s)(?:a |o )?'+k+'\\b').test(withoutWeekdays))return v;
+ }
  if(/\b(ultima|ultimo)\b/.test(n))return -1;
  return null;
 }
@@ -123,7 +129,12 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  /\b(avaliacao|nota|reviews)\b/.test(n)?'rating':
  /\b(produtos|cardapio|estoque|tem|vende|tamanho)\b/.test(n)?'products':null;
  if(reference!==null&&Array.isArray(prev.lastResults)&&prev.lastResults.length)return{kind:'select',index:reference,ask,raw:text,filters:parseFilters(text,{},options)};
- if(ask&&prev.selectedStore&&!/\b(nova|outra|outro|procuro|encontrar)\b/.test(n)&&!(/\b(?:quero|queria|busco|buscando)\s+(?:uma?|alguma?)\b/.test(n)&&getTaxon(n,lexicon)))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
+ const mentionedType=prev.selectedStore?getTaxon(n,lexicon):null;
+ const newType=!!mentionedType&&(
+  mentionedType.group?norm(mentionedType.group)!==norm(prev.selectedStore.group):
+  norm(mentionedType.category)!==norm(prev.selectedStore.category)
+ );
+ if(ask&&prev.selectedStore&&!newType&&!/\b(nova|outra|outro|procuro|encontrar)\b/.test(n)&&!(/\b(?:quero|queria|busco|buscando)\s+(?:uma?|alguma?)\b/.test(n)&&mentionedType))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
  if(prev.selectedStore&&!ask&&!getTaxon(n,lexicon)&&!/(com entrega|sem entrega|mais perto|promocao|qualquer tipo)/.test(n))return{kind:'ask',ask:'knowledge',raw:text,filters:{}};
  if(ask&&!prev.selectedStore&&/\b(ela|ele|essa|esse|a loja|essa loja)\b/.test(n))return{kind:'clarify',raw:text,reason:'store'};
  const neg=n.match(/^(.*?)\b(?:nao quero|sem|exceto|menos|tirando|evitar|excluir)\b\s+(.+)$/);
@@ -156,16 +167,18 @@ export function emptyState(){return{category:null,group:null,query:null,semantic
 export function nextState(current,plan){
  if(plan.kind!=='search')return current;
  const prev=current||emptyState(),changed=plan.taxon?.category&&plan.taxon.category!==prev.category;
- const next={...prev,filters:{...((changed||plan.broad)?{}:prev.filters),...plan.filters},category:plan.taxon?.category||prev.category,group:changed?null:prev.group,selectedStore:null,selectedProduct:null};
+ // Mencionar uma nova categoria/grupo inicia uma busca nova; refinamentos sem grupo preservam filtros.
+ const freshTopic=Boolean(changed||plan.taxon||plan.broad);
+ const next={...prev,filters:{...(freshTopic?{}:prev.filters),...plan.filters},category:plan.taxon?.category||prev.category,group:changed?null:prev.group,selectedStore:null,selectedProduct:null};
  if(plan.taxon?.group)next.group=plan.taxon.group;
  else if(plan.taxon?.category)next.group=null;
  if(plan.productTerm)next.productTerm=plan.productTerm;
- else if(changed||plan.taxon?.group)next.productTerm=null;
+ else if(freshTopic)next.productTerm=null;
  if(plan.taxon?.category||plan.productTerm||plan.broad){next.semanticTerms=plan.semanticTerms;next.featureTerms=plan.featureTerms}
  if(plan.broad&&!plan.taxon){next.category=null;next.group=null;next.productTerm=null;next.semanticTerms=[];next.featureTerms=[]}
- next.excludedGroups=[...new Set([...((changed||plan.broad)?[]:prev.excludedGroups),...plan.excludedGroups])];
- next.excludedCategories=[...new Set([...((changed||plan.broad)?[]:prev.excludedCategories),...plan.excludedCategories])];
- next.excludedTerms=[...new Set([...((changed||plan.broad)?[]:prev.excludedTerms),...plan.excludedTerms])];
+ next.excludedGroups=[...new Set([...(freshTopic?[]:prev.excludedGroups),...plan.excludedGroups])];
+ next.excludedCategories=[...new Set([...(freshTopic?[]:prev.excludedCategories),...plan.excludedCategories])];
+ next.excludedTerms=[...new Set([...(freshTopic?[]:prev.excludedTerms),...plan.excludedTerms])];
  next.query=plan.raw;
  return next;
 }

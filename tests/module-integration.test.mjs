@@ -19,7 +19,7 @@ const deleted=[
  'real-location.js','regular-results-ui.js','response-variations.js',
  'semantic-db-resolver.js','semantic-query-guard.js','smart-ranking-v2.js',
  'taxonomy-db-runtime.js','tests/semantic-regression.mjs','typing-indicator.js',
- 'verified-store-badge.js','zero-result-responses.js','guru-store-groups.js'
+ 'verified-store-badge.js','zero-result-responses.js','guru-store-groups.js','admin-runtime-v2.js'
 ];
 
 test('a IA pública executa apenas o GURU V4',()=>{

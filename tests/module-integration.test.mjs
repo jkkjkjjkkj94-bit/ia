@@ -259,7 +259,7 @@ test('V5 sanitiza pesquisas para métricas e protege métricas no servidor',asyn
  assert.equal(safeSearchLabel('ENCONTRE uma Pizzaria!'),'encontre uma pizzaria');
  const fn=source('supabase/functions/guru-hybrid-openai/index.ts');
  assert.match(fn,/guru_hybrid_record_metric/);
- assert.match(fn,/recordOutcome\("success"\)/);
+ assert.match(fn,/recordOutcome\(answer \? "success" : "empty_response"\)/);
  const admin=source('guru-quality-admin.js');
  assert.match(admin,/guru_hybrid_metrics/);
  assert.match(admin,/guru_hybrid_quota/);

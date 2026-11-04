@@ -49,7 +49,11 @@ Deno.serve(async (req: Request) => {
   if (Number(req.headers.get("content-length") || "0") > 5000) return json({ error: "Pedido muito grande." }, 413);
 
   let body: any;
-  try { body = await req.json(); } catch { return json({ error: "JSON inválido." }, 400); }
+  try {
+    const raw = await req.text();
+    if (raw.length > 5000) return json({ error: "Pedido muito grande." }, 413);
+    body = JSON.parse(raw);
+  } catch { return json({ error: "JSON inválido." }, 400); }
   const question = limited(body?.question, 380);
   const token = limited(body?.turnstileToken, 2500);
   const results = publicResults(body?.results);

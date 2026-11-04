@@ -132,12 +132,12 @@ test('painel de qualidade ignora confiança ausente sem descartar zero válido',
 test('admin carrega somente um módulo consolidado de lojistas',()=>{
  const loader=source('admin-post-login-loader.js');
  const merchant=source('admin-merchant-enhancements.js');
- assert.match(loader,/admin-merchant-enhancements\\.js\\?v=3/);
- assert.doesNotMatch(loader,/admin-merchant-details\\.js/);
- assert.equal((merchant.match(/createClient\\(HU,HK\\)/g)||[]).length,1);
- assert.match(merchant,/window\\.GuruMerchantEnhancements=/);
- assert.match(merchant,/window\\.GuruMerchantDetails=/);
+ assert.match(loader,/admin-merchant-enhancements\.js\?v=3/);
+ assert.doesNotMatch(loader,/admin-merchant-details\.js/);
+ assert.equal((merchant.match(/createClient\(HU,HK\)/g)||[]).length,1);
+ assert.match(merchant,/window\.GuruMerchantEnhancements=/);
+ assert.match(merchant,/window\.GuruMerchantDetails=/);
  assert.match(merchant,/data-merchant-details/);
  assert.match(merchant,/merchant-detailed-list/);
- assert.match(source('admin.html'),/admin-post-login-loader\\.js\\?v=6/);
+ assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=6/);
 });

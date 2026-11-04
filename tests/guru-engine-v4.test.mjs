@@ -694,3 +694,96 @@ test('diagnóstico combinado mantém filtros adicionais e não inventa Pix ou en
  const saturday=nextState(emptyState(),plan('pizzaria que faça entrega e aceite Pix aberta no sábado'));
  assert.match(explainEmptySearch(noHours,saturday),/nenhum atende a todos os critérios/);
 });
+
+
+test('pesquisa por assunto não exige verbos da conversa nem palavras adicionais sem significado comercial',()=>{
+ const options={today:2};
+ const right=shop('burger','Comida','Hamburgueria',{name:'Hamburgueria Real'});
+ const wrong=shop('pizza','Comida','Pizzaria',{name:'Pizzaria Real'});
+ const taxonomy={Comida:{Hamburgueria:['hamburgueria','hamburguer','lanche'],Pizzaria:['pizzaria','pizza']}};
+ const catalog={stores:[right,wrong],products:[],hours:[],reviews:[],knowledge:[]};
+ const qs=[
+  'Por favor, localize uma hamburgueria',
+  'Se conseguir, busque hamburgueria que exista por aí',
+  'Você acha uma hamburgueria?',
+  'Poderia me encontrar uma hamburgueria, obrigado?',
+  'Há como descobrir algum lugar de hambúrguer?',
+  'Queria ver opções de hamburguerias, por gentileza',
+  'Por obséquio, me mostre estabelecimentos de hamburgueria',
+  'Preciso que você pesquise alguma hamburgueria interessante'
+ ];
+ for(const q of qs){
+  const p=interpret(q,taxonomy,{},emptyState(),options);
+  assert.equal(p.taxon?.group,'Hamburgueria',q);
+  assert.deepEqual(searchStores(catalog,nextState(emptyState(),p)).map(r=>r.store.id),['burger'],q);
+ }
+ assert.deepEqual(searchStores({...catalog,stores:[wrong]},nextState(emptyState(),interpret(qs[0],taxonomy,{},emptyState(),options))),[],
+ 'o GURU não deve inventar hamburguerias se o banco não contém nenhuma');
+});
+
+test('contexto do catálogo busca produto específico sem exigir comandos conversacionais',()=>{
+ const tech=shop('tech','Tecnologia','Informática',{name:'Loja Digital'});
+ const shoes=shop('shoes','Roupas','Calçados',{name:'Calçados Central'});
+ const bakery=shop('bakery','Comida','Padaria',{name:'Padaria do Centro'});
+ const none=shop('none','Comida','Pizzaria',{name:'Pizzaria Central'});
+ const items=[
+  row('tech','Notebook Gamer',{stock:2,price:3500}),
+  row('tech','Fone Bluetooth',{stock:3}),
+  row('shoes','Tênis de Corrida',{stock:2}),
+  row('bakery','Pão de Queijo',{stock:8}),
+  row('none','Pizza de Chocolate',{stock:0})
+ ];
+ const catalogue={stores:[tech,shoes,bakery,none],products:items,hours:[],reviews:[],knowledge:[]};
+ const questions=[
+  ['Por favor, me ajuda a achar notebook gamer?','tech','notebook'],
+  ['Consegue descobrir algum lugar onde vende fone bluetooth?','tech','fone'],
+  ['Me encontre um tênis de corrida, se possível.','shoes','tenis'],
+  ['Você poderia buscar pão de queijo para mim?','bakery','pao'],
+  ['Gostaria de saber quem comercializa notebook gamer.','tech','notebook'],
+  ['Procure onde tem notebook gamer disponível, por gentileza.','tech','notebook'],
+  ['Há por acaso uma loja que tenha fone bluetooth?','tech','fone'],
+  ['Pesquise um estabelecimento que vende tênis de corrida.','shoes','tenis']
+ ];
+ for(const [question,id,word] of questions){
+  const p=interpret(question,{}, {}, emptyState(),{today:2,products:items});
+  assert.equal(p.kind,'search',question);
+  assert.ok(p.productTerm?.includes(word),question+' / produto: '+p.productTerm);
+  assert.deepEqual(searchStores(catalogue,nextState(emptyState(),p)).map(r=>r.store.id),[id],question);
+ }
+ const gone=interpret('Você poderia achar uma pizza de chocolate?',{}, {},emptyState(),{products:items});
+ assert.deepEqual(searchStores(catalogue,nextState(emptyState(),gone)),[],'item cadastrado sem estoque não pode ser recomendado');
+});
+
+test('palavras soltas não bloqueiam busca por nome e uma nova pesquisa de produto não herda a antiga categoria',()=>{
+ const pizza=shop('pizza','Comida','Pizzaria',{name:'Pizzaria da Vila'});
+ const store=shop('misael','Serviços','Limpeza',{name:'Loja do Misael'});
+ const notebookStore=shop('tech','Tecnologia','Informática',{name:'Loja Digital'});
+ const product=row('tech','Notebook Gamer',{stock:5});
+ const db={stores:[pizza,store,notebookStore],products:[product],hours:[],reviews:[],knowledge:[]};
+ for(const q of [
+  'Por favor, procure a Loja do Misael',
+  'Conseguiria encontrar o estabelecimento Misael?',
+  'Será que você acha a loja Misael na região?'
+ ]){
+  const p=interpret(q,{}, {},emptyState(),{today:2,products:[product]});
+  assert.equal(p.kind,'search',q);
+  assert.deepEqual(searchStores(db,nextState(emptyState(),p)).map(r=>r.store.id),['misael'],q);
+ }
+ const selected={...emptyState(),category:'Comida',group:'Pizzaria',selectedStore:pizza,filters:{delivery:true,day:6}};
+ const p=interpret('Agora, por favor, encontre um notebook gamer',{}, {},selected,{today:2,products:[product]});
+ const updated=nextState(selected,p);
+ assert.equal(updated.category,null);
+ assert.equal(updated.group,null);
+ assert.deepEqual(updated.filters,{});
+ assert.equal(updated.selectedStore,null);
+ assert.deepEqual(searchStores(db,updated).map(r=>r.store.id),['tech']);
+});
+
+test('pedido de produto sem descrição concreta não inventa catálogo nem bloqueia com palavra encontrar',()=>{
+ const p=interpret('Por favor, você pode me ajudar a encontrar um produto?',{}, {},emptyState(),{products:[]});
+ assert.equal(p.kind,'clarify');
+ assert.equal(p.reason,'product');
+ const noStore=interpret('Por favor, pode encontrar uma hamburgueria?',{Comida:{Hamburgueria:['hamburgueria']}}, {},emptyState(),{products:[]});
+ assert.equal(noStore.kind,'search');
+ assert.equal(noStore.taxon?.group,'Hamburgueria');
+});

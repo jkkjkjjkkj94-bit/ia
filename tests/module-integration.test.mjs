@@ -308,3 +308,16 @@ test('Indexador autorizado coleta várias páginas em lotes limitados e mantém 
  assert.match(publicQuery,/limit=1000/);
  assert.match(publicQuery,/matches\.slice\(0,12\)/);
 });
+
+
+test('Site sem autorização de coleta preserva os produtos e desativa sincronizações',()=>{
+ const edge=source('supabase/functions/guru-approved-sources/index.ts');
+ const admin=source('admin-web-sources.js');
+ const catalog=source('guru-approved-products.mjs');
+ assert.match(edge,/s\.auto_sync_enabled===false/);
+ assert.match(edge,/robots\.status/);
+ assert.match(edge,/permittedByRobots/);
+ assert.match(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
+ assert.match(admin,/requer API ou feed autorizado/);
+ assert.match(catalog,/if\(source\.auto_sync_enabled!==true\)return false/);
+});

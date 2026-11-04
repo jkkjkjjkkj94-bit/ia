@@ -141,3 +141,21 @@ test('admin carrega somente um módulo consolidado de lojistas',()=>{
  assert.match(merchant,/merchant-detailed-list/);
  assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=6/);
 });
+
+
+test('GURU híbrida nunca exige OpenAI para buscar nem expõe chave privada no frontend',()=>{
+ const ui=source('guru-engine-v4.js');
+ const html=source('index.html');
+ const edge=source('supabase/functions/guru-hybrid-openai/index.ts');
+ assert.match(html,/guru-turnstile-site-key/);
+ assert.match(ui,/if\(!hybridSiteKey\|\|!Array\.isArray\(rows\)\|\|!rows\.length\)return ''/);
+ assert.match(ui,/const natural=await hybridResponse\(text,rows\)/);
+ assert.match(ui,/displayResults\(rows\);save\(\)/);
+ assert.doesNotMatch(ui,/OPENAI_API_KEY|sk-proj-|Bearer sk-/);
+ assert.match(edge,/Deno\.env\.get\("OPENAI_API_KEY"\)/);
+ assert.match(edge,/Deno\.env\.get\("GURU_TURNSTILE_SECRET"\)/);
+ assert.match(edge,/verified\.hostname !== new URL\(ALLOWED_ORIGIN\)\.hostname/);
+ assert.match(edge,/store: false/);
+ assert.match(edge,/max_output_tokens: 180/);
+ assert.match(edge,/if \(!apiKey \|\| !challengeSecret\)/);
+});

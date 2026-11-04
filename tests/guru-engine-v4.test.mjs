@@ -513,3 +513,59 @@ test('formas equivalentes de pedir indicação não acrescentam palavras obrigat
  assert.deepEqual(p.semanticTerms,['diga']);
  assert.deepEqual(searchStores({...data,stores:[named]},nextState(emptyState(),p)).map(r=>r.store.id),['d']);
 });
+
+
+test('contexto livre não vira exigência literal quando o tipo de loja é conhecido',()=>{
+ const doce=shop('doce','Comida','Doceria',{name:'Loja do Misael Teste'});
+ const pizza=shop('pizza','Comida','Pizzaria',{name:'Pizza Exemplo'});
+ const samples={stores:[doce,pizza],hours:[{store_id:'doce',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false}],products:[],reviews:[],knowledge:[]};
+ const phrasings=[
+  'Por favor, me diga uma doceria',
+  'Será que você poderia gentilmente me apresentar uma doceria?',
+  'Eu adoraria saber se há alguma confeitaria',
+  'Por acaso você conhece um lugar de doces?',
+  'Gostaria de receber uma indicação de doceria',
+  'Me mostre alguma doceria de que você tenha conhecimento',
+  'Será que teria alguma doceria aberta no sábado, se não for incômodo?'
+ ];
+ for(const query of phrasings){
+  const p=plan(query);
+  assert.equal(p.kind,'search',query);
+  assert.equal(p.taxon?.group,'Doceria',query);
+  assert.deepEqual(p.nameTerms,[],query);
+  const matches=searchStores(samples,nextState(emptyState(),p));
+  assert.deepEqual(matches.map(x=>x.store.id),['doce'],query);
+ }
+ const saturday=plan('Por gentileza, encontre uma doceria aberta no sábado');
+ assert.equal(saturday.filters.day,6);
+ assert.deepEqual(searchStores(samples,nextState(emptyState(),saturday)).map(r=>r.store.id),['doce']);
+ const closed={...samples,hours:[{...samples.hours[0],closed:true}]};
+ assert.deepEqual(searchStores(closed,nextState(emptyState(),saturday)).map(r=>r.store.id),[],'filtro explícito de horário permanece obrigatório');
+});
+
+test('pesquisa por nome explícito continua restritiva e contexto opcional só ajuda a relevância',()=>{
+ const sweet=shop('sweet','Comida','Doceria',{name:'Loja do Misael Teste'});
+ const generic=shop('generic','Comida','Doceria',{name:'Doceria Geral'});
+ const dataset={stores:[sweet,generic],hours:[],products:[],reviews:[],knowledge:[]};
+ for(const query of ['doceria Misael','doceria Misaell','doceria de nome Misael','doceria chamada Misael']){
+  const p=plan(query);
+  assert.equal(p.taxon?.group,'Doceria',query);
+  assert.ok(p.nameTerms.includes(query.includes('Misaell')?'misaell':'misael'),query);
+  assert.deepEqual(searchStores(dataset,nextState(emptyState(),p)).map(r=>r.store.id),['sweet'],query);
+ }
+ const missing=plan('doceria chamada Fantasma');
+ assert.deepEqual(searchStores(dataset,nextState(emptyState(),missing)).map(r=>r.store.id),[]);
+ const context=plan('Consegue recomendar alguma doceria maravilhosa e interessante?');
+ assert.deepEqual(searchStores(dataset,nextState(emptyState(),context)).map(r=>r.store.id).sort(),['generic','sweet']);
+});
+
+test('atributos reconhecidos e produtos em estoque permanecem exigências reais',()=>{
+ const plain=shop('plain','Comida','Doceria',{name:'Doceria Simples'});
+ const handmade=shop('handmade','Comida','Doceria',{name:'Doceria Artesanal',description:'Doces artesanais e ambiente tranquilo'});
+ const dataset={stores:[plain,handmade],products:[],reviews:[],hours:[],knowledge:[]};
+ const p=plan('Gostaria de conhecer uma doceria artesanal');
+ assert.deepEqual(searchStores(dataset,nextState(emptyState(),p)).map(r=>r.store.id),['handmade']);
+ const noPizza=plan('Quero comprar uma camiseta tamanho M');
+ const shirts={stores:[shop('clothes','Roupas','Infantil')],products:[row('clothes','Camiseta Infantil',{sizes:['M'],stock:0})],hours:[],reviews:[],knowledge:[]};
+ assert.deepEqual(searchStores(shirts,nextState(emptyState(),noPizza)).map(r=>r.store.id),[]);
+});

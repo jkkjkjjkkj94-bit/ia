@@ -197,6 +197,8 @@ async function smoke(){
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
  for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);
  if(!document.getElementById('msgs').textContent.includes('opções cadastradas'))throw Error('submit do formulário falhou');
+ for(let i=0;i<120&&input.disabled;i++)await sleep(50);
+ if(input.disabled)throw Error('Envio anterior não terminou antes do teste de filtros');
  guru.reset();
  await guru.submitText('pizzaria com entrega');
  const deliveryChip=[...document.querySelectorAll('#ctx .guru-filter-chip')].find(e=>e.textContent.includes('Com entrega'));

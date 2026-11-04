@@ -66,7 +66,7 @@ function storeText(store,products=[]){
 }
 export function evidenceForRow(query,row={},data={}){
  const store=row.store||{};
- const all=(data.products||[]).filter(p=>p.store_id===store.id&&eligibleProduct(p));
+ const all=(row.products||[]).filter(p=>eligibleProduct(p));
  const name=norm(store.name),category=norm([store.category,store.group,(store.groups||[]).join(' ')].join(' '));
  const product=norm(all.flatMap(p=>[p.name,p.category,p.description,p.brand]).join(' '));
  const rest=storeText(store,all);
@@ -85,11 +85,11 @@ export function evidenceForRow(query,row={},data={}){
  if(row.distance!=null)reasons.push('distância calculada com coordenadas cadastradas');
  return {relevance,matched,terms:meaningful.length,reasons};
 }
-export function rerankSearchResults(rows=[],query='',data={}){
+export function rerankSearchResults(rows=[],query='',data={},sort=null){
  // Preserva a regra já estabelecida da GURU: classificação maior aparece antes.
  // Relevância serve exclusivamente como desempate entre pontuações idênticas.
  const decorated=rows.map((row,index)=>({row,index,evidence:evidenceForRow(query,row,data)}));
- decorated.sort((a,b)=>(Number(b.row.rankScore||0)-Number(a.row.rankScore||0))||
+ if(!['price','distance','rating'].includes(sort))decorated.sort((a,b)=>(Number(b.row.rankScore||0)-Number(a.row.rankScore||0))||
   (b.evidence.relevance-a.evidence.relevance)||(a.index-b.index));
  return decorated.map(({row,evidence})=>({...row,
   relevanceEvidence:evidence,

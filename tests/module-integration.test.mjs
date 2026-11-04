@@ -49,7 +49,7 @@ test('Lojista usa módulo único de atividade e classificação compartilhada',(
  assert.match(activity,/updatePresence:touch/);
  assert.match(source('ai-taxonomy.js'),/export const groupsByCategory/);
  for(const path of ['admin-store-group.js','lojista-store-group.js']){
-  assert.match(source(path),/guru-store-groups\.js\?v=1/);
+  assert.match(source(path),/ai-taxonomy\.js\?v=7/);
  }
 });
 

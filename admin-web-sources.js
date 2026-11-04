@@ -58,7 +58,7 @@ async function synchronize(source){
    method:'POST',
    headers:{apikey:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1',
     Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},
-   body:JSON.stringify({action:'sync',sourceId:source.id}),signal:AbortSignal.timeout(25000)
+   body:JSON.stringify({action:'sync',sourceId:source.id}),signal:AbortSignal.timeout(35000)
   });
   const result=await r.json();
   tell(result.message||result.error||'Sincronização concluída.');
@@ -68,7 +68,7 @@ async function synchronize(source){
 async function refresh(){
  const list=get('guruApprovedSourcesList');if(!list)return;
  list.textContent='Consultando fontes autorizadas...';
- const {data,error}=await sb.from('guru_web_sources').select('id,name,base_url,catalog_url,enabled,sync_status,sync_note,last_synced_at').order('name');
+ const {data,error}=await sb.from('guru_web_sources').select('id,name,base_url,catalog_url,enabled,sync_status,sync_note,last_synced_at,next_page,indexed_count,scanned_pages').order('name');
  if(error){list.textContent='Sem acesso às fontes: '+error.message;return}
  list.replaceChildren();
  if(!data?.length){list.textContent='Nenhuma fonte web cadastrada.';return}
@@ -78,6 +78,7 @@ async function refresh(){
   const left=document.createElement('div');
   left.innerHTML='<b>'+esc(s.name)+'</b><div class="meta">'+esc(s.base_url)+'</div>'
     +'<div class="meta">Status: '+esc(s.sync_status)+' · '+(s.last_synced_at?new Date(s.last_synced_at).toLocaleString('pt-BR'):'sem sincronização')+'</div>'
+    +'<div class="meta">Produtos indexados: '+Number(s.indexed_count||0)+' · páginas processadas: '+Number(s.scanned_pages||0)+' · próxima página: '+Number(s.next_page||1)+'</div>'
     +(s.sync_note?'<div class="meta">'+esc(s.sync_note)+'</div>':'');
   const buttons=document.createElement('div');buttons.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
   const sync=document.createElement('button');sync.id='guruSync_'+s.id;sync.className='btn sm';sync.type='button';sync.textContent='Sincronizar';sync.disabled=!s.enabled;sync.onclick=()=>synchronize(s);

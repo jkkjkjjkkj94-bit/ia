@@ -118,7 +118,7 @@ export function preserveMandatoryFilters(original={},alternate={}){
  // Filtros da pergunta original têm precedência em qualquer interpretação alternativa.
  return {
   ...alternate,
-  filters:{...(alternate.filters||{}),...(original.filters||{})},
+  filters:{...(original.filters||{})},
   location:{...(alternate.location||{}),...(original.location||{})},
   excludedGroups:[...new Set([...(alternate.excludedGroups||[]),...(original.excludedGroups||[])])],
   excludedCategories:[...new Set([...(alternate.excludedCategories||[]),...(original.excludedCategories||[])])],

@@ -276,6 +276,8 @@ test('GURU indexa apenas fontes web aprovadas e não presume estoque',()=>{
  assert.match(server,/site\.hostname!==catalog\.hostname/);
  assert.match(server,/profiles\[0\]\?\.role!=="admin"/);
  assert.match(server,/permittedByRobots/);
+ assert.match(server,/guru_web_claim_refresh/);
+ assert.match(server,/action==="refresh"/);
  assert.match(server,/availability:"unknown"/);
  assert.match(server,/redirect:"error"/);
  assert.match(chat,/approvedSourceProducts\(text\)/);

@@ -153,7 +153,8 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const positive=neg?.[1]?.trim()||n;
  // Expressões de cortesia não são atributos obrigatórios do estabelecimento.
  // Remova somente expressões completas, preservando a palavra isolada 'favor' em nomes de lojas.
- const searchContent=positive.replace(/\b(?:por\s+favor|por\s+gentileza|faz\s+favor|se\s+possivel|obrigad[oa]s?|pfv|pfvr)\b/g,' ').replace(/\s+/g,' ').trim();
+ const requestWords=/\b(?:(?:voce\s+)?(?:pode|poderia|consegue|conseguiria)\s+me\s+(?:dizer|falar|informar|indicar|recomendar|sugerir)|me\s+(?:diga|diz|dizer|fale|fala|conte|conta|informe|informar|sugira|recomende|indique|indica))\b/g;
+ const searchContent=positive.replace(/\b(?:por\s+favor|por\s+gentileza|faz\s+favor|se\s+possivel|obrigad[oa]s?|pfv|pfvr)\b/g,' ').replace(requestWords,' ').replace(/\s+/g,' ').trim();
  let taxon=getTaxon(searchContent,lexicon);
  // Common food service nouns do not map to generic retail.
  if(!taxon&&/\b(restaurante|cafeteria|almoco|jantar|comer)\b/.test(positive))taxon={category:'Comida',group:null};

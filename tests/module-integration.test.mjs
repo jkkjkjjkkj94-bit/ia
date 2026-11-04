@@ -288,3 +288,23 @@ test('GURU indexa apenas fontes web aprovadas e não presume estoque',()=>{
  assert.match(catalog,/guru_web_products/);
  assert.match(catalog,/isSafeProductUrl/);
 });
+
+
+test('Indexador autorizado coleta várias páginas em lotes limitados e mantém cursor',()=>{
+ const edge=source('supabase/functions/guru-approved-sources/index.ts');
+ const admin=source('admin-web-sources.js');
+ const publicQuery=source('guru-approved-products.mjs');
+ assert.match(edge,/PAGE_BATCH=3,MAX_PAGE=200/);
+ assert.match(edge,/next_page/);
+ assert.match(edge,/pageUrl\.searchParams\.set\("page",String\(nextPage\)\)/);
+ assert.match(edge,/permittedByRobots\(robotsText,pageUrl\.pathname/);
+ assert.match(edge,/pageUrl\.origin!==site\.origin/);
+ assert.match(edge,/redirect:"error"/);
+ assert.match(edge,/resolution=ignore-duplicates/);
+ assert.match(edge,/indexed_count/);
+ assert.match(edge,/sync_status:status/);
+ assert.match(admin,/Produtos indexados:/);
+ assert.match(admin,/próxima página:/);
+ assert.match(publicQuery,/limit=1000/);
+ assert.match(publicQuery,/matches\.slice\(0,12\)/);
+});

@@ -212,3 +212,28 @@
  .msg.bot.selected-store-card:has(.chat-actions){animation:none}
  .msg.bot.selected-store-card .selected-store-actions .selected-store-action{transition:none}
 }
+
+/* GURU V5: resumo de classificação, comparação e perguntas em sequência. */
+.guru-score-line{display:inline-flex;align-items:center;gap:5px;color:#444;font-size:11px;font-weight:700;
+ background:#f6f6f6;border:1px solid #eaeaea;border-radius:8px;padding:6px 9px;margin:7px 0 3px}
+.guru-data-alert{font-size:11px;color:#765329;background:#fff8ee;border:1px solid #f2e5d3;padding:7px 9px;border-radius:8px;margin:6px 0}
+.guru-next-questions{border-top:1px solid #eee;margin-top:12px;padding-top:12px}
+.guru-next-label{font-size:11px;color:#727272;margin-bottom:8px}
+.guru-next-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.guru-next-button{border:1px solid #e1e1e1;border-radius:999px;background:#fff;color:#292929;
+ font:inherit;font-size:11px;line-height:1.35;padding:7px 11px;cursor:pointer;text-align:left}
+.guru-next-button:hover{background:#f6f6f6;border-color:#bcbcbc}
+.guru-next-button:focus-visible{outline:2px solid #303030;outline-offset:2px}
+.guru-compare-wrap{width:100%;overflow-x:auto;margin-top:11px;border:1px solid #e8e8e8;border-radius:12px}
+.guru-compare-grid{min-width:410px;padding:3px 10px}
+.guru-compare-row{display:grid;grid-template-columns:minmax(115px,1fr) repeat(2,minmax(118px,1fr));gap:8px;
+ align-items:center;padding:9px 2px;border-bottom:1px solid #eee;color:#353535;font-size:11px}
+.guru-compare-row:last-child{border-bottom:0}
+.guru-compare-row:first-child{color:#111;font-weight:700}
+.guru-compare-label{color:#666}
+.guru-compare-value{overflow-wrap:anywhere}
+@media(max-width:680px){
+ .guru-next-buttons{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+ .guru-next-button{flex:0 0 auto}
+ .guru-compare-grid{min-width:390px}
+}

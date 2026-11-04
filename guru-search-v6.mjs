@@ -74,7 +74,7 @@ export function repairFromCatalog(raw,vocabulary){
   if(token.length<5||token.length>18||STOP.has(token)||/\d/.test(token)||vocabulary.has(token))continue;
   const options=[];
   for(const [candidate,weight] of vocabulary){
-   if(candidate.length<5||Math.abs(candidate.length-token.length)>1)continue;
+   if(candidate.length<4||Math.abs(candidate.length-token.length)>1)continue;
    if(distanceOne(token,candidate))options.push({candidate,weight});
   }
   options.sort((a,b)=>b.weight-a.weight||a.candidate.localeCompare(b.candidate));

@@ -834,3 +834,37 @@ test('destaques desativados, futuros ou vencidos não geram selo',()=>{
  }
  assert.equal(applyStoreHighlight(s,{highlight_type:'verified',active:true,starts_at:'2026-11-01T00:00:00Z',ends_at:'2026-12-01T00:00:00Z'},now).verified,true);
 });
+
+
+test('ordenação padrão prioriza Patrocinada, Verificada e Normal nessa ordem',()=>{
+ const normal=shop('normal','Comida','Pizzaria',{name:'AAA Normal',delivery:true,verified:false,sponsored:false,latitude:-23.501,longitude:-47.400});
+ const verified=shop('verified','Comida','Pizzaria',{name:'ZZZ Verificada',verified:true,sponsored:false,latitude:-23.51,longitude:-47.400});
+ const sponsored=shop('sponsored','Comida','Pizzaria',{name:'MMM Patrocinada',verified:false,sponsored:true,latitude:-23.60,longitude:-47.400});
+ const data={stores:[normal,verified,sponsored],products:[],hours:[],knowledge:[],reviews:[{store_id:'normal',rating:5},{store_id:'verified',rating:4},{store_id:'sponsored',rating:3}]};
+ const state=nextState(emptyState(),plan('pizzaria'));
+ const rows=searchStores(data,state,{lat:-23.5,lng:-47.4},{limit:10});
+ assert.deepEqual(rows.map(r=>r.store.id),['sponsored','verified','normal'],'categoria do destaque deve preceder relevância, nome, distância e nota no padrão');
+});
+
+test('ordenar explicitamente por distância, avaliação ou preço respeita o critério solicitado',()=>{
+ const normal=shop('normal','Comida','Pizzaria',{name:'AAA Normal',verified:false,sponsored:false,latitude:-23.5001,longitude:-47.400});
+ const verified=shop('verified','Comida','Pizzaria',{name:'Verificada',verified:true,latitude:-23.53,longitude:-47.400});
+ const sponsored=shop('sponsored','Comida','Pizzaria',{name:'Patrocinada',sponsored:true,latitude:-23.60,longitude:-47.400});
+ const ds={stores:[normal,verified,sponsored],hours:[],knowledge:[],
+  products:[row('normal','Pizza',{price:20}),row('verified','Pizza',{price:30}),row('sponsored','Pizza',{price:40})],
+  reviews:[{store_id:'normal',rating:5},{store_id:'verified',rating:4},{store_id:'sponsored',rating:3}]};
+ const base=nextState(emptyState(),plan('pizzaria'));
+ const sorted=sort=>searchStores(ds,{...base,filters:{...base.filters,sort}},{lat:-23.5,lng:-47.4},{limit:10}).map(r=>r.store.id);
+ assert.deepEqual(sorted('distance'),['normal','verified','sponsored']);
+ assert.deepEqual(sorted('rating'),['normal','verified','sponsored']);
+ assert.deepEqual(sorted('price'),['normal','verified','sponsored']);
+});
+
+test('classificação nunca contorna filtros de disponibilidade ou status',()=>{
+ const verified=shop('verified','Comida','Pizzaria',{verified:true,delivery:false});
+ const sponsored=shop('sponsored','Comida','Pizzaria',{sponsored:true,active:false,delivery:true});
+ const normal=shop('normal','Comida','Pizzaria',{delivery:true});
+ const state=nextState(emptyState(),plan('pizzaria com entrega'));
+ const rows=searchStores({stores:[verified,sponsored,normal],hours:[],products:[],reviews:[],knowledge:[]},state);
+ assert.deepEqual(rows.map(r=>r.store.id),['normal']);
+});

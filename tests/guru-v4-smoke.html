@@ -78,7 +78,7 @@ async function smoke(){
  const intentCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
  if(intentCards?.querySelector('h3')?.textContent!=='Doceria Teste')throw Error('Termos conversacionais eliminam doceria válida');
  await guru.submitText('Quero uma doceria chamada Fantasma');
- if(!document.getElementById('msgs').textContent.includes('Não encontrei estabelecimentos cadastrados'))throw Error('Nome de loja explícito não restringiu resultados');
+ if(!document.getElementById('msgs').textContent.includes('nenhum atende a todos os critérios desta pesquisa'))throw Error('Nome de loja explícito não restringiu resultados');
 
  // As consultas em português devem conservar categoria, grupo e dias pretendidos.
  const weekend=guru.interpret('Tem alguma loja de doces funcionando no fim de semana?');

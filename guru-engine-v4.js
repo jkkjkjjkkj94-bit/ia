@@ -5,6 +5,7 @@ import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDa
 import {recordSearch,recordSelection} from './guru-telemetry-v5.mjs?v=1';
 import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
 import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './guru-search-v7.mjs?v=1';
+import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
@@ -681,7 +682,7 @@ async function run(text){
  // só entram quando a consulta original não encontrou nenhum resultado.
  let finalState=draft,rows=searchStores(db,draft,position,{limit:6}),recovery=null;
  if(!rows.length){
-  for(const alt of guidedSearchAlternatives(text,db,taxonomy,aliases)){
+  for(const alt of [...guidedSearchAlternatives(text,db,taxonomy,aliases),...catalogAwareAlternatives(text,db,taxonomy,aliases)]){
    const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});
    if(alternatePlan.kind!=='search')continue;
    const alternateState=preserveMandatoryFilters(draft,nextState(state,alternatePlan));

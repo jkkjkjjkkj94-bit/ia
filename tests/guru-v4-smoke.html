@@ -68,6 +68,9 @@ async function smoke(){
  if(!recentCards.some(x=>x.textContent==='Sushi Teste'))throw Error('loja de comida japonesa não encontrou estabelecimento válido');
  await guru.submitText('pode me indicar uma confeitaria?');
  if(![...document.querySelectorAll('.store-result-card h3')].some(x=>x.textContent==='Doceria Teste'))throw Error('Sinônimo local foi perdido ao carregar taxonomia dinâmica');
+ await guru.submitText('Por favor, quero uma doceria aberta no sábado');
+ const courtesyCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
+ if(courtesyCards?.querySelector('h3')?.textContent!=='Doceria Teste')throw Error('Frase com por favor gerou falso negativo de doceria aberta sábado');
  // As consultas em português devem conservar categoria, grupo e dias pretendidos.
  const weekend=guru.interpret('Tem alguma loja de doces funcionando no fim de semana?');
  if(weekend.kind!=='search'||weekend.taxon?.group!=='Doceria'||JSON.stringify(weekend.filters?.days)!=='[0,6]')throw Error('Consulta de fim de semana não foi interpretada corretamente');

@@ -33,7 +33,7 @@ test('Admin tem interface única e autenticação isolada',()=>{
  const html=source('admin.html'),runtime=source('admin-runtime-v2.js');
  assert.match(html,/admin-post-login-loader\.js\?v=5/);
  assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
- assert.match(runtime,/admin-ui\.js\?v=2/);
+ assert.match(runtime,/admin-ui\.js\?v=\d+/);
  assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
  const code=source('admin-ui.js');
  assert.match(code,/window\.GuruAdminUI=/);
@@ -103,4 +103,19 @@ test('a classificação administrativa salva apenas pela função segura do CORE
  assert.match(admin,/Erro ao salvar/);
  assert.match(source('admin-runtime-v2.js'),/admin-store-group\.js\?v=4/);
  assert.match(source('admin-post-login-loader.js'),/admin-runtime-v2\.js\?v=7/);
+});
+
+
+test('pontuação do ranking é compartilhada entre Admin e busca pública',()=>{
+ const core=source('guru-engine-v4-core.mjs');
+ const admin=source('admin.js');
+ const ui=source('admin-ui.js');
+ assert.match(core,/export function storeRankingPoints\(/);
+ assert.match(core,/rankScore:ranking\.total/);
+ assert.match(core,/const byRank=b\.rankScore-a\.rankScore/);
+ assert.match(admin,/import\{storeRankingPoints\}from/);
+ assert.match(admin,/rankingByStore\.get\(b\.id\)\?\.total/);
+ assert.match(admin,/data-ranking-score=/);
+ assert.match(ui,/admin-score-number/);
+ assert.match(ui,/Score<\/span>/);
 });

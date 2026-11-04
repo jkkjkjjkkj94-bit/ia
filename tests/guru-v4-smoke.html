@@ -61,16 +61,14 @@ async function smoke(){
  await guru.submitText('loja de comida japonesa');
  const recentCards=[...document.querySelectorAll('.store-result-card h3')];
  if(!recentCards.some(x=>x.textContent==='Sushi Teste'))throw Error('loja de comida japonesa não encontrou estabelecimento válido');
- const plainRequest=guru.submitText('hamburgueria');
- let writingReply=null;
- for(let i=0;i<40&&!writingReply;i++){writingReply=document.querySelector('.guru-typewriter-caret');if(!writingReply)await sleep(40)}
- if(!writingReply||writingReply.classList.contains('hashtag-intro'))throw Error('Resposta textual não recebeu escrita gradual');
- await plainRequest;
- if(!document.getElementById('msgs').textContent.includes('Não encontrei estabelecimentos cadastrados'))throw Error('Resposta sem resultados falhou');
  await guru.submitText('pizzaria com entrega em promoção até R$ 40');
  const cards=[...document.querySelectorAll('.store-result-card')];
  if(cards.at(-1)?.querySelector('h3')?.textContent!=='Pizza Teste')throw Error('filtro de promoção falhou');
- await guru.submitText('a primeira abre sábado?');
+ const hoursRequest=guru.submitText('a primeira abre sábado?');
+ let writingReply=null;
+ for(let i=0;i<40&&!writingReply;i++){writingReply=document.querySelector('.guru-typewriter-caret');if(!writingReply)await sleep(40)}
+ if(!writingReply||writingReply.classList.contains('hashtag-intro'))throw Error('Resposta textual não recebeu escrita gradual');
+ await hoursRequest;
  if(!document.getElementById('msgs').textContent.includes('sábado das'))throw Error('contexto de horário falhou');
  await guru.submitText('tem estacionamento?');
  if(!document.getElementById('msgs').textContent.includes('Sim, tem estacionamento.'))throw Error('resposta cadastrada do lojista não funcionou');

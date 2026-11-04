@@ -284,7 +284,7 @@ test('GURU indexa apenas fontes web aprovadas e não presume estoque',()=>{
  assert.match(chat,/displayWebProducts/);
  assert.match(chat,/Estoque não confirmado/);
  assert.match(admin,/guruSourceForm/);
- assert.match(admin,/guru-approved-sources/);
+ assert.match(admin,/async function synchronize\(source\)/);
  assert.match(catalog,/guru_web_products/);
  assert.match(catalog,/isSafeProductUrl/);
 });
@@ -318,7 +318,7 @@ test('Site sem autorização de coleta preserva os produtos e desativa sincroniz
  assert.match(edge,/robots\.status/);
  assert.match(edge,/permittedByRobots/);
  assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
- assert.match(admin,/requer API ou feed autorizado/);
+ assert.match(admin,/o botão sincroniza apenas produtos do Supabase/);
  assert.match(catalog,/if\(source\.auto_sync_enabled!==true\)return false/);
 });
 

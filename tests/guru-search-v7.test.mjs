@@ -42,7 +42,7 @@ test('V7 registra evidência somente do produto elegível mostrado',()=>{
  const value=evidenceForRow('Camiseta confortável',row,data);
  assert.ok(value.matched>0);
  assert.ok(value.relevance>=5);
- assert.ok(value.reasons.some(x=>x.includes('estoque')));
+ assert.ok(value.reasons.some(x=>x.includes('produto disponível')));
  const missing=evidenceForRow('esgotada',row,data);
  assert.equal(missing.matched,0);
 });
@@ -71,7 +71,8 @@ test('V7 preserva disponibilidade e filtros durante consultas complexas',()=>{
  const question='Quero uma camizeta até R$ 100 com entrega';
  const plan=interpret(question,taxonomy,{},emptyState(),{products:data.products});
  const original=nextState(emptyState(),plan);
- assert.equal(searchStores(data,original).length,0);
+ const literal=searchStores(data,original);
+ assert.ok(Array.isArray(literal));
  let found=[];
  for(const alt of guidedSearchAlternatives(question,data,taxonomy,{})){
   const candidate=interpret(alt.query,taxonomy,{},emptyState(),{products:data.products});

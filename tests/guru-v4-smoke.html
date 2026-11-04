@@ -74,6 +74,12 @@ async function smoke(){
  await guru.submitText('Por favor, me diga uma doceria');
  const requestCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
  if(requestCards?.querySelector('h3')?.textContent!=='Doceria Teste')throw Error('Pedido me diga uma doceria não encontrou a loja cadastrada');
+ await guru.submitText('Eu adoraria saber se você poderia gentilmente apresentar alguma doceria interessante?');
+ const intentCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
+ if(intentCards?.querySelector('h3')?.textContent!=='Doceria Teste')throw Error('Termos conversacionais eliminam doceria válida');
+ await guru.submitText('Quero uma doceria chamada Fantasma');
+ if(!document.getElementById('msgs').textContent.includes('Não encontrei estabelecimentos cadastrados'))throw Error('Nome de loja explícito não restringiu resultados');
+
  // As consultas em português devem conservar categoria, grupo e dias pretendidos.
  const weekend=guru.interpret('Tem alguma loja de doces funcionando no fim de semana?');
  if(weekend.kind!=='search'||weekend.taxon?.group!=='Doceria'||JSON.stringify(weekend.filters?.days)!=='[0,6]')throw Error('Consulta de fim de semana não foi interpretada corretamente');

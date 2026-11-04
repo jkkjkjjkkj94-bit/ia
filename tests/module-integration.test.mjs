@@ -31,7 +31,7 @@ test('a IA pública executa apenas o GURU V4',()=>{
 
 test('Admin tem interface única e autenticação isolada',()=>{
  const html=source('admin.html'),runtime=source('admin-post-login-loader.js');
- assert.match(html,/admin-post-login-loader\.js\?v=9/);
+ assert.match(html,/admin-post-login-loader\.js\?v=10/);
  assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
  assert.match(runtime,/admin-ui\.js\?v=\d+/);
  assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
@@ -139,7 +139,7 @@ test('admin carrega somente um módulo consolidado de lojistas',()=>{
  assert.match(merchant,/window\.GuruMerchantDetails=/);
  assert.match(merchant,/data-merchant-details/);
  assert.match(merchant,/merchant-detailed-list/);
- assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=9/);
+ assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=10/);
 });
 
 
@@ -320,4 +320,17 @@ test('Site sem autorização de coleta preserva os produtos e desativa sincroniz
  assert.match(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
  assert.match(admin,/requer API ou feed autorizado/);
  assert.match(catalog,/if\(source\.auto_sync_enabled!==true\)return false/);
+});
+
+
+test('Erro HTTP 403 do robots bloqueia apenas a coleta, sem afetar produtos cadastrados',()=>{
+ const edge=source('supabase/functions/guru-approved-sources/index.ts');
+ const admin=source('admin-web-sources.js');
+ assert.match(edge,/robots\.status===401\|\|robots\.status===403/);
+ assert.match(edge,/auto_sync_enabled:false/);
+ assert.match(edge,/permission_required/);
+ assert.match(edge,/Os produtos já cadastrados continuam disponíveis/);
+ assert.match(admin,/explainSourceError/);
+ assert.match(admin,/Consulta automática indisponível/);
+ assert.match(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
 });

@@ -2,6 +2,20 @@ import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const get=id=>document.getElementById(id);
+const explainSourceError=(message,source)=>{
+ const text=String(message||'');
+ if(/robots\.txt|HTTP\s*(401|403)|indexa[cç][aã]o.+permiss[aã]o/i.test(text))
+  return 'A loja '+(source?.name||'selecionada')+' não permitiu a consulta automática. Os produtos já cadastrados permanecem disponíveis.';
+ return text;
+};
+const sourceStatus=source=>{
+ if(source.auto_sync_enabled!==true)return 'Consulta automática indisponível';
+ if(source.sync_status==='ok')return 'Catálogo atualizado';
+ if(source.sync_status==='pending')return 'Aguardando sincronização';
+ if(source.sync_status==='no_products')return 'Nenhum produto encontrado';
+ if(source.sync_status==='error')return 'Não foi possível consultar a loja';
+ return 'Fonte cadastrada';
+};
 const tell=msg=>{const toast=get('toast');if(toast){toast.textContent=msg;toast.classList.add('on');setTimeout(()=>toast.classList.remove('on'),4000)}};
 const validate=(url,site=null)=>{
  try{
@@ -61,7 +75,7 @@ async function synchronize(source){
    body:JSON.stringify({action:'sync',sourceId:source.id}),signal:AbortSignal.timeout(35000)
   });
   const result=await r.json();
-  tell(result.message||result.error||'Sincronização concluída.');
+  tell(explainSourceError(result.message||result.error||'Sincronização concluída.',source));
  }catch{tell('Não foi possível acessar a fonte. Confira se o site permite leitura automatizada.')}
  await refresh();
 }
@@ -77,12 +91,12 @@ async function refresh(){
   const header=document.createElement('div');header.className='row';
   const left=document.createElement('div');
   left.innerHTML='<b>'+esc(s.name)+'</b><div class="meta">'+esc(s.base_url)+'</div>'
-    +'<div class="meta">Status: '+esc(s.sync_status)+' · '+(s.last_synced_at?new Date(s.last_synced_at).toLocaleString('pt-BR'):'sem sincronização')+'</div>'
+    +'<div class="meta">Status: '+esc(sourceStatus(s))+' · '+(s.last_synced_at?new Date(s.last_synced_at).toLocaleString('pt-BR'):'sem sincronização')+'</div>'
     +'<div class="meta">Coleta automática: '+(s.auto_sync_enabled===true?'autorizada':'desativada — requer API ou feed autorizado')+'</div>'
     +'<div class="meta">Produtos indexados: '+Number(s.indexed_count||0)+' · páginas processadas: '+Number(s.scanned_pages||0)+' · próxima página: '+Number(s.next_page||1)+'</div>'
-    +(s.sync_note?'<div class="meta">'+esc(s.sync_note)+'</div>':'');
+    +(s.sync_note?'<div class="meta">'+esc(explainSourceError(s.sync_note,s))+'</div>':'');
   const buttons=document.createElement('div');buttons.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
-  const sync=document.createElement('button');sync.id='guruSync_'+s.id;sync.className='btn sm';sync.type='button';sync.textContent='Sincronizar';sync.disabled=!s.enabled||s.auto_sync_enabled!==true;sync.onclick=()=>synchronize(s);
+  const sync=document.createElement('button');sync.id='guruSync_'+s.id;sync.className='btn sm';sync.type='button';sync.textContent=s.auto_sync_enabled===true?'Sincronizar':'Consulta indisponível';sync.disabled=!s.enabled||s.auto_sync_enabled!==true;sync.onclick=()=>synchronize(s);
   const toggle=document.createElement('button');toggle.className='btn sm';toggle.type='button';
   toggle.textContent=s.enabled?'Desativar':'Ativar';toggle.onclick=()=>editStatus(s,!s.enabled);
   buttons.append(sync,toggle);header.append(left,buttons);item.appendChild(header);list.appendChild(item);

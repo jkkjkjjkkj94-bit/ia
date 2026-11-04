@@ -111,7 +111,17 @@ async function syncSource(sourceId:string){
  let listingAllowed=false,robotsText="";
  try{
   const robots=await fetch(site.origin+"/robots.txt",{redirect:"error",signal:AbortSignal.timeout(5000)});
-  if(!robots.ok)throw Error("robots.txt HTTP "+robots.status+": não foi possível confirmar a permissão de indexação.");
+  if(!robots.ok){
+   if(robots.status===401||robots.status===403){
+     await rest("guru_web_sources?id=eq."+id,{method:"PATCH",body:JSON.stringify({
+       auto_sync_enabled:false,sync_status:"error",
+       sync_note:"A loja não autorizou a consulta automática (HTTP "+robots.status+"). A fonte permanece cadastrada; a busca utiliza apenas os produtos já registrados.",
+       updated_at:new Date().toISOString()
+     })});
+     return output({status:"permission_required",products:0,message:"Esta loja não permite a sincronização automática. Os produtos já cadastrados continuam disponíveis."},409);
+   }
+   throw Error("Não foi possível confirmar as permissões do site (HTTP "+robots.status+").");
+  }
   robotsText=(await robots.text()).slice(0,100000);
   if(!permittedByRobots(robotsText,catalog.pathname))throw Error("A página inicial do catálogo não permite indexação.");
   listingAllowed=true;

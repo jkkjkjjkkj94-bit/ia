@@ -149,13 +149,13 @@ function rehydrate(){
  delete state._lastIds;delete state._selectedId;delete state._productId;
  renderContext();
 }
-async function read(project,table,query=''){
+async function read(project,table,query='',orderField='id'){
  // Pagina resultados com ordenação estável: a API pode limitar respostas a 1.000 registros.
  const limit=200,maxRows=10000,all=[];
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
  try{
   for(let offset=0;offset<maxRows;offset+=limit){
-   const url=project.url+'/rest/v1/'+table+'?select=*'+query+'&order=id.asc&limit='+limit+'&offset='+offset;
+   const url=project.url+'/rest/v1/'+table+'?select=*'+query+'&order='+orderField+'.asc&limit='+limit+'&offset='+offset;
    const r=await fetch(url,{headers:{apikey:project.key,Authorization:'Bearer '+project.key,Accept:'application/json'},signal:controller.signal});
    if(!r.ok)throw new Error(table+' HTTP '+r.status);
    const rows=await r.json();
@@ -200,7 +200,7 @@ async function loadData(force=false){
    read(AI,'local_ai_taxonomy_categories','&active=eq.true'),
    read(AI,'local_ai_taxonomy_groups','&active=eq.true'),
    read(AI,'local_ai_taxonomy_terms','&active=eq.true'),
-   read(AI,'local_ai_store_highlights')
+   read(AI,'local_ai_store_highlights','','store_id')
   ]);
   const get=i=>all[i].status==='fulfilled'?all[i].value:[];
   if(all[0].status==='rejected')throw all[0].reason;

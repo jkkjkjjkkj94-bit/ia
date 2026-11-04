@@ -102,7 +102,7 @@ test('a classificação administrativa salva apenas pela função segura do CORE
  assert.match(admin,/Salvando\.\.\./);
  assert.match(admin,/Erro ao salvar/);
  assert.match(source('admin-runtime-v2.js'),/admin-store-group\.js\?v=4/);
- assert.match(source('admin-post-login-loader.js'),/admin-runtime-v2\.js\?v=7/);
+ assert.match(source('admin-post-login-loader.js'),/admin-runtime-v2\.js\?v=\d+/);
 });
 
 

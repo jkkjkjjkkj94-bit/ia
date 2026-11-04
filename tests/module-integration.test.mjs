@@ -160,3 +160,15 @@ test('GURU híbrida nunca exige OpenAI para buscar nem expõe chave privada no f
  assert.match(edge,/max_output_tokens: 180/);
  assert.match(edge,/if \(!apiKey \|\| !adminKey \|\| !supabaseUrl\)/);
 });
+
+
+test('Respostas híbridas soam conversacionais sem confundir score com avaliação',()=>{
+ const edge=source('supabase/functions/guru-hybrid-openai/index.ts');
+ const frontend=source('guru-engine-v4.js');
+ assert.match(edge,/Sua voz é simpática, acolhedora, natural e objetiva/);
+ assert.match(edge,/rankScore NÃO é avaliação dos clientes/);
+ assert.match(edge,/NUNCA invente ou infira avaliações/);
+ assert.match(edge,/Não altere ordem, score, categoria ou entrega/);
+ assert.match(frontend,/if\(natural\)add\(natural\)/);
+ assert.doesNotMatch(frontend,/GURU · Resumo com OpenAI/);
+});

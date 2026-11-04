@@ -13,7 +13,7 @@
 </nav></aside>
 <main class="panel-main">
 <div class="panel-top"><span id="pageTitle">Dashboard</span><div class="top-actions"></div></div>
-<div id="adminStores"><div class="item store-admin-item"><div class="store-row">
+<div id="adminStores"><div class="item store-admin-item" data-ranking-score="65" data-ranking-tier="Verificada" data-ranking-detail="Classificação: Verificada: 35/70 • Dados do cadastro: 30/30"><div class="store-row">
 <div class="title-line"><b>Loja Exemplo</b><span class="status-dot active"></span></div>
 <div class="meta">Comida · Sorocaba - SP</div><div class="meta">Qualidade: Boa</div>
 <div class="actions-wrap"><button type="button" data-open-store="store-example">Detalhes</button><button type="button" data-status="suspended">Suspender</button></div>
@@ -37,6 +37,10 @@ const run=async()=>{
  const row=document.querySelector('#adminStores .admin-store-row');
  if(!row)throw Error('Tabela não renderizada');
  if(!row.querySelector('.admin-cell-sub')?.textContent.includes('Ativa'))throw Error('Status não preservado: '+row.textContent);
+ if(!document.querySelector('.admin-store-head')?.textContent.includes('Score'))throw Error('Cabeçalho de pontuação ausente');
+ if(!row.querySelector('.admin-score-number')?.textContent.includes('65'))throw Error('Score 65/100 não aparece na tabela');
+ if(row.querySelector('.admin-score-track span')?.style.width!=='65%')throw Error('Barra de pontuação incorreta');
+ if(!row.querySelector('.admin-score-cell')?.title.includes('Verificada'))throw Error('Detalhamento de pontos indisponível');
  if(document.querySelectorAll('link[href*="admin-ui.css"]').length!==1)throw Error('CSS novo não carregado');
  const extra=document.createElement('button');extra.dataset.view='taxonomyDb';extra.textContent='Taxonomia';nav.appendChild(extra);
  await wait(450);

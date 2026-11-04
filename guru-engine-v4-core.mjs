@@ -150,7 +150,7 @@ function requestedStoreNameTerms(raw,taxon,semanticTerms){
  // Nome próprio citado após "loja/estabelecimento" é uma exigência real,
  // mesmo sem a categoria: evita encontrar "Outra Loja Teste" ao pedir "Misael Teste".
  if(!taxon){
-  const named=String(raw||'').match(/\b(?:loja|estabelecimento)\s+(?:d[aeo]\s+)?([\p{Lu}][\p{L}\p{N}]+(?:\s+[\p{Lu}][\p{L}\p{N}]+)*)/iu);
+  const named=String(raw||'').match(/\b(?:[Ll]oja|[Ee]stabelecimento)\s+(?:[Dd][aeo]\s+)?([\p{Lu}][\p{L}\p{N}]+(?:\s+[\p{Lu}][\p{L}\p{N}]+)*)/u);
   if(named)return words(named[1]).filter(w=>semanticTerms.includes(w));
  }
  

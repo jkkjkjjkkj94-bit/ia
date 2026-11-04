@@ -161,7 +161,13 @@ function mergeTaxonomy(cats=[],groups=[],terms=[]){
  const byCategory=new Map(activeCats.map(x=>[x.id,x])),byGroup=new Map(activeGroups.map(x=>[x.id,x]));
  const map={},catAliases={};
  for(const cat of activeCats){map[cat.name]={};catAliases[cat.name]=[cat.name,...(fallbackAliases[cat.name]||[])]}
- for(const group of activeGroups){const cat=byCategory.get(group.category_id);if(cat)map[cat.name][group.name]=[group.name]}
+ for(const group of activeGroups){
+  const cat=byCategory.get(group.category_id);
+  if(!cat)continue;
+  // Os sinônimos locais complementam os do AIDB; não desaparecem ao carregar a taxonomia.
+  const known=fallbackTaxonomy[cat.name]?.[group.name]||[];
+  map[cat.name][group.name]=[group.name,...known];
+ }
  for(const term of activeTerms){
   const cat=byCategory.get(term.category_id);if(!cat)continue;
   const group=byGroup.get(term.group_id);

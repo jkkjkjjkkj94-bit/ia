@@ -606,7 +606,7 @@ const cases=[
  },
  {
   "q": "Onde tem calabresa em estoque?",
-  "group": "Pizzaria",
+  "group": null,
   "kind": "search",
   "filters": {},
   "ids": [

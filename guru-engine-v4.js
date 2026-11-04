@@ -1,5 +1,6 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
+import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
@@ -564,6 +565,9 @@ function replyAboutStore(text,ask,filter={}){
  add('Na '+s.name+', encontrei:\n'+ps.slice(0,8).map(p=>'• '+p.name+' — '+money(priceOf(p))+' · estoque '+p.stock).join('\n'));save();
 }
 async function run(text){
+ const routed=routeConversation(text);
+ if(routed.kind==='social'){add(routed.answer);return}
+ text=routed.query;
  const prelim=interpret(text,taxonomy,aliases,state);
  if(prelim.kind==='reset'){state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};renderContext();add('Contexto limpo. O que você quer encontrar?');return}
  // Carregue o catálogo antes de compreender o produto solicitado.

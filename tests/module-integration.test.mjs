@@ -31,7 +31,7 @@ test('a IA pública executa apenas o GURU V4',()=>{
 
 test('Admin tem interface única e autenticação isolada',()=>{
  const html=source('admin.html'),runtime=source('admin-post-login-loader.js');
- assert.match(html,/admin-post-login-loader\.js\?v=10/);
+ assert.match(html,/admin-post-login-loader\.js\?v=11/);
  assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
  assert.match(runtime,/admin-ui\.js\?v=\d+/);
  assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
@@ -139,7 +139,7 @@ test('admin carrega somente um módulo consolidado de lojistas',()=>{
  assert.match(merchant,/window\.GuruMerchantDetails=/);
  assert.match(merchant,/data-merchant-details/);
  assert.match(merchant,/merchant-detailed-list/);
- assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=10/);
+ assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=11/);
 });
 
 
@@ -284,7 +284,7 @@ test('GURU indexa apenas fontes web aprovadas e não presume estoque',()=>{
  assert.match(chat,/displayWebProducts/);
  assert.match(chat,/Estoque não confirmado/);
  assert.match(admin,/guruSourceForm/);
- assert.match(admin,/guru-approved-sources/);
+ assert.match(admin,/async function synchronize\(source\)/);
  assert.match(catalog,/guru_web_products/);
  assert.match(catalog,/isSafeProductUrl/);
 });
@@ -317,8 +317,8 @@ test('Site sem autorização de coleta preserva os produtos e desativa sincroniz
  assert.match(edge,/s\.auto_sync_enabled===false/);
  assert.match(edge,/robots\.status/);
  assert.match(edge,/permittedByRobots/);
- assert.match(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
- assert.match(admin,/requer API ou feed autorizado/);
+ assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
+ assert.match(admin,/o botão sincroniza apenas produtos do Supabase/);
  assert.match(catalog,/if\(source\.auto_sync_enabled!==true\)return false/);
 });
 
@@ -332,5 +332,22 @@ test('Erro HTTP 403 do robots bloqueia apenas a coleta, sem afetar produtos cada
  assert.match(edge,/Os produtos já cadastrados continuam disponíveis/);
  assert.match(admin,/explainSourceError/);
  assert.match(admin,/Consulta automática indisponível/);
- assert.match(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
+ assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
+});
+
+
+test('Cadastro manual de produtos e sincronização do catálogo sem crawling bloqueado',()=>{
+ const admin=source('admin-web-sources.js');
+ assert.match(admin,/guruManualProductForm/);
+ assert.match(admin,/guruManualName/);
+ assert.match(admin,/guruManualUrl/);
+ assert.match(admin,/async function addManualProduct/);
+ assert.match(admin,/site\.origin!==url\.origin/);
+ assert.match(admin,/ignoreDuplicates:true/);
+ assert.match(admin,/availability:'unknown'/);
+ assert.match(admin,/async function synchronize\(source\)/);
+ assert.match(admin,/count:'exact',head:true/);
+ assert.match(admin,/indexed_count:quantity/);
+ assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
+ assert.doesNotMatch(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
 });

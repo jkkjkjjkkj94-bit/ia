@@ -101,7 +101,13 @@ async function smoke(){
  await guru.submitText('doceria aberta no sábado');
  if(!document.getElementById('msgs').textContent.includes('Não consegui consultar os horários agora'))throw Error('Falha de horários foi apresentada como ausência de lojas');
  if(guru.getState().selectedStore?.id!=='sweet')throw Error('Falha de rede apagou seleção anterior');
- window.smokeFailHours=false;await guru.refresh();
+ window.smokeFailHours=false;window.smokeFailReviews=true;await guru.refresh();
+ await guru.submitText('Qual a avaliação?');
+ if(!document.getElementById('msgs').textContent.includes('Não consegui consultar as avaliações dessa loja agora'))throw Error('Falha de avaliações foi apresentada como falta de avaliação');
+ await guru.submitText('pizzaria nota acima de 4');
+ if(!document.getElementById('msgs').textContent.includes('Não consegui consultar as avaliações agora'))throw Error('Filtro de nota ignorou falha no banco');
+ if(guru.getState().selectedStore?.id!=='sweet')throw Error('Falha de avaliações alterou loja selecionada');
+ window.smokeFailReviews=false;await guru.refresh();
  window.smokeDisableStore='sweet';
  await guru.refresh();
  if(guru.getState().selectedStore||guru.getState().lastResults.some(r=>r.store.id==='sweet'))throw Error('Loja removida do banco permaneceu selecionável após atualização');

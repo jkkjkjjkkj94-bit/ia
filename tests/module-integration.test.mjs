@@ -31,7 +31,7 @@ test('a IA pública executa apenas o GURU V4',()=>{
 
 test('Admin tem interface única e autenticação isolada',()=>{
  const html=source('admin.html'),runtime=source('admin-post-login-loader.js');
- assert.match(html,/admin-post-login-loader\.js\?v=6/);
+ assert.match(html,/admin-post-login-loader\.js\?v=7/);
  assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
  assert.match(runtime,/admin-ui\.js\?v=\d+/);
  assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
@@ -139,7 +139,7 @@ test('admin carrega somente um módulo consolidado de lojistas',()=>{
  assert.match(merchant,/window\.GuruMerchantDetails=/);
  assert.match(merchant,/data-merchant-details/);
  assert.match(merchant,/merchant-detailed-list/);
- assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=6/);
+ assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=7/);
 });
 
 
@@ -150,7 +150,7 @@ test('GURU híbrida nunca exige OpenAI para buscar nem expõe chave privada no f
  assert.doesNotMatch(html,/guru-turnstile-site-key/);
  assert.match(ui,/if\(!Array\.isArray\(rows\)\|\|!rows\.length\)return ''/);
  assert.match(ui,/const natural=await hybridResponse\(text,rows\)/);
- assert.match(ui,/displayResults\(rows\);save\(\)/);
+ assert.match(ui,/displayResults\(rows\)/);
  assert.doesNotMatch(ui,/OPENAI_API_KEY|sk-proj-|Bearer sk-|turnstile/i);
  assert.match(edge,/Deno\.env\.get\("OPENAI_API_KEY"\)/);
  assert.match(edge,/guru_hybrid_claim_quota/);

@@ -151,7 +151,10 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const after=neg?.[2]||'';
  const excludedTax=after?getTaxon(after,lexicon):null;
  const positive=neg?.[1]?.trim()||n;
- let taxon=getTaxon(positive,lexicon);
+ // Expressões de cortesia não são atributos obrigatórios do estabelecimento.
+ // Remova somente expressões completas, preservando a palavra isolada 'favor' em nomes de lojas.
+ const searchContent=positive.replace(/\b(?:por\s+favor|por\s+gentileza|faz\s+favor|se\s+possivel|obrigad[oa]s?|pfv|pfvr)\b/g,' ').replace(/\s+/g,' ').trim();
+ let taxon=getTaxon(searchContent,lexicon);
  // Common food service nouns do not map to generic retail.
  if(!taxon&&/\b(restaurante|cafeteria|almoco|jantar|comer)\b/.test(positive))taxon={category:'Comida',group:null};
  const filters=parseFilters(text,{},options);
@@ -160,14 +163,14 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const excludedCategories=excludeCategory?[norm(excludedTax.category)]:[];
  const excludedTerms=after&&!excludedGroups.length&&!excludeCategory&&!/^(?:entrega|retirada|frete|delivery)\b/.test(after)?[after]:[];
  const allTerms=(taxon?[taxon.term,normalizeQuery(taxon.category),normalizeQuery(taxon.group||'')]:[]).filter(Boolean);
- let semanticTerms=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo','barato','barata','economico','economica','aceita','pix','credito','debito','dinheiro','retirada','retirar','entrega','delivery','rapida','rapido','minutos','minuto','horas','hora','numero','noite','manha','tarde'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!(w==='feira'&&/\b(?:segunda|terca|quarta|quinta|sexta) feira\b/.test(positive))&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?h?$/.test(w));
+ let semanticTerms=words(searchContent).filter(w=>w.length>2&&!STOP.has(w)&&!['tamanho','tam','nota','avaliacao','frete','taxa','promocao','acima','abaixo','barato','barata','economico','economica','aceita','pix','credito','debito','dinheiro','retirada','retirar','entrega','delivery','rapida','rapido','minutos','minuto','horas','hora','numero','noite','manha','tarde'].includes(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!(w==='feira'&&/\b(?:segunda|terca|quarta|quinta|sexta) feira\b/.test(positive))&&!allTerms.some(t=>words(t).includes(w))&&!/^\d+(?:\.\d+)?h?$/.test(w));
  const featureTerms=semanticTerms.filter(w=>/^(vegano|vegana|vegetariano|vegetariana|familia|familiar|tranquilo|sossegado|artesanal)$/.test(w));
  const lookingForStore=/\b(?:tem|vende)\s+(?:(?:um|uma|algum|alguma)\s+)?(?:loja|lojas|comercio|comercios|estabelecimento|estabelecimentos)\b/.test(n);
  const productCue=!lookingForStore&&/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|preciso de|tem|vende|estoque)\b/.test(n);
  const genericProduct=/\b(produto|comprar|tem|vende|estoque)\b/.test(n);
  let productTerm=null;
  if(productCue){
-  const list=words(positive).filter(w=>w.length>2&&!STOP.has(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!['produto','comprar','tem','vende','estoque','tamanho','tam'].includes(w)&&!taxon?.group?.toLowerCase().includes(w)&&!words(taxon?.term||'').includes(w));
+  const list=words(searchContent).filter(w=>w.length>2&&!STOP.has(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!['produto','comprar','tem','vende','estoque','tamanho','tam'].includes(w)&&!taxon?.group?.toLowerCase().includes(w)&&!words(taxon?.term||'').includes(w));
   if(list.length)productTerm=list.slice(0,3).join(' ');
  }
  if(!productTerm&&genericProduct&&prev.selectedStore&&!taxon)return{kind:'ask',ask:'products',raw:text,filters};

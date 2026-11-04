@@ -273,7 +273,7 @@ test('GURU indexa apenas fontes web aprovadas e não presume estoque',()=>{
  const chat=source('guru-engine-v4.js');
  const catalog=source('guru-approved-products.mjs');
  assert.match(server,/guru_web_sources\?select/);
- assert.match(server,/catalog\.hostname!==site\.hostname/);
+ assert.match(server,/site\.hostname!==catalog\.hostname/);
  assert.match(server,/profiles\[0\]\?\.role!=="admin"/);
  assert.match(server,/permittedByRobots/);
  assert.match(server,/availability:"unknown"/);

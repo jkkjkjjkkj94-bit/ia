@@ -143,3 +143,54 @@ for(let i=0;i<cases.length;i++){
   assert.ok(matching.every(r=>r.store.category===spec.category&&r.store.group===spec.group));
  });
 }
+
+
+// Casos adversariais independentes da matriz combinatória (pagamento, negação e diálogos).
+const paymentStores=[
+ activeStore('all','Comida','Pizzaria',{name:'Todos os Pagamentos',delivery:true,pickup:true,payment_methods:['Pix','Cartão','Crédito','Débito','Dinheiro']}),
+ activeStore('onlypix','Comida','Pizzaria',{name:'Só Pix',delivery:false,pickup:false,payment_methods:['Pix']}),
+ activeStore('onlycard','Comida','Pizzaria',{name:'Só Cartão',delivery:true,pickup:true,payment_methods:['Cartão']}),
+ activeStore('none','Comida','Pizzaria',{name:'Sem Pagamento',delivery:false,pickup:true,payment_methods:[]})
+];
+const paymentHours=paymentStores.flatMap((s,i)=>[
+ {store_id:s.id,weekday:i===2?0:6,opens_at:'09:00',closes_at:'20:00',closed:false},
+ {store_id:s.id,weekday:2,opens_at:'09:00',closes_at:'20:00',closed:false}
+]);
+const paymentData={stores:paymentStores,hours:paymentHours,products:[],reviews:[],knowledge:[]};
+const paymentCases=[
+ ['Pizzaria que não aceita Pix.',{},['onlycard','none']],
+ ['Pizzaria sem Pix.',{},['onlycard','none']],
+ ['Pizzaria que aceite Pix e cartão.',{},['all']],
+ ['Pizzaria que recebe Pix e dinheiro.',{},['all']],
+ ['Pizzaria que recebe crédito e débito.',{},['all']],
+ ['Pizzaria que entrega em casa.',{delivery:true},['all','onlycard']],
+ ['Pizzaria que realiza entregas em domicílio.',{delivery:true},['all','onlycard']],
+ ['Pizzaria que não faz delivery.',{delivery:false},['onlypix','none']],
+ ['Pizzaria que trabalha com delivery.',{delivery:true},['all','onlycard']],
+ ['Pizzaria onde posso buscar no balcão.',{pickup:true},['all','onlycard','none']],
+ ['Pizzaria que não permite retirada.',{pickup:false},['onlypix']],
+ ['Pizzaria com loja física e sem entrega.',{delivery:false},['onlypix','none']],
+ ['Pizzaria que abre sábado ou domingo.',{days:[0,6]},['all','onlypix','onlycard','none']],
+ ['Pizzaria que abre sábado e domingo.',{daysAll:[0,6]},[]],
+ ['Pizzaria que recebe pagamento no Pix.',{payment:'pix'},['all','onlypix']],
+ ['Pizzaria com opção de cartão.',{payment:'cartao'},['all','onlycard']],
+ ['Pizzaria que aceita cartão e não aceita Pix.',{},['onlycard']],
+ ['Pizzaria sem entrega e com retirada.',{delivery:false,pickup:true},['none']],
+ ['Pizzaria que não entrega mas aceita Pix.',{delivery:false,payment:'pix'},['onlypix']],
+ ['Pizzaria que faz entrega e aceita Pix.',{delivery:true,payment:'pix'},['all']],
+ ['Pizzaria para retirar meu pedido.',{pickup:true},['all','onlycard','none']],
+ ['Pizzaria que não recebe cartão.',{},['onlypix','none']],
+ ['Pizzaria com cartões aceitos.',{payment:'cartao'},['all','onlycard']],
+ ['Pizzaria que não faz entregas.',{delivery:false},['onlypix','none']]
+];
+for(const [i,[query,filters,expectedIds]] of paymentCases.entries()){
+ test('GURU-EXTRA '+String(i+1).padStart(3,'0')+' | '+query,()=>{
+  const p=interpretOne(query);
+  assert.equal(p.kind,'search','deve pesquisar pizzarias');
+  assert.equal(p.taxon?.group,'Pizzaria','grupo incorreto');
+  for(const [key,value] of Object.entries(filters))
+   assert.deepEqual(p.filters[key],value,'filtro incorreto '+key);
+  const matches=results(nextState(emptyState(),p),paymentData).map(r=>r.store.id).sort();
+  assert.deepEqual(matches,expectedIds.slice().sort(),'lojas sem critérios foram recomendadas');
+ });
+}

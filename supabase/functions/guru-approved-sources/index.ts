@@ -101,36 +101,79 @@ async function syncSource(sourceId:string){
  const site=safeURL(s.base_url),catalog=safeURL(s.catalog_url);
  if(!site||!catalog||site.hostname!==catalog.hostname||catalog.origin!==site.origin)
   return output({error:"O endereço da fonte precisa ser HTTPS e do domínio aprovado."},400);
- let found:{name:string,product_url:string,image_url:null,price:null,currency:null,availability:"unknown"}[]=[];
- let result="error",note="";
+
+ // Importação progressiva: até três páginas por execução para evitar sobrecarga.
+ // O próximo cursor pertence à fonte aprovada, nunca é uma URL recebida do visitante.
+ const PAGE_BATCH=3,MAX_PAGE=200;
+ let nextPage=Math.min(MAX_PAGE,Math.max(1,Number(s.next_page)||1));
+ let imported=0,scanned=0,completed=false,status="error",note="";
+ let listingAllowed=false,robotsText="";
  try{
   const robots=await fetch(site.origin+"/robots.txt",{redirect:"error",signal:AbortSignal.timeout(5000)});
-  if(!robots.ok)throw Error("Não foi possível validar robots.txt");
-  const robotsText=(await robots.text()).slice(0,100000);
-  if(!permittedByRobots(robotsText,catalog.pathname))throw Error("Indexação não permitida pelo site.");
-  const page=await fetch(catalog.href,{redirect:"error",headers:{Accept:"text/html,application/xhtml+xml","User-Agent":"GURU-Catalog/1.0"},signal:AbortSignal.timeout(9000)});
-  if(!page.ok)throw Error("Site não respondeu com uma página pública.");
-  const type=page.headers.get("content-type")||"";
-  if(!type.includes("text/html"))throw Error("A fonte não retornou HTML.");
-  const size=Number(page.headers.get("content-length")||0);
-  if(size>2000000)throw Error("Página maior que o limite de leitura.");
-  const html=(await page.text()).slice(0,2000000);
-  found=productsFromHtml(html,catalog);
-  result=found.length?"ok":"no_products";
-  note=found.length?found.length+" links de produtos encontrados. Sem garantia de preço ou estoque.":"Sem produtos extraíveis: a loja pode exigir JavaScript, API oficial ou feed de produtos.";
- }catch(e){note=String(e instanceof Error?e.message:e).slice(0,260)}
- if(result==="ok"){
-  // Atualiza somente itens da fonte já cadastrada e URLs do domínio aprovado.
-  const rows=found.map(x=>({...x,source_id:s.id,last_checked_at:new Date().toISOString()}));
-  const write=await rest("guru_web_products?on_conflict=source_id,product_url",{
-   method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows)
-  });
-  if(!write.ok){result="error";note="Erro ao gravar produtos indexados."}
+  if(!robots.ok)throw Error("Não foi possível confirmar permissão de indexação no robots.txt.");
+  robotsText=(await robots.text()).slice(0,100000);
+  if(!permittedByRobots(robotsText,catalog.pathname))throw Error("A página inicial do catálogo não permite indexação.");
+  listingAllowed=true;
+  for(let i=0;i<PAGE_BATCH&&nextPage<=MAX_PAGE;i++){
+   const pageUrl=new URL(catalog.href);
+   if(nextPage>1)pageUrl.searchParams.set("page",String(nextPage));
+   // Não usar links externos, redirects ou URLs livres na paginação.
+   if(pageUrl.origin!==site.origin||!permittedByRobots(robotsText,pageUrl.pathname+pageUrl.search))
+     throw Error("Página do catálogo não autorizada pelas regras da fonte.");
+   const page=await fetch(pageUrl.href,{
+     redirect:"error",
+     headers:{Accept:"text/html,application/xhtml+xml","User-Agent":"GURU-Catalog/1.0"},
+     signal:AbortSignal.timeout(6500)
+   });
+   if(!page.ok)throw Error("Página "+nextPage+": o site não permitiu a leitura pública.");
+   const type=page.headers.get("content-type")||"";
+   if(!type.includes("text/html"))throw Error("Catálogo não retornou HTML.");
+   if(Number(page.headers.get("content-length")||0)>2000000)throw Error("Página maior que o limite.");
+   const html=(await page.text()).slice(0,2000000);
+   const found=productsFromHtml(html,pageUrl);
+   scanned++;
+   if(!found.length){
+     // Quando não há produtos legíveis, não declarar que o catálogo todo foi importado.
+     status=imported?"partial":"no_products";
+     note="Página "+nextPage+" sem produtos extraíveis. O site pode exigir uma API ou feed oficial.";
+     completed=true;
+     break;
+   }
+   const rows=found.map(x=>({...x,source_id:s.id,last_checked_at:new Date().toISOString()}));
+   const write=await rest("guru_web_products?on_conflict=source_id,product_url",{
+      method:"POST",headers:{Prefer:"resolution=ignore-duplicates,return=minimal"},
+      body:JSON.stringify(rows)
+   });
+   if(!write.ok)throw Error("Falha ao gravar produtos da página "+nextPage+".");
+   imported+=rows.length;
+   nextPage++;
+   status="ok";
+   // Continuação limitada ao catálogo previamente autorizado.
+   if(nextPage>MAX_PAGE){completed=true;break;}
+  }
+  if(status==="ok")note=imported+" links encontrados em "+scanned+" páginas nesta execução; próxima página "+nextPage+". Preço e estoque não foram presumidos.";
+ }catch(e){
+  status=imported?"partial":"error";
+  note=String(e instanceof Error?e.message:e).slice(0,240);
  }
- await rest("guru_web_sources?id=eq."+id,{method:"PATCH",body:JSON.stringify({
-  sync_status:result,sync_note:note,last_synced_at:new Date().toISOString(),updated_at:new Date().toISOString()
- })});
- return output({status:result,products:result==="ok"?found.length:0,message:note,source:s.name});
+ if(!listingAllowed)nextPage=Math.max(1,Number(s.next_page)||1);
+ // Registra o cursor para continuar o catálogo da próxima vez.
+ const count=await rest("guru_web_products?select=id&source_id=eq."+id+"&limit=1",{
+   headers:{Prefer:"count=exact"}
+ });
+ const range=count.headers.get("content-range")||"";
+ const savedCount=Number(range.split("/").at(-1));
+ const update={
+  sync_status:status,
+  sync_note:note,
+  next_page:completed?1:Math.min(MAX_PAGE,nextPage),
+  scanned_pages:Number(s.scanned_pages||0)+scanned,
+  indexed_count:Number.isFinite(savedCount)?savedCount:Number(s.indexed_count||0),
+  last_synced_at:new Date().toISOString(),updated_at:new Date().toISOString()
+ };
+ await rest("guru_web_sources?id=eq."+id,{method:"PATCH",body:JSON.stringify(update)});
+ return output({status,products:imported,total: update.indexed_count,pages:scanned,nextPage:update.next_page,message:note,source:s.name});
+
 }
 Deno.serve(async req=>{
  if(req.headers.get("origin")!==ORIGIN)return output({error:"Origem não autorizada."},403);

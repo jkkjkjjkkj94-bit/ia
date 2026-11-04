@@ -31,7 +31,7 @@ test('a IA pública executa apenas o GURU V4',()=>{
 
 test('Admin tem interface única e autenticação isolada',()=>{
  const html=source('admin.html'),runtime=source('admin-post-login-loader.js');
- assert.match(html,/admin-post-login-loader\.js\?v=7/);
+ assert.match(html,/admin-post-login-loader\.js\?v=8/);
  assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
  assert.match(runtime,/admin-ui\.js\?v=\d+/);
  assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
@@ -139,7 +139,7 @@ test('admin carrega somente um módulo consolidado de lojistas',()=>{
  assert.match(merchant,/window\.GuruMerchantDetails=/);
  assert.match(merchant,/data-merchant-details/);
  assert.match(merchant,/merchant-detailed-list/);
- assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=7/);
+ assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=8/);
 });
 
 
@@ -287,4 +287,24 @@ test('GURU indexa apenas fontes web aprovadas e não presume estoque',()=>{
  assert.match(admin,/guru-approved-sources/);
  assert.match(catalog,/guru_web_products/);
  assert.match(catalog,/isSafeProductUrl/);
+});
+
+
+test('Indexador autorizado coleta várias páginas em lotes limitados e mantém cursor',()=>{
+ const edge=source('supabase/functions/guru-approved-sources/index.ts');
+ const admin=source('admin-web-sources.js');
+ const publicQuery=source('guru-approved-products.mjs');
+ assert.match(edge,/PAGE_BATCH=3,MAX_PAGE=200/);
+ assert.match(edge,/next_page/);
+ assert.match(edge,/pageUrl\.searchParams\.set\("page",String\(nextPage\)\)/);
+ assert.match(edge,/permittedByRobots\(robotsText,pageUrl\.pathname/);
+ assert.match(edge,/pageUrl\.origin!==site\.origin/);
+ assert.match(edge,/redirect:"error"/);
+ assert.match(edge,/resolution=ignore-duplicates/);
+ assert.match(edge,/indexed_count/);
+ assert.match(edge,/sync_status:status/);
+ assert.match(admin,/Produtos indexados:/);
+ assert.match(admin,/próxima página:/);
+ assert.match(publicQuery,/limit=1000/);
+ assert.match(publicQuery,/matches\.slice\(0,12\)/);
 });

@@ -3,7 +3,7 @@ import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from '.
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
 import {recordSearch,recordSelection} from './guru-telemetry-v5.mjs?v=1';
-import {approvedSourceProducts} from './guru-approved-products.mjs?v=1';
+import {approvedSourceProducts} from './guru-approved-products.mjs?v=2';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};

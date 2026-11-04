@@ -31,7 +31,7 @@ export async function approvedSourceProducts(query,attemptRefresh=true){
  try{
   const [sources,products]=await Promise.all([
    withApi('guru_web_sources?select=id,name,base_url,sync_status,last_synced_at&enabled=eq.true&limit=20'),
-   withApi('guru_web_products?select=source_id,name,product_url,price,currency,availability,last_checked_at&limit=500')
+   withApi('guru_web_products?select=source_id,name,product_url,price,currency,availability,last_checked_at&limit=1000')
   ]);
   // Se o catálogo aprovado ainda não possui produtos, tenta indexar sob demanda.
   // O servidor impede que a mesma fonte seja consultada repetidamente em menos de 12h.
@@ -41,7 +41,7 @@ export async function approvedSourceProducts(query,attemptRefresh=true){
       const name=normalize(source.name).split(' ')[0];
       const last=Date.parse(source.last_synced_at||'');
       const due=!Number.isFinite(last)||Date.now()-last>12*60*60*1000;
-      return due&&(name&&topic.includes(name)||sources.length===1&&/\\b(tenis|camiseta|roupa|sapato|produto|comprar)\\b/.test(topic));
+      return due&&(name&&topic.includes(name)||sources.length===1&&/\b(tenis|camiseta|roupa|sapato|produto|comprar)\b/.test(topic));
     });
     if(candidates.length&&await refreshApproved(candidates[0]))
        return approvedSourceProducts(query,false);
@@ -62,6 +62,6 @@ export async function approvedSourceProducts(query,attemptRefresh=true){
     availability:p.availability,checkedAt:p.last_checked_at,score:hit});
   }
   matches.sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'pt-BR'));
-  return {items:matches.slice(0,8),sources:sources.map(s=>({id:s.id,name:s.name,url:s.base_url,status:s.sync_status,lastSync:s.last_synced_at}))};
+  return {items:matches.slice(0,12),sources:sources.map(s=>({id:s.id,name:s.name,url:s.base_url,status:s.sync_status,lastSync:s.last_synced_at}))};
  }catch{return{items:[],sources:[],unavailable:true}}
 }

@@ -205,3 +205,15 @@ test('Conversação natural não bloqueia buscas nem altera os termos essenciais
  assert.match(engine,/if\(routed.kind==='social'\)\{add\(routed.answer\);return\}/);
  assert.ok(engine.indexOf("const routed=routeConversation(text)")<engine.indexOf("await loadData();",engine.indexOf("async function run(text)")));
 });
+
+
+test('GURU híbrida tem cota global sem limitar individualmente visitantes',()=>{
+ const edge=source('supabase/functions/guru-hybrid-openai/index.ts');
+ const docs=source('GURU-HIBRIDO.md');
+ assert.match(edge,/guru_hybrid_claim_quota/);
+ assert.match(edge,/p_client: 'global'/);
+ assert.doesNotMatch(edge,/clientHash|remoteAddress|x-forwarded-for|turnstile/i);
+ assert.match(docs,/60 chamadas\/hora/);
+ assert.match(docs,/300 chamadas\/dia/);
+ assert.match(docs,/Sem limite individual por visitante/);
+});

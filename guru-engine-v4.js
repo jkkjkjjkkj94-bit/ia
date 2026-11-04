@@ -20,7 +20,7 @@ async function hybridResponse(question,rows){
   question:String(question).slice(0,380),
   results:rows.slice(0,5).map(r=>({
    name:r.store?.name,category:r.store?.category,group:r.store?.group,
-   reason:(r.reason||[]).join(', ').slice(0,140),
+   reason:(Array.isArray(r.reason)?r.reason.join(', '):String(r.reason||'')).slice(0,140),
    delivery:r.store?.delivery===true,rankScore:r.rankScore
   }))
  };

@@ -636,13 +636,14 @@ async function run(text){
   let matching=[];
   if(follow.kind==='filterPrevious'){
    if(follow.attribute==='delivery')matching=current.filter(r=>r.store?.delivery===true);
+   else if(follow.attribute==='noDelivery')matching=current.filter(r=>r.store?.delivery!==true);
    else if(follow.attribute==='stock')matching=current.filter(r=>(r.products||[]).length>0);
   }else if(follow.kind==='sortPrevious'){
    const usable=current.filter(r=>follow.attribute==='price'?r.minPrice!=null:follow.attribute==='distance'?r.distance!=null:r.reviewCount>0);
    matching=[...usable].sort((a,b)=>follow.attribute==='price'?a.minPrice-b.minPrice:follow.attribute==='distance'?a.distance-b.distance:b.rating-a.rating);
   }
   if(!matching.length){
-   const reason=follow.attribute==='price'?'preços dos produtos':follow.attribute==='distance'?'distâncias confirmadas':follow.attribute==='rating'?'avaliações verificadas':follow.attribute==='delivery'?'opções com entrega':'produtos em estoque';
+   const reason=follow.attribute==='price'?'preços dos produtos':follow.attribute==='distance'?'distâncias confirmadas':follow.attribute==='rating'?'avaliações verificadas':follow.attribute==='delivery'?'opções com entrega':follow.attribute==='noDelivery'?'opções sem entrega':'produtos em estoque';
    add('Ainda não tenho '+reason+' suficientes nessas opções. Posso fazer uma nova busca se você quiser.');return;
   }
   state.lastResults=matching.slice(0,6);save();

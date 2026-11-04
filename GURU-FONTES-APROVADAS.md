@@ -10,7 +10,7 @@ A GURU pesquisa estabelecimentos cadastrados em COREDB e produtos de **fontes ex
 - Site autorizado: `https://www.nike.com.br`.
 - Catálogo de exemplo: `https://www.nike.com.br/nav/categorias/tenis`.
 - Fonte cadastrada e ativada em `guru_web_sources` no AIDB.
-- **Atenção:** a fonte estar ativa não significa que os produtos já foram importados. O status `pending` e a contagem `0` indicam que a extração ainda deve ser confirmada.
+- **Catálogo inicial:** cinco links de tênis foram conferidos nas páginas públicas oficiais da Nike e incluídos manualmente com preço não informado e disponibilidade desconhecida, para permitir testes imediatos. Isso **não comprova que a extração automática funcionou**; o status de sincronização automática ainda exige verificação.
 
 ## Como funciona
 

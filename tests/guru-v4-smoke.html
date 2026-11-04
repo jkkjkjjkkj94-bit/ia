@@ -209,6 +209,9 @@ async function smoke(){
  guru.reset();
  if(document.body.classList.contains('chat-started'))throw Error('Nova busca não retornou à tela inicial');
  if(document.querySelectorAll('#ctx .guru-filter-chip').length)throw Error('Filtros antigos permaneceram após nova busca');
+ await guru.submitText('Oi, tudo bem?');
+ if(!document.getElementById('msgs').textContent.includes('Tudo certo por aqui'))throw Error('Conversa natural não respondeu ao cumprimento');
+ if(guru.getState().query||guru.getState().lastResults.length)throw Error('Cumprimento iniciou pesquisa ou alterou contexto');
  document.body.dataset.smoke='PASS';
  document.body.setAttribute('data-report','Busca + regra + promoção + contexto + envio OK');
 }

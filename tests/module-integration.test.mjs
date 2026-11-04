@@ -19,7 +19,7 @@ const deleted=[
  'real-location.js','regular-results-ui.js','response-variations.js',
  'semantic-db-resolver.js','semantic-query-guard.js','smart-ranking-v2.js',
  'taxonomy-db-runtime.js','tests/semantic-regression.mjs','typing-indicator.js',
- 'verified-store-badge.js','zero-result-responses.js','guru-store-groups.js','admin-runtime-v2.js'
+ 'verified-store-badge.js','zero-result-responses.js','guru-store-groups.js','admin-runtime-v2.js','admin-merchant-details.js'
 ];
 
 test('a IA pública executa apenas o GURU V4',()=>{
@@ -127,4 +127,17 @@ test('painel de qualidade ignora confiança ausente sem descartar zero válido',
  assert.ok(expression,'filtro da confiança média não localizado');
  const values=Function('rows','return '+expression);
  assert.deepEqual(values([{confidence:null},{confidence:undefined},{confidence:''},{confidence:'0.9'},{confidence:0},{confidence:'invalid'}]),[0.9,0]);
+});
+
+test('admin carrega somente um módulo consolidado de lojistas',()=>{
+ const loader=source('admin-post-login-loader.js');
+ const merchant=source('admin-merchant-enhancements.js');
+ assert.match(loader,/admin-merchant-enhancements\\.js\\?v=3/);
+ assert.doesNotMatch(loader,/admin-merchant-details\\.js/);
+ assert.equal((merchant.match(/createClient\\(HU,HK\\)/g)||[]).length,1);
+ assert.match(merchant,/window\\.GuruMerchantEnhancements=/);
+ assert.match(merchant,/window\\.GuruMerchantDetails=/);
+ assert.match(merchant,/data-merchant-details/);
+ assert.match(merchant,/merchant-detailed-list/);
+ assert.match(source('admin.html'),/admin-post-login-loader\\.js\\?v=6/);
 });

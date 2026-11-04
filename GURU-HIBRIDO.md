@@ -11,14 +11,14 @@ O motor `guru-engine-v4-core.mjs` continua decidindo as buscas e a classificaç�
 
 ## Proteções sem Cloudflare
 
-- Limites globais atômicos: **20 chamadas/hora** e **80 chamadas/dia**, incluindo todos os usuários.
-- Limite adicional de **4 chamadas/hora por identificador de cliente** derivado de hash, na medida em que o gateway forneça o IP.
-- A identificação por IP pode ser falsificada em determinadas infraestruturas; portanto **a quota global é indispensável**.
+- Limites globais atômicos: **60 chamadas/hora** e **300 chamadas/dia**, somando todos os visitantes.
+- **Sem limite individual por visitante**: perguntas seguidas de uma mesma pessoa não esgotam uma cota própria.
+- Sem coleta de IP ou criação de identificadores de cliente para cotas; os contadores são apenas globais.
+- Uma rajada de solicitações pode alcançar o limite global antes do fim da hora; isto protege custos, mas não substitui proteção antiabuso mais robusta.
 - Permite somente a origem `https://jkkjkjjkkj94-bit.github.io`, requisições POST curtas, até cinco lojas por pedido e resposta resumida.
 - Origem CORS não é autenticação nem impede clientes automatizados; é apenas defesa adicional.
 - A Edge Function falha com segurança se a chave da OpenAI, a chave administrativa do servidor, a função SQL ou o banco estiverem indisponíveis.
 - Os dados enviados à OpenAI incluem pergunta e nomes, categorias, entrega e score de até cinco estabelecimentos. `store:false` é solicitado à Responses API.
-- O identificador de rede é transformado em hash no servidor, antes da persistência da quota.
 
 ## Arquivos
 
@@ -30,7 +30,7 @@ O motor `guru-engine-v4-core.mjs` continua decidindo as buscas e a classificaç�
 
 1. Verifique que a Edge Function `guru-hybrid-openai` está implantada no AIDB e que a quota SQL existe.
 2. Confirme a publicação da versão atualizada do site pela PR.
-3. Busque uma pizzaria real na GURU; o resumo deve aparecer acima dos cards, com indicação de assistência OpenAI.
+3. Busque uma pizzaria real na GURU; a resposta conversacional da OpenAI pode aparecer acima dos cards, sem título técnico.
 4. Esgote o limite no ambiente de testes ou simule indisponibilidade da OpenAI; a busca e os cards devem continuar funcionando.
 5. Acompanhe uso e custos da API OpenAI após ativar o recurso.
 

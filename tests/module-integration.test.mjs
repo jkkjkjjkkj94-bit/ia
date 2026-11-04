@@ -265,3 +265,24 @@ test('V5 sanitiza pesquisas para métricas e protege métricas no servidor',asyn
  assert.match(admin,/guru_hybrid_quota/);
  assert.match(admin,/gqPendingSuggestions/);
 });
+
+
+test('GURU indexa apenas fontes web aprovadas e não presume estoque',()=>{
+ const server=source('supabase/functions/guru-approved-sources/index.ts');
+ const admin=source('admin-web-sources.js');
+ const chat=source('guru-engine-v4.js');
+ const catalog=source('guru-approved-products.mjs');
+ assert.match(server,/guru_web_sources\?select/);
+ assert.match(server,/catalog\.hostname!==site\.hostname/);
+ assert.match(server,/profiles\[0\]\?\.role!=="admin"/);
+ assert.match(server,/permittedByRobots/);
+ assert.match(server,/availability:"unknown"/);
+ assert.match(server,/redirect:"error"/);
+ assert.match(chat,/approvedSourceProducts\(text\)/);
+ assert.match(chat,/displayWebProducts/);
+ assert.match(chat,/Estoque não confirmado/);
+ assert.match(admin,/guruSourceForm/);
+ assert.match(admin,/guru-approved-sources/);
+ assert.match(catalog,/guru_web_products/);
+ assert.match(catalog,/isSafeProductUrl/);
+});

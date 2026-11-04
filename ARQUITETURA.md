@@ -16,7 +16,7 @@ O repositório foi consolidado em 3 áreas, sem alterar os dados do Supabase.
 ## Lojista
 - `lojista.html` → `core-data-router.js`, `lojista.js`, `lojista-store-group.js`, `address-validation.js`, `lojista-activity.js`.
 - `lojista-activity.js` administra presença e avaliações.
-- `guru-store-groups.js` é compartilhado com o Admin.
+- Os grupos são derivados diretamente de `ai-taxonomy.js`, compartilhado entre Admin e Lojista.
 
 ## Arquivos antigos excluídos
 Foram removidos controladores antigos da IA pública, menus legados, versões anteriores da UI, folhas de estilo duplicadas e testes substituídos pelo GURU V4. As versões anteriores podem ser recuperadas no **histórico de commits do GitHub**, sem continuar disponíveis como scripts executáveis no site.

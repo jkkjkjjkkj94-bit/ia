@@ -178,6 +178,7 @@ async function smoke(){
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
  for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);
  if(!document.getElementById('msgs').textContent.includes('opções cadastradas'))throw Error('submit do formulário falhou');
+ guru.reset();
  await guru.submitText('comida');
  const latestGrid=[...document.querySelectorAll('.store-results-grid')].at(-1);
  const orderedNames=[...(latestGrid?.querySelectorAll('.store-result-card h3')||[])].map(el=>el.textContent);

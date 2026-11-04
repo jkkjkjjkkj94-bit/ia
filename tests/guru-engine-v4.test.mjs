@@ -148,3 +148,48 @@ test('dias de funcionamento no plural e nova pesquisa após selecionar loja',()=
  assert.equal(plan('quero uma doceria que abre aos sábados',prev).kind,'search');
  assert.equal(plan('que horas abre?',prev).kind,'ask');
 });
+
+test('dia da semana não é confundido com segunda opção da lista',()=>{
+ const prev={...emptyState(),lastResults:[{store:stores[0]},{store:stores[1]}]};
+ const monday=plan('pizzaria aberta segunda-feira',prev);
+ assert.equal(monday.kind,'search');
+ assert.equal(monday.filters.day,1);
+ assert.equal(monday.taxon?.group,'Pizzaria');
+ const second=plan('a segunda abre sábado?',prev);
+ assert.equal(second.kind,'select');
+ assert.equal(second.index,1);
+ assert.equal(second.filters.day,6);
+ const weekday=plan('pizzaria aberta na quarta-feira',prev);
+ assert.equal(weekday.kind,'search');
+ assert.equal(weekday.filters.day,3);
+});
+test('nova pesquisa limpa filtros antigos, refinamento conserva contexto',()=>{
+ let s=nextState(emptyState(),plan('doceria aberta sábado'));
+ assert.equal(s.filters.day,6);
+ s=nextState(s,plan('pizzaria'));
+ assert.equal(s.category,'Comida');
+ assert.equal(s.group,'Pizzaria');
+ assert.equal(s.filters.day,undefined);
+ s=nextState(s,plan('com entrega',s));
+ assert.equal(s.filters.delivery,true);
+ s=nextState(s,plan('pizzaria',s));
+ assert.equal(s.filters.delivery,undefined);
+ s=nextState(s,plan('doceria sem entrega',s));
+ assert.equal(s.group,'Doceria');
+ assert.equal(s.filters.delivery,false);
+ s=nextState(s,plan('doceria',s));
+ assert.equal(s.filters.delivery,undefined);
+});
+test('troca explícita de tipo abre busca e verbos genéricos não viram requisitos',()=>{
+ const previous={...emptyState(),selectedStore:shop('pizza','Comida','Pizzaria')};
+ const searchNew=plan('doceria abre sábado?',previous);
+ assert.equal(searchNew.kind,'search');
+ assert.equal(searchNew.taxon?.group,'Doceria');
+ const asking=plan('a pizzaria abre sábado?',previous);
+ assert.equal(asking.kind,'ask');
+ const other=plan('doceria funcionando no sábado');
+ assert.equal(other.filters.day,6);
+ assert.deepEqual(other.semanticTerms,[]);
+ const chosen={...previous,lastResults:[{store:stores[0]},{store:stores[1]}]};
+ assert.equal(plan('doceria aberta segunda-feira',chosen).kind,'search');
+});

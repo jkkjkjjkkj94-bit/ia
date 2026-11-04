@@ -1,5 +1,5 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
-import{groupsByCategory}from'./guru-store-groups.js?v=1';
+import{groupsByCategory}from'./ai-taxonomy.js?v=7';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const split=s=>[...new Set(String(s||'').split(/[\n,;]+/).map(x=>x.trim()).filter(Boolean))];

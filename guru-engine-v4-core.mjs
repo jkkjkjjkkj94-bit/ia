@@ -102,7 +102,7 @@ function parseFilters(raw,prev={},options={}){
  const q=n.match(/\b(\d{1,3})\s*(?:unidades|unidade|pares|itens|pecas)\b/);if(q)f.quantity=Number(q[1]);
  // Pagamentos são cumulativos: "Pix e cartão" exige ambos, "sem Pix" exclui Pix.
  // Não confunda negação de pagamento com o requisito positivo do mesmo método.
- const paymentTerms=[...n.matchAll(/\b(cartao(?:s|es)?(?:\s+de\s+(?:credito|debito))?|pix|credito|debito|dinheiro)\b/g)];
+ const paymentTerms=[...n.matchAll(/\b(cart(?:ao|oes)(?:\s+de\s+(?:credito|debito))?|pix|credito|debito|dinheiro)\b/g)];
  const required=[],excluded=[];
  for(const hit of paymentTerms){
   const token=hit[1],method=token.includes('credito')?'credito':token.includes('debito')?'debito':token.startsWith('cart')?'cartao':token;

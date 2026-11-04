@@ -65,7 +65,7 @@ function parseFilters(raw,prev={},options={}){
  if(/\bfim de semana\b/.test(n)){f.days=[0,6];f.day=null;f.openNow=false}
  const day=dayOf(n,options.today??new Date().getDay());if(day!==null){f.day=day;f.days=null;f.openNow=false}
  if(/\b(sem entrega|sem delivery|nao quero entrega|nao quero delivery|nao faz entrega|nao oferece entrega|nao realiza entrega|nao entrega)\b/.test(n))f.delivery=false;
- else if(/\b(com entrega|delivery|faz entrega|faca entrega|oferece entrega|realiza entrega|entrega rapida|entrega hoje|leva (?:a )?pizza em casa|entrega em domicilio|levar (?:a )?pizza em casa)\b/.test(n))f.delivery=true;
+ else if(/\b(com entrega|delivery|faz entrega|faca entrega|oferece entrega|realiza entrega|entrega rapida|entrega hoje|lev[ae] (?:a )?pizza em casa|entrega em domicilio|levar (?:a )?pizza em casa)\b/.test(n))f.delivery=true;
  if(/\b(para retirar|com retirada|retirada na loja|buscar na loja|buscar (?:a )?pizza no balcao|retirar no balcao|retirada no balcao|permita retirada|permite retirada|oferece retirada|faz retirada)\b/.test(n))f.pickup=true;
  else if(/\b(sem retirada)\b/.test(n))f.pickup=false;
  if(/\b(melhor avaliadas?|maior nota|bem avaliadas?|bem avaliados?|melhor reputacao|mais bem avaliadas?)\b/.test(n))f.sort='rating';
@@ -86,6 +86,8 @@ function parseFilters(raw,prev={},options={}){
   const minPrice=amount(priceText,/\b(?:acima de|mais de|a partir de)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?)?\b/);if(minPrice!==null)f.minPrice=minPrice;
  }
  if(/\b(em promocao|promocao|com desconto|em oferta|oferta)\b/.test(n))f.promoOnly=true;
+ // A busca pode perguntar sobre itens sem estoque, mas nunca deve recomendá-los como disponíveis.
+ if(/\bsem estoque\b/.test(n))f.outOfStockOnly=true;
  const sz=n.match(/\b(?:tamanho|tam)\s*(pp|p|m|g|gg|xg)\b/);
  const lastSize=(/\b(camisa|camiseta|roupa|vestido|calca)\b/.test(n))?String(raw).match(/\b(PP|P|M|G|GG|XG)\b/):null;
  if(sz||lastSize)f.size=String((sz||lastSize)[1]).toUpperCase();
@@ -349,6 +351,7 @@ export function explainEmptySearch(data={},state={},position=null){
 export function searchStores(data={},state={},position=null,options={}){
  const stores=data.stores||[],products=data.products||[],hours=data.hours||[],reviews=data.reviews||[],knowledge=data.knowledge||[],f=state.filters||{};
  const rating=ratingsMap(reviews),max=options.limit??6,now=options.now||new Date(),output=[];
+ if(f.outOfStockOnly)return output;
  const byStore=new Map(),kByStore=new Map();
  for(const p of products){if(!byStore.has(p.store_id))byStore.set(p.store_id,[]);byStore.get(p.store_id).push(p)}
  for(const k of knowledge)if(k.active!==false){if(!kByStore.has(k.store_id))kByStore.set(k.store_id,[]);kByStore.get(k.store_id).push(k)}

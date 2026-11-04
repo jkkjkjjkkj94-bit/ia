@@ -177,7 +177,7 @@ export function nextState(current,plan){
  else if(plan.taxon?.category)next.group=null;
  if(plan.productTerm)next.productTerm=plan.productTerm;
  else if(freshTopic)next.productTerm=null;
- if(plan.taxon?.category||plan.productTerm||plan.broad){next.semanticTerms=plan.semanticTerms;next.featureTerms=plan.featureTerms}
+ if(plan.taxon?.category||plan.productTerm||plan.broad||plan.semanticTerms?.length){next.semanticTerms=plan.semanticTerms;next.featureTerms=plan.featureTerms}
  if(plan.broad&&!plan.taxon){next.category=null;next.group=null;next.productTerm=null;next.semanticTerms=[];next.featureTerms=[]}
  next.excludedGroups=[...new Set([...(freshTopic?[]:prev.excludedGroups),...plan.excludedGroups])];
  next.excludedCategories=[...new Set([...(freshTopic?[]:prev.excludedCategories),...plan.excludedCategories])];

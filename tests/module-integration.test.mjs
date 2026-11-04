@@ -267,87 +267,13 @@ test('V5 sanitiza pesquisas para métricas e protege métricas no servidor',asyn
 });
 
 
-test('GURU indexa apenas fontes web aprovadas e não presume estoque',()=>{
- const server=source('supabase/functions/guru-approved-sources/index.ts');
- const admin=source('admin-web-sources.js');
+test('GURU não busca em fontes externas, somente no catálogo interno',()=>{
  const chat=source('guru-engine-v4.js');
- const catalog=source('guru-approved-products.mjs');
- assert.match(server,/guru_web_sources\?select/);
- assert.match(server,/site\.hostname!==catalog\.hostname/);
- assert.match(server,/profiles\[0\]\?\.role!=="admin"/);
- assert.match(server,/permittedByRobots/);
- assert.match(server,/guru_web_claim_refresh/);
- assert.match(server,/action==="refresh"/);
- assert.match(server,/availability:"unknown"/);
- assert.match(server,/redirect:"error"/);
- assert.match(chat,/approvedSourceProducts\(text\)/);
- assert.match(chat,/displayWebProducts/);
- assert.match(chat,/Estoque não confirmado/);
- assert.match(admin,/guruSourceForm/);
- assert.match(admin,/async function synchronize\(source\)/);
- assert.match(catalog,/guru_web_products/);
- assert.match(catalog,/isSafeProductUrl/);
-});
-
-
-test('Indexador autorizado coleta várias páginas em lotes limitados e mantém cursor',()=>{
- const edge=source('supabase/functions/guru-approved-sources/index.ts');
- const admin=source('admin-web-sources.js');
- const publicQuery=source('guru-approved-products.mjs');
- assert.match(edge,/PAGE_BATCH=3,MAX_PAGE=200/);
- assert.match(edge,/next_page/);
- assert.match(edge,/pageUrl\.searchParams\.set\("page",String\(nextPage\)\)/);
- assert.match(edge,/permittedByRobots\(robotsText,pageUrl\.pathname/);
- assert.match(edge,/pageUrl\.origin!==site\.origin/);
- assert.match(edge,/redirect:"error"/);
- assert.match(edge,/resolution=ignore-duplicates/);
- assert.match(edge,/indexed_count/);
- assert.match(edge,/sync_status:status/);
- assert.match(admin,/Produtos indexados:/);
- assert.match(admin,/próxima página:/);
- assert.match(publicQuery,/limit=1000/);
- assert.match(publicQuery,/matches\.slice\(0,12\)/);
-});
-
-
-test('Site sem autorização de coleta preserva os produtos e desativa sincronizações',()=>{
- const edge=source('supabase/functions/guru-approved-sources/index.ts');
- const admin=source('admin-web-sources.js');
- const catalog=source('guru-approved-products.mjs');
- assert.match(edge,/s\.auto_sync_enabled===false/);
- assert.match(edge,/robots\.status/);
- assert.match(edge,/permittedByRobots/);
- assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
- assert.match(admin,/o botão sincroniza apenas produtos do Supabase/);
- assert.match(catalog,/if\(source\.auto_sync_enabled!==true\)return false/);
-});
-
-
-test('Erro HTTP 403 do robots bloqueia apenas a coleta, sem afetar produtos cadastrados',()=>{
- const edge=source('supabase/functions/guru-approved-sources/index.ts');
- const admin=source('admin-web-sources.js');
- assert.match(edge,/robots\.status===401\|\|robots\.status===403/);
- assert.match(edge,/auto_sync_enabled:false/);
- assert.match(edge,/permission_required/);
- assert.match(edge,/Os produtos já cadastrados continuam disponíveis/);
- assert.match(admin,/explainSourceError/);
- assert.match(admin,/Consulta automática indisponível/);
- assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
-});
-
-
-test('Cadastro manual de produtos e sincronização do catálogo sem crawling bloqueado',()=>{
- const admin=source('admin-web-sources.js');
- assert.match(admin,/guruManualProductForm/);
- assert.match(admin,/guruManualName/);
- assert.match(admin,/guruManualUrl/);
- assert.match(admin,/async function addManualProduct/);
- assert.match(admin,/site\.origin!==url\.origin/);
- assert.match(admin,/ignoreDuplicates:true/);
- assert.match(admin,/availability:'unknown'/);
- assert.match(admin,/async function synchronize\(source\)/);
- assert.match(admin,/count:'exact',head:true/);
- assert.match(admin,/indexed_count:quantity/);
- assert.match(admin,/sync\.textContent='Sincronizar catálogo'/);
- assert.doesNotMatch(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
+ const admin=source('admin-post-login-loader.js');
+ assert.match(chat,/searchStores\(db,state,position,\{limit:6\}\)/);
+ assert.match(chat,/if\(!rows.length\)\{add\(explainEmptySearch/);
+ assert.doesNotMatch(chat,/approvedSourceProducts|displayWebProducts|guru-approved-products/);
+ assert.doesNotMatch(admin,/admin-web-sources/);
+ for(const path of ['guru-approved-products.mjs','admin-web-sources.js','supabase/functions/guru-approved-sources/index.ts'])
+  assert.equal(existsSync(resolve(root,path)),false,path+' deveria ter sido retirado');
 });

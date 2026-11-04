@@ -924,3 +924,22 @@ test('filtros explícitos continuam valendo mesmo com score alto',()=>{
  const matches=searchStores({stores:[sponsored,normal],products:[],hours:[],reviews:[],knowledge:[]},state);
  assert.deepEqual(matches.map(x=>x.store.id),['normal']);
 });
+
+
+test('busca não dá bônus de nome citado a lojas sem nome ou com substring incidental',()=>{
+ const shops=[
+  shop('empty','Comida','Pizzaria',{name:''}),
+  shop('letter','Comida','Pizzaria',{name:'A'}),
+  shop('exact','Comida','Pizzaria',{name:'Pizzaria'})
+ ];
+ const state=nextState(emptyState(),plan('pizzaria'));
+ const rows=searchStores({stores:shops,products:[],hours:[],reviews:[],knowledge:[]},state,null,{limit:10});
+ const byId=new Map(rows.map(row=>[row.store.id,row]));
+ assert.equal(byId.has('empty'),true);
+ assert.equal(byId.has('letter'),true);
+ assert.equal(byId.has('exact'),true);
+ assert.equal(byId.get('empty').reason.includes('loja citada'),false);
+ assert.equal(byId.get('letter').reason.includes('loja citada'),false);
+ assert.equal(byId.get('exact').reason.includes('loja citada'),true);
+ assert.ok(byId.get('exact').score>byId.get('letter').score);
+});

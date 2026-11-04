@@ -64,11 +64,11 @@ function parseFilters(raw,prev={},options={}){
  // 'Fim de semana' significa sábado OU domingo, não a data de hoje.
  if(/\bfim de semana\b/.test(n)){f.days=[0,6];f.day=null;f.openNow=false}
  const day=dayOf(n,options.today??new Date().getDay());if(day!==null){f.day=day;f.days=null;f.openNow=false}
- if(/\b(sem entrega|sem delivery|nao quero entrega|nao quero delivery)\b/.test(n))f.delivery=false;
- else if(/\b(com entrega|delivery|faz entrega|faca entrega|oferece entrega|realiza entrega|entrega rapida|entrega hoje)\b/.test(n))f.delivery=true;
- if(/\b(para retirar|com retirada|retirada na loja|buscar na loja|permita retirada|permite retirada|oferece retirada|faz retirada)\b/.test(n))f.pickup=true;
+ if(/\b(sem entrega|sem delivery|nao quero entrega|nao quero delivery|nao faz entrega|nao oferece entrega|nao realiza entrega|nao entrega)\b/.test(n))f.delivery=false;
+ else if(/\b(com entrega|delivery|faz entrega|faca entrega|oferece entrega|realiza entrega|entrega rapida|entrega hoje|leva (?:a )?pizza em casa|entrega em domicilio|levar (?:a )?pizza em casa)\b/.test(n))f.delivery=true;
+ if(/\b(para retirar|com retirada|retirada na loja|buscar na loja|buscar (?:a )?pizza no balcao|retirar no balcao|retirada no balcao|permita retirada|permite retirada|oferece retirada|faz retirada)\b/.test(n))f.pickup=true;
  else if(/\b(sem retirada)\b/.test(n))f.pickup=false;
- if(/\b(melhor avaliadas?|maior nota|bem avaliadas?|bem avaliados?)\b/.test(n))f.sort='rating';
+ if(/\b(melhor avaliadas?|maior nota|bem avaliadas?|bem avaliados?|melhor reputacao|mais bem avaliadas?)\b/.test(n))f.sort='rating';
  else if(/\b(mais proxim[oa]s?|mais perto|perto de mim)\b/.test(n))f.sort='distance';
  else if(/\b(mais barat[oa]s?|barat[oa]s?|economicos?|economicas?|menor preco)\b/.test(n))f.sort='price';
  const maxKm=amount(n,/\b(?:ate|no maximo|maximo)\s*(\d+(?:[.,]\d+)?)\s*km\b/);if(maxKm!==null)f.maxDistance=maxKm;
@@ -81,7 +81,7 @@ function parseFilters(raw,prev={},options={}){
  const priceRange=priceText.match(/\bentre\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:e|a)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?)?\b/);
  if(priceRange){f.minPrice=asNum(priceRange[1]);f.maxPrice=asNum(priceRange[2])}
  else{
-  const maxPrice=amount(priceText,/\b(?:ate|menos de|maximo|no maximo)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?|rs|r)?\b(?!\s*(?:h|horas|km|m|minutos)\b)/);
+  const maxPrice=amount(priceText,/\b(?:ate|menos de|abaixo de|maximo|no maximo)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?|rs|r)?\b(?!\s*(?:h|horas|km|m|minutos)\b)/);
   if(maxPrice!==null)f.maxPrice=maxPrice;
   const minPrice=amount(priceText,/\b(?:acima de|mais de|a partir de)\s*(?:r\s*)?(\d+(?:[.,]\d+)?)\s*(?:reais?)?\b/);if(minPrice!==null)f.minPrice=minPrice;
  }
@@ -94,6 +94,7 @@ function parseFilters(raw,prev={},options={}){
  if(/\b(?:pix|pagamento por pix)\b/.test(n))f.payment='pix';
  else if(/\b(?:cartao de credito|credito)\b/.test(n))f.payment='credito';
  else if(/\b(?:cartao de debito|debito)\b/.test(n))f.payment='debito';
+ else if(/\bcartao\b/.test(n))f.payment='cartao';
  else if(/\bdinheiro\b/.test(n))f.payment='dinheiro';
  const rangeAfter=n.match(/\b(?:depois das|apos as|a partir das)\s*(\d{1,2})(?::(\d{2}))?/);
  const rangeBefore=n.match(/\b(?:antes das|ate as)\s*(\d{1,2})(?::(\d{2}))?/);
@@ -153,10 +154,10 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
 
  const reference=getReference(n);
  const ask= /\b(que horas|horario|abre|fecha|funciona)\b/.test(n)?'hours':
- /\b(quanto fica com entrega|valor com entrega|preco com frete)\b/.test(n)?'total':
+ /\b(quanto fica com entrega|valor com entrega|preco com frete|quanto custa .* com entrega|quanto sairia .* com entrega)\b/.test(n)?'total':
  /\b(entrega|delivery|frete)\b/.test(n)&&!/\b(com entrega|sem entrega|entrega rapida|entrega em ate)\b/.test(n)?'delivery':
  /\b(aceita\s+(?:pix|cartao|credito|debito|dinheiro)|pix|pagamento|cartao|credito|debito)\b/.test(n)?'payment':
- /\b(endereco|onde fica|localizacao)\b/.test(n)?'address':
+ /\b(endereco|onde fica|fica onde|localizacao)\b/.test(n)?'address':
  /\b(whatsapp|telefone|contato)\b/.test(n)?'contact':
  /\b(avaliacao|nota|reviews)\b/.test(n)?'rating':
  /\b(produtos|cardapio|estoque|tem|vende|tamanho)\b/.test(n)?'products':null;
@@ -287,7 +288,8 @@ function semanticHit(token,text){
   vegetariano:/\bvegetarian[ao]s?\b/,vegetariana:/\bvegetarian[ao]s?\b/,
   familia:/\b(familia|familiar|criancas)\b/,familiar:/\b(familia|familiar|criancas)\b/,
   tranquilo:/\b(tranquil[ao]|sossegad[ao]|calm[ao])\b/,
-  sossegado:/\b(tranquil[ao]|sossegad[ao]|calm[ao])\b/
+  sossegado:/\b(tranquil[ao]|sossegad[ao]|calm[ao])\b/,
+  artesanal:/\bartesan(?:al|ais)\b/
  };
  // Não confundir "bar" com "barbearia" nem aceitar correspondência dentro de palavras.
  return families[n]?families[n].test(text):has(text,n);

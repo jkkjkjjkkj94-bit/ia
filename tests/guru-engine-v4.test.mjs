@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import {taxonomy as registeredTaxonomy,categoryAliases as registeredAliases} from '../ai-taxonomy.js';
 
 import assert from 'node:assert/strict';
-import {interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,eligibleProduct,scheduleMatches,distanceKm,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
+import {interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,storeRankingPoints,eligibleProduct,scheduleMatches,distanceKm,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
 
 const tax={
  Comida:{Pizzaria:['pizza','pizzaria'],Japonesa:['comida japonesa','japonesa','sushi'],Doceria:['doces','doce','doceria','confeitaria']},
@@ -867,4 +867,60 @@ test('classificação nunca contorna filtros de disponibilidade ou status',()=>{
  const state=nextState(emptyState(),plan('pizzaria com entrega'));
  const rows=searchStores({stores:[verified,sponsored,normal],hours:[],products:[],reviews:[],knowledge:[]},state);
  assert.deepEqual(rows.map(r=>r.store.id),['normal']);
+});
+
+
+test('score de classificação usa faixas claras e dados verificáveis (0 a 100)',()=>{
+ const details={
+  name:'Pizzaria Completa',category:'Comida',group:'Pizzaria',
+  address:'Rua São José, 100 - Sorocaba - SP',latitude:-23.5,longitude:-47.4,
+  description:'Pizzas e massas',phone:'15999999999',logo_url:'https://example.com/logo.png',
+  payment_methods:['Pix']
+ };
+ const catalog={
+  products:[row('complete','Pizza Mussarela',{stock:4,active:true,show_in_ai:true})],
+  hours:[{store_id:'complete',weekday:6,opens_at:'10:00',closes_at:'20:00',closed:false}],
+  reviews:[{store_id:'complete',rating:5}]
+ };
+ const normal=storeRankingPoints({...details,verified:false,sponsored:false},catalog);
+ const verified=storeRankingPoints({...details,verified:true,sponsored:false},catalog);
+ const sponsored=storeRankingPoints({...details,verified:false,sponsored:true},catalog);
+ assert.deepEqual([normal.total,verified.total,sponsored.total],[30,65,100]);
+ assert.equal(normal.tierName,'Normal');
+ assert.equal(verified.tierName,'Verificada');
+ assert.equal(sponsored.tierName,'Patrocinada');
+ assert.equal(normal.details.reduce((sum,p)=>sum+p.earned,0),normal.total);
+});
+
+test('pontuação não recompensa estoque inexistente, localização inválida ou dados ausentes',()=>{
+ const absent=shop('s','Comida','Pizzaria',{latitude:'',longitude:'',description:'',phone:'',logo_url:'',payment_methods:[]});
+ const score=storeRankingPoints(absent,{
+  hours:[{store_id:'s',weekday:2,closed:true}],
+  products:[row('s','Pizza',{stock:0,active:true,show_in_ai:true})],
+  reviews:[{store_id:'s',rating:10}]
+ });
+ assert.equal(score.details.find(x=>x.label==='Localização válida').earned,0);
+ assert.equal(score.details.find(x=>x.label==='Produto disponível').earned,0);
+ assert.equal(score.details.find(x=>x.label==='Horário informado').earned,0);
+ assert.equal(score.details.find(x=>x.label==='Avaliação dos clientes').earned,0);
+ assert.ok(score.total<30);
+ assert.equal(score.details.reduce((sum,p)=>sum+p.earned,0),score.total);
+});
+
+test('score superior ordena primeiro entre lojas da mesma classificação',()=>{
+ const rich=shop('rich','Comida','Pizzaria',{name:'ZZZ Cadastro Completo',description:'Descrição',address:'Rua C, 100 - SP',latitude:-23.5,longitude:-47.4,payment_methods:['Pix'],logo_url:'https://example.com/c.png',phone:'15999999999'});
+ const basic=shop('basic','Comida','Pizzaria',{name:'AAA Cadastro Básico',description:'',address:'',payment_methods:[],latitude:null,longitude:null});
+ const db={stores:[basic,rich],products:[row('rich','Pizza',{stock:5})],hours:[{store_id:'rich',weekday:6,opens_at:'10:00',closes_at:'18:00',closed:false}],reviews:[{store_id:'rich',rating:5}],knowledge:[]};
+ const state=nextState(emptyState(),plan('pizzaria'));
+ const found=searchStores(db,state,null,{limit:10});
+ assert.deepEqual(found.map(r=>r.store.id),['rich','basic']);
+ assert.ok(found[0].rankScore>found[1].rankScore);
+});
+
+test('filtros explícitos continuam valendo mesmo com score alto',()=>{
+ const sponsored=shop('sponsored','Comida','Pizzaria',{sponsored:true,delivery:false});
+ const normal=shop('normal','Comida','Pizzaria',{delivery:true});
+ const state=nextState(emptyState(),plan('pizzaria com entrega'));
+ const matches=searchStores({stores:[sponsored,normal],products:[],hours:[],reviews:[],knowledge:[]},state);
+ assert.deepEqual(matches.map(x=>x.store.id),['normal']);
 });

@@ -466,6 +466,22 @@ export function searchStores(data={},state={},position=null,options={}){
   output.push({store,products:eligible,score,reason:reasons,distance:km,rating:avg,reviewCount:rv?.count||0,minPrice:eligible.length?Math.min(...eligible.map(p=>priceOf(p,now.getTime()))):null});
  }
  const sort=f.sort;
- output.sort((a,b)=>sort==='distance'?(a.distance??Infinity)-(b.distance??Infinity):sort==='price'?(a.minPrice??Infinity)-(b.minPrice??Infinity):sort==='rating'?b.rating-a.rating:b.score-a.score||String(a.store.name).localeCompare(String(b.store.name),'pt-BR'));
+ // Ordenação padrão: Patrocinada > Verificada > Normal.
+ // Ordenações solicitadas (mais perto, menor preço ou melhor avaliação) continuam prioritárias.
+ const tier=row=>row.store.sponsored===true?2:row.store.verified===true?1:0;
+ output.sort((a,b)=>{
+  const byTier=tier(b)-tier(a);
+  const fallback=()=>byTier||(b.score-a.score)||String(a.store.name).localeCompare(String(b.store.name),'pt-BR');
+  if(sort==='distance'){
+   const aKm=a.distance??Infinity,bKm=b.distance??Infinity;
+   return (aKm===bKm?0:aKm-bKm)||fallback();
+  }
+  if(sort==='price'){
+   const aPrice=a.minPrice??Infinity,bPrice=b.minPrice??Infinity;
+   return (aPrice===bPrice?0:aPrice-bPrice)||fallback();
+  }
+  if(sort==='rating')return b.rating-a.rating||fallback();
+  return fallback();
+ });
  return output.slice(0,max);
 }

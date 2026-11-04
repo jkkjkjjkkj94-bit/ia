@@ -58,16 +58,17 @@ async function smoke(){
  if(document.querySelector('.guru-typewriter-caret'))throw Error('Cursor não desapareceu ao terminar');
  if(getComputedStyle(grid).display==='none')throw Error('Cards não foram exibidos após a escrita');
  if(!document.querySelector('.store-result-card h3')?.textContent?.includes('Sushi Teste'))throw Error('busca japonesa falhou');
- const blockedRequest=guru.submitText('loja de comida japonesa');
- let writingReply=null;
- for(let i=0;i<40&&!writingReply;i++){writingReply=document.querySelector('.guru-typewriter-caret');if(!writingReply)await sleep(40)}
- if(!writingReply||writingReply.classList.contains('hashtag-intro'))throw Error('Resposta textual não recebeu escrita gradual');
- await blockedRequest;
- if(!document.getElementById('msgs').textContent.includes('não entram na categoria Comida'))throw Error('restrição de varejo falhou');
+ await guru.submitText('loja de comida japonesa');
+ const recentCards=[...document.querySelectorAll('.store-result-card h3')];
+ if(!recentCards.some(x=>x.textContent==='Sushi Teste'))throw Error('loja de comida japonesa não encontrou estabelecimento válido');
  await guru.submitText('pizzaria com entrega em promoção até R$ 40');
  const cards=[...document.querySelectorAll('.store-result-card')];
  if(cards.at(-1)?.querySelector('h3')?.textContent!=='Pizza Teste')throw Error('filtro de promoção falhou');
- await guru.submitText('a primeira abre sábado?');
+ const hoursRequest=guru.submitText('a primeira abre sábado?');
+ let writingReply=null;
+ for(let i=0;i<40&&!writingReply;i++){writingReply=document.querySelector('.guru-typewriter-caret');if(!writingReply)await sleep(40)}
+ if(!writingReply||writingReply.classList.contains('hashtag-intro'))throw Error('Resposta textual não recebeu escrita gradual');
+ await hoursRequest;
  if(!document.getElementById('msgs').textContent.includes('sábado das'))throw Error('contexto de horário falhou');
  await guru.submitText('tem estacionamento?');
  if(!document.getElementById('msgs').textContent.includes('Sim, tem estacionamento.'))throw Error('resposta cadastrada do lojista não funcionou');

@@ -475,7 +475,7 @@ async function run(text){
  renderContext();save();
  const rows=searchStores(db,state,position,{limit:6});
  state.lastResults=rows;
- if(!rows.length){add(explainEmptySearch(db,state));save();return}
+ if(!rows.length){add(explainEmptySearch(db,state,position));save();return}
  displayResults(rows);save();
 }
 async function submitText(raw){

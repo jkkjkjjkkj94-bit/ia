@@ -290,7 +290,8 @@ export function searchStores(data={},state={},position=null,options={}){
   const hits=semanticTerms.filter(t=>semanticHit(t,text)||storeNameTypoHit(t,store.name));
   // A mandatory feature requested in prose must be present in store/catalog information.
   if(featureTerms.length&&!featureTerms.every(t=>semanticHit(t,text)))continue;
-  if(semanticTerms.length&&!hits.length)continue;
+  // Termos específicos são critérios cumulativos: uma palavra no endereço não basta para corresponder ao nome informado.
+  if(semanticTerms.length&&hits.length<semanticTerms.length)continue;
   let score=0,reasons=[];
   if(state.category){score+=30;reasons.push('categoria '+state.category)}
   if(state.group){score+=45;reasons.push('grupo '+state.group)}

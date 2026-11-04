@@ -48,7 +48,7 @@ jobs:
           SERVER_PID=$!
           trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
           sleep 2
-          timeout 45s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --disable-background-networking --virtual-time-budget=15000 --dump-dom "http://127.0.0.1:8765/tests/guru-v4-smoke.html" > /tmp/guru-smoke.html 2>/tmp/guru-chrome.log
+          timeout 75s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --disable-background-networking --virtual-time-budget=55000 --dump-dom "http://127.0.0.1:8765/tests/guru-v4-smoke.html" > /tmp/guru-smoke.html 2>/tmp/guru-chrome.log
           if ! grep -q 'data-smoke="PASS"' /tmp/guru-smoke.html; then
             echo "Browser smoke test failed";grep -o 'data-report="[^"]*"' /tmp/guru-smoke.html || true
             tail -n 25 /tmp/guru-chrome.log || true

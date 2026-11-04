@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import {taxonomy as registeredTaxonomy,categoryAliases as registeredAliases} from '../ai-taxonomy.js';
 
 import assert from 'node:assert/strict';
-import {interpret,emptyState,nextState,searchStores,eligibleProduct,scheduleMatches,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
+import {interpret,emptyState,nextState,searchStores,eligibleProduct,scheduleMatches,distanceKm,normalizeQuery,retailFoodConflict} from '../guru-engine-v4-core.mjs';
 
 const tax={
  Comida:{Pizzaria:['pizza','pizzaria'],Japonesa:['comida japonesa','japonesa','sushi'],Doceria:['doces','doce','doceria','confeitaria']},
@@ -350,4 +350,111 @@ test('todas as 10 categorias e 50 grupos da taxonomia são reconhecidos com cont
    assert.deepEqual(results.map(r=>r.store.id),['g'+i],question);
   }
  }
+});
+
+
+test('conversa consecutiva: busca, proximidade, seleção, entrega, produtos e troca de categoria',()=>{
+ const sweetNearby=shop('sweet-near','Comida','Doceria',{name:'Doceria Próxima',latitude:-23.5,longitude:-47.4,delivery:true});
+ const sweetFar=shop('sweet-far','Comida','Doceria',{name:'Doceria Distante',latitude:-23.7,longitude:-47.6,delivery:false});
+ const pizzeria=shop('pizza-new','Comida','Pizzaria',{name:'Pizzaria Nova',latitude:-23.6,longitude:-47.4,delivery:true});
+ const ds={stores:[sweetFar,sweetNearby,pizzeria],products:[
+  row('sweet-near','Brigadeiro',{stock:4}),row('sweet-far','Bolo',{stock:0}),
+  row('pizza-new','Pizza',{stock:3})
+ ],reviews:[],knowledge:[],hours:[
+  {store_id:'sweet-near',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false},
+  {store_id:'sweet-far',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false}
+ ]};
+ let s=emptyState();
+ const first=plan('Quero uma doceria.',s);
+ assert.equal(first.kind,'search');
+ s=nextState(s,first);
+ assert.equal(s.group,'Doceria');
+ s.lastResults=searchStores(ds,s);
+ assert.deepEqual(s.lastResults.map(r=>r.store.id).sort(),['sweet-far','sweet-near']);
+ const near=plan('Qual fica mais perto?',s);
+ assert.equal(near.kind,'search');
+ assert.equal(near.filters.sort,'distance');
+ s=nextState(s,near);
+ s.lastResults=searchStores(ds,s,{lat:-23.5005,lng:-47.4005});
+ assert.equal(s.lastResults[0].store.id,'sweet-near');
+ const selected=plan('A primeira abre sábado?',s);
+ assert.equal(selected.kind,'select');assert.equal(selected.index,0);
+ assert.equal(selected.ask,'hours');assert.equal(selected.filters.day,6);
+ s.selectedStore=s.lastResults[0].store;
+ assert.equal(plan('Ela faz entrega?',s).ask,'delivery');
+ assert.equal(plan('Quais produtos vende?',s).ask,'products');
+ const switchTopic=plan('Agora quero encontrar uma pizzaria.',s);
+ assert.equal(switchTopic.kind,'search');
+ s=nextState(s,switchTopic);
+ assert.equal(s.group,'Pizzaria');
+ assert.equal(s.filters.sort,undefined,'ordenação antiga deve ser descartada');
+ assert.equal(s.filters.day,undefined,'dia consultado não deve virar filtro antigo');
+ assert.equal(s.selectedStore,null);
+ assert.deepEqual(searchStores(ds,s).map(r=>r.store.id),['pizza-new']);
+});
+
+test('falso negativo: loja com dois turnos no mesmo dia deve abrir no segundo turno',()=>{
+ const st=shop('turnos','Comida','Doceria');
+ const slots=[
+  {store_id:'turnos',weekday:6,opens_at:'08:00',closes_at:'12:00',closed:false},
+  {store_id:'turnos',weekday:6,opens_at:'14:00',closes_at:'19:00',closed:false}
+ ];
+ assert.equal(scheduleMatches(st,slots,{day:6,start:1020,end:1020}),true,'17h deve corresponder ao segundo turno');
+ assert.equal(scheduleMatches(st,slots,{day:6,start:780,end:780}),false,'13h é intervalo fechado');
+ assert.equal(scheduleMatches(st,slots,{day:6,start:600,end:600}),true,'10h corresponde ao primeiro turno');
+});
+
+test('falso positivo: correspondência no interior de outra palavra não equivale a palavra pesquisada',()=>{
+ const barbershop=shop('barber','Beleza','Barbearia',{name:'Barbearia do Centro',description:'Corte de cabelo'});
+ const ds={stores:[barbershop],products:[],reviews:[],knowledge:[],hours:[]};
+ assert.deepEqual(searchStores(ds,nextState(emptyState(),plan('bar'))).map(r=>r.store.id),[],
+  'Bar não deve corresponder apenas ao começo de barbearia');
+ const named=shop('named','Comida','Doceria',{name:'Loja do Misael Teste'});
+ assert.deepEqual(searchStores({...ds,stores:[named]},nextState(emptyState(),plan('Misa'))).map(r=>r.store.id),['named'],
+  'Busca parcial por nome da loja deve continuar funcionando');
+});
+
+test('falso positivo: produtos sem publicação ativa comprovada não podem ser recomendados',()=>{
+ const base=row('store','Brigadeiro',{stock:5});
+ assert.equal(eligibleProduct({...base,active:null}),false);
+ assert.equal(eligibleProduct({...base,show_in_ai:null}),false);
+ assert.equal(eligibleProduct({...base,active:true,show_in_ai:true}),true);
+ assert.equal(eligibleProduct({...base,stock:0}),false);
+});
+
+test('falso positivo de localização: coordenadas ausentes, inválidas ou vazias não contam como distância real',()=>{
+ const pos={lat:-23.5,lng:-47.4};
+ assert.equal(distanceKm(pos,{latitude:'',longitude:''}),null);
+ assert.equal(distanceKm(pos,{latitude:100,longitude:-47.4}),null);
+ assert.equal(distanceKm({lat:999,lng:0},{latitude:-23.5,longitude:-47.4}),null);
+ assert.equal(distanceKm(pos,{latitude:null,longitude:-47.4}),null);
+ assert.ok(distanceKm(pos,{latitude:-23.5,longitude:-47.401})>0);
+});
+
+test('múltiplos filtros, produto indisponível e ausência de resultados não inventam estabelecimentos',()=>{
+ const a=shop('a','Comida','Doceria',{delivery:true,payment_methods:['Pix']});
+ const b=shop('b','Comida','Doceria',{delivery:false,payment_methods:['Pix']});
+ const dataset={stores:[a,b],hours:[
+  {store_id:'a',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false},
+  {store_id:'b',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false}
+ ],reviews:[{store_id:'a',rating:5},{store_id:'b',rating:3}],
+ products:[row('a','Bolo',{stock:0})],knowledge:[]};
+ assert.deepEqual(searchStores(dataset,nextState(emptyState(),plan('doceria com entrega aberta sábado nota acima de 4'))).map(r=>r.store.id),['a']);
+ assert.deepEqual(searchStores(dataset,nextState(emptyState(),plan('doceria sem entrega aberta sábado nota acima de 4'))).map(r=>r.store.id),[]);
+ assert.deepEqual(searchStores(dataset,nextState(emptyState(),plan('pizzaria'))).map(r=>r.store.id),[]);
+ assert.deepEqual(searchStores(dataset,nextState(emptyState(),plan('doceria em promoção'))).map(r=>r.store.id),[]);
+});
+
+
+test('filtros simultâneos de nota e preço aplicam quantias separadamente',()=>{
+ const st=shop('premium','Comida','Doceria',{delivery:true});
+ const ds={stores:[st],hours:[],reviews:[{store_id:'premium',rating:5}],knowledge:[],
+  products:[row('premium','Bolo de chocolate',{stock:5,price:35})]};
+ const p=plan('doceria com entrega nota acima de 4 e bolo até R$ 40');
+ assert.equal(p.filters.minRating,4);
+ assert.equal(p.filters.maxPrice,40);
+ assert.equal(p.filters.minPrice,undefined);
+ assert.deepEqual(searchStores(ds,nextState(emptyState(),p)).map(r=>r.store.id),['premium']);
+ const tooCheap=plan('doceria com entrega nota acima de 4 e bolo até R$ 20');
+ assert.deepEqual(searchStores(ds,nextState(emptyState(),tooCheap)).map(r=>r.store.id),[]);
 });

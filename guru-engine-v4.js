@@ -1,6 +1,6 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=7';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=8';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
@@ -134,10 +134,20 @@ function restore(){
 }
 function rehydrate(){
  if(!db)return;
- if(state._selectedId)state.selectedStore=db.stores.find(s=>s.id===state._selectedId)||null;
- if(state._productId)state.selectedProduct=db.products.find(p=>p.id===state._productId)||null;
- if(state._lastIds?.length)state.lastResults=state._lastIds.map(id=>{const st=db.stores.find(s=>s.id===id);return st?{store:st,products:db.products.filter(p=>p.store_id===id&&eligibleProduct(p)),reason:[],rating:0,distance:distanceKm(position,st)}:null}).filter(Boolean);
+ // Em toda atualização, referências da conversa precisam refletir apenas dados ativos.
+ const currentStore=id=>id?(db.stores||[]).find(s=>s.id===id&&s.active===true&&s.status==='active')||null:null;
+ const selectedId=state._selectedId||state.selectedStore?.id;
+ state.selectedStore=currentStore(selectedId);
+ const productId=state._productId||state.selectedProduct?.id;
+ state.selectedProduct=state.selectedStore&&productId?(db.products||[]).find(p=>p.id===productId&&p.store_id===state.selectedStore.id&&eligibleProduct(p))||null:null;
+ const ids=Array.isArray(state._lastIds)?state._lastIds:(state.lastResults||[]).map(r=>r.store?.id).filter(Boolean);
+ if(ids.length){
+  // Reaplica todos os filtros para impedir seleção de loja desativada ou sem requisito obrigatório.
+  const valid=new Map(searchStores(db,state,position,{limit:db.stores.length}).map(row=>[row.store.id,row]));
+  state.lastResults=ids.map(id=>valid.get(id)).filter(Boolean);
+ }else state.lastResults=[];
  delete state._lastIds;delete state._selectedId;delete state._productId;
+ renderContext();
 }
 async function read(project,table,query=''){
  // Pagina resultados com ordenação estável: a API pode limitar respostas a 1.000 registros.
@@ -207,12 +217,12 @@ function getCityFromAddress(address=''){
  const m=s.match(/(?:^|,|·)\s*([^,·-]{2,55})\s*-\s*([A-Z]{2})(?:\b|$)/i);
  return m?m[1].trim():null;
 }
-function applyLocation(raw){
+function applyLocation(raw,target=state){
  if(!db)return;
  const n=norm(raw);
- if(/\b(qualquer cidade|todas as cidades|sem cidade)\b/.test(n)){state.location={city:null,uf:null,neighborhood:null};return}
+ if(/\b(qualquer cidade|todas as cidades|sem cidade)\b/.test(n)){target.location={city:null,uf:null,neighborhood:null};return}
  for(const city of [...new Set(db.stores.map(s=>getCityFromAddress(s.address)).filter(Boolean))].sort((a,b)=>b.length-a.length)){
-  if(n.includes('em '+norm(city))||n.includes('na cidade de '+norm(city))||n.includes('de '+norm(city))){state.location={city,uf:null,neighborhood:null};return}
+  if(n.includes('em '+norm(city))||n.includes('na cidade de '+norm(city))||n.includes('de '+norm(city))){target.location={city,uf:null,neighborhood:null};return}
  }
 }
 function isLocationSearch(raw,plan){
@@ -404,11 +414,21 @@ function replyAboutStore(text,ask,filter={}){
  const s=state.selectedStore;if(!s){add('Escolha uma das opções encontradas antes de perguntar sobre ela.');return}
  const n=norm(text),day=filter.day??state.filters.day??new Date().getDay();
  const record=(db?.knowledge||[]).find(k=>k.store_id===s.id&&k.active!==false&&[k.question,...(Array.isArray(k.variations)?k.variations:[])].some(q=>norm(q).length>=4&&(norm(text).includes(norm(q))||norm(q).includes(norm(text)))));
- if(record?.answer&&ask!=='total'){add(String(record.answer));return}
+ // Respostas livres não podem contradizer campos estruturados, como entrega e horários.
+ const structuredAsk=['hours','total','delivery','payment','address','contact','rating'].includes(ask);
+ const explicitCatalog=ask==='products'&&/\b(produtos|produto|cardapio|estoque|vende|vender|comprar|tamanho)\b/.test(n);
+ if(record?.answer&&!structuredAsk&&!explicitCatalog){add(String(record.answer));return}
  if(ask==='knowledge'){if(db.unavailable.knowledge){add('Não consegui consultar as respostas cadastradas desta loja agora. Tente novamente.');return}add('Não encontrei uma resposta específica cadastrada. Dados da loja: '+[s.name,s.category,s.group,s.address].filter(Boolean).join(' · ')+'.');return}
  if(ask==='hours'){
-  const h=db.hours.find(x=>x.store_id===s.id&&Number(x.weekday)===day);
-  add(!h?'Essa loja ainda não informou o horário de '+dayNames[day]+'.':h.closed?'Essa loja está cadastrada como fechada no '+dayNames[day]+'.':s.name+' funciona no '+dayNames[day]+' das '+String(h.opens_at).slice(0,5)+' às '+String(h.closes_at).slice(0,5)+'.');return;
+  if(db.unavailable.hours){add('Não consegui consultar os horários dessa loja agora. Tente novamente.');return}
+  const entries=(db.hours||[]).filter(x=>x.store_id===s.id&&Number(x.weekday)===day);
+  const open=entries.filter(h=>!h.closed&&h.opens_at&&h.closes_at);
+  if(open.length){
+   const ranges=open.map(h=>'das '+String(h.opens_at).slice(0,5)+' às '+String(h.closes_at).slice(0,5));
+   add(s.name+' funciona no '+dayNames[day]+' '+ranges.join(' e ')+'.');
+  }else if(entries.length&&entries.every(x=>x.closed))add('Essa loja está cadastrada como fechada no '+dayNames[day]+'.');
+  else add('Essa loja ainda não informou o horário de '+dayNames[day]+'.');
+  return;
  }
  if(ask==='total'){
   if(!s.delivery){add('Essa loja não possui entrega cadastrada.');return}
@@ -421,7 +441,7 @@ function replyAboutStore(text,ask,filter={}){
  if(ask==='payment'){const methods=s.payment_methods||[];add(methods.length?s.name+' aceita '+methods.join(', ')+'.':'Essa loja ainda não informou formas de pagamento.');return}
  if(ask==='address'){add(s.address||'Essa loja ainda não informou o endereço.');return}
  if(ask==='contact'){add(s.whatsapp?'WhatsApp: '+s.whatsapp:s.phone?'Telefone: '+s.phone:'Essa loja ainda não informou um contato.');return}
- if(ask==='rating'){const rv=ratingsMap(db.reviews).get(s.id);add(rv?'Avaliação real: '+(rv.sum/rv.count).toFixed(1)+'/5 em '+rv.count+' avaliação(ões).':'Essa loja ainda não possui avaliações cadastradas.');return}
+ if(ask==='rating'){if(db.unavailable.reviews){add('Não consegui consultar as avaliações dessa loja agora. Tente novamente.');return}const rv=ratingsMap(db.reviews).get(s.id);add(rv?'Avaliação real: '+(rv.sum/rv.count).toFixed(1)+'/5 em '+rv.count+' avaliação(ões).':'Essa loja ainda não possui avaliações cadastradas.');return}
  const ps=productListFor(s,text);
  if(!ps.length){add('Não encontrei produto ativo e disponível em estoque que corresponda a essa pergunta.');return}
  if(ps.length===1)state.selectedProduct=ps[0];
@@ -437,19 +457,21 @@ async function run(text){
   const index=plan.index<0?state.lastResults.length-1:plan.index,row=state.lastResults[index];
   if(!row){add('Essa opção não existe na lista atual.');return}
   state.selectedStore=row.store;state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;
-  if(plan.ask){if(plan.filters?.day!=null)state.filters.day=plan.filters.day;replyAboutStore(text,plan.ask,plan.filters);renderContext();save()}else chooseStore(row);
+  if(plan.ask){replyAboutStore(text,plan.ask,plan.filters);renderContext();save()}else chooseStore(row);
   return;
  }
- if(plan.kind==='ask'){if(plan.filters?.day!=null)state.filters.day=plan.filters.day;replyAboutStore(text,plan.ask,plan.filters);renderContext();save();return}
+ if(plan.kind==='ask'){replyAboutStore(text,plan.ask,plan.filters);renderContext();save();return}
  if(plan.kind!=='search')return;
- if(isLocationSearch(text,plan)&&!position&&(!state.location?.city)){
+ if(isLocationSearch(text,plan)&&!position){
   await locate(false);
   if(!position){add('Para aplicar distância ou proximidade real, permita o acesso à localização no navegador. Não vou apresentar opções como próximas sem confirmar isso.');return}
  }
- state=nextState(state,plan);
- applyLocation(text);
- if(db.unavailable.hours&&(state.filters.openNow||state.filters.day!=null||(Array.isArray(state.filters.days)&&state.filters.days.length)||state.filters.start!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
- if(db.unavailable.reviews&&state.filters.minRating!=null){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
+ // Valide dados obrigatórios antes de trocar o contexto. Uma falha não deve apagar a loja selecionada.
+ const draft=nextState(state,plan);
+ applyLocation(text,draft);
+ if(db.unavailable.hours&&(draft.filters.openNow||draft.filters.day!=null||(Array.isArray(draft.filters.days)&&draft.filters.days.length)||draft.filters.start!=null||draft.filters.end!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
+ if(db.unavailable.reviews&&(draft.filters.minRating!=null||draft.filters.sort==='rating')){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
+ state=draft;
  renderContext();save();
  const rows=searchStores(db,state,position,{limit:6});
  state.lastResults=rows;

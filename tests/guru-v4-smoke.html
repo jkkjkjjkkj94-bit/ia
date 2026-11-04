@@ -19,11 +19,15 @@ const products=[
 ];
 const hours=[
  {store_id:'sushi',weekday:6,opens_at:'18:00',closes_at:'23:00',closed:false},
- {store_id:'pizza',weekday:6,opens_at:'11:00',closes_at:'23:00',closed:false}
+ {store_id:'pizza',weekday:6,opens_at:'11:00',closes_at:'13:00',closed:false},
+ {store_id:'pizza',weekday:6,opens_at:'17:00',closes_at:'23:00',closed:false},
+ {store_id:'sweet',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false}
 ];
+window.smokeFailHours=false;window.smokeFailReviews=false;window.smokeDisableStore=null;
 window.fetch=async url=>{
  const path=String(url),table=(path.match(/\/rest\/v1\/(local_ai_[a-z_]+)/)||[])[1];
- const values={local_ai_stores:stores,local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[{store_id:'pizza',question:'tem estacionamento?',variations:['possui estacionamento?'],answer:'Sim, tem estacionamento.',active:true}],local_ai_taxonomy_categories:[{id:'c1',name:'Comida',active:true}],local_ai_taxonomy_groups:[{id:'g1',category_id:'c1',name:'Japonesa',active:true},{id:'g2',category_id:'c1',name:'Pizzaria',active:true},{id:'g3',category_id:'c1',name:'Doceria',active:true}],local_ai_taxonomy_terms:[{id:'t1',category_id:'c1',group_id:'g3',term:'doces',active:true}]};
+ if((table==='local_ai_store_hours'&&window.smokeFailHours)||(table==='local_ai_reviews'&&window.smokeFailReviews))return new Response('Falha simulada de rede',{status:503});
+ const values={local_ai_stores:stores.filter(s=>s.id!==window.smokeDisableStore),local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[{store_id:'pizza',question:'tem estacionamento?',variations:['possui estacionamento?'],answer:'Sim, tem estacionamento.',active:true},{store_id:'pizza',question:'ela faz entrega?',variations:[],answer:'Não, ela não faz entrega.',active:true}],local_ai_taxonomy_categories:[{id:'c1',name:'Comida',active:true}],local_ai_taxonomy_groups:[{id:'g1',category_id:'c1',name:'Japonesa',active:true},{id:'g2',category_id:'c1',name:'Pizzaria',active:true},{id:'g3',category_id:'c1',name:'Doceria',active:true}],local_ai_taxonomy_terms:[{id:'t1',category_id:'c1',group_id:'g3',term:'doces',active:true}]};
  return new Response(JSON.stringify(values[table]||[]),{status:200,headers:{'Content-Type':'application/json'}});
 };
 </script>
@@ -77,9 +81,37 @@ async function smoke(){
  for(let i=0;i<40&&!writingReply;i++){writingReply=document.querySelector('.guru-typewriter-caret');if(!writingReply)await sleep(40)}
  if(!writingReply||writingReply.classList.contains('hashtag-intro'))throw Error('Resposta textual não recebeu escrita gradual');
  await hoursRequest;
- if(!document.getElementById('msgs').textContent.includes('sábado das'))throw Error('contexto de horário falhou');
+ if(!document.getElementById('msgs').textContent.includes('sábado das 11:00 às 13:00 e das 17:00 às 23:00'))throw Error('Resposta de dois turnos falhou');
+ if(guru.getState().filters.day!=null)throw Error('Pergunta de horário gravou sábado como filtro de busca');
  await guru.submitText('tem estacionamento?');
  if(!document.getElementById('msgs').textContent.includes('Sim, tem estacionamento.'))throw Error('resposta cadastrada do lojista não funcionou');
+ await guru.submitText('Ela faz entrega?');
+ if(!document.getElementById('msgs').textContent.includes('Sim, Pizza Teste oferece entrega'))throw Error('Conhecimento desatualizado contradisse entrega cadastrada');
+ await guru.submitText('Quais produtos vende?');
+ if(!document.getElementById('msgs').textContent.includes('Na Pizza Teste, encontrei:'))throw Error('Pergunta de produtos não manteve loja selecionada');
+ await guru.submitText('Agora quero encontrar uma doceria.');
+ if(guru.getState().group!=='Doceria'||guru.getState().filters.promoOnly||guru.getState().selectedStore)throw Error('Troca de categoria herdou filtros ou loja antiga');
+ const resultCards=[...document.querySelectorAll('.store-results-grid')];
+ const lastCard=resultCards.at(-1)?.querySelector('.store-result-card');
+ if(!lastCard||lastCard.querySelector('h3')?.textContent!=='Doceria Teste')throw Error('Nova categoria deixou de encontrar doceria');
+ lastCard.querySelector('.store-action.primary')?.click();
+ if(guru.getState().selectedStore?.id!=='sweet')throw Error('Seleção do card não preservou a loja');
+ window.smokeFailHours=true;
+ await guru.refresh();
+ await guru.submitText('doceria aberta no sábado');
+ if(!document.getElementById('msgs').textContent.includes('Não consegui consultar os horários agora'))throw Error('Falha de horários foi apresentada como ausência de lojas');
+ if(guru.getState().selectedStore?.id!=='sweet')throw Error('Falha de rede apagou seleção anterior');
+ window.smokeFailHours=false;window.smokeFailReviews=true;await guru.refresh();
+ await guru.submitText('Qual a avaliação?');
+ if(!document.getElementById('msgs').textContent.includes('Não consegui consultar as avaliações dessa loja agora'))throw Error('Falha de avaliações foi apresentada como falta de avaliação');
+ await guru.submitText('pizzaria nota acima de 4');
+ if(!document.getElementById('msgs').textContent.includes('Não consegui consultar as avaliações agora'))throw Error('Filtro de nota ignorou falha no banco');
+ if(guru.getState().selectedStore?.id!=='sweet')throw Error('Falha de avaliações alterou loja selecionada');
+ window.smokeFailReviews=false;await guru.refresh();
+ window.smokeDisableStore='sweet';
+ await guru.refresh();
+ if(guru.getState().selectedStore||guru.getState().lastResults.some(r=>r.store.id==='sweet'))throw Error('Loja removida do banco permaneceu selecionável após atualização');
+ window.smokeDisableStore=null;await guru.refresh();
  const input=document.getElementById('q');
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
  for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);

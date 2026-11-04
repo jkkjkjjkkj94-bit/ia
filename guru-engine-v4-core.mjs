@@ -404,11 +404,51 @@ export function explainEmptySearch(data={},state={},position=null){
  }
  return 'Não encontrei estabelecimentos ativos que atendam aos critérios informados. Você pode ampliar a região, retirar um filtro ou tentar outro termo.';
 }
+// Pontuação pública e reproduzível (0–100). Os filtros obrigatórios são aplicados
+// antes da ordenação: pontos nunca tornam uma loja inelegível em resultado válido.
+// Faixas sem sobreposição: Normal 0–30, Verificada 35–65, Patrocinada 70–100.
+export function storeRankingPoints(store={},data={}){
+ const tier=store.sponsored===true?'sponsored':store.verified===true?'verified':'normal';
+ const tierName={sponsored:'Patrocinada',verified:'Verificada',normal:'Normal'}[tier];
+ const base={sponsored:70,verified:35,normal:0}[tier];
+ const products=Array.isArray(data.products)?data.products:[];
+ const hours=Array.isArray(data.hours)?data.hours:[];
+ const reviews=Array.isArray(data.reviews)?data.reviews:[];
+ const filled=value=>typeof value==='string'?value.trim().length>0:value!=null&&value!==false;
+ const coords=filled(store.latitude)&&filled(store.longitude)
+  &&Number.isFinite(Number(store.latitude))&&Number.isFinite(Number(store.longitude))
+  &&Math.abs(Number(store.latitude))<=90&&Math.abs(Number(store.longitude))<=180
+  &&!(Number(store.latitude)===0&&Number(store.longitude)===0);
+ const hasHours=hours.some(h=>h.closed!==true&&filled(h.opens_at)&&filled(h.closes_at));
+ const hasProduct=products.some(p=>p.active===true&&p.show_in_ai===true&&Number(p.stock)>0);
+ const validRatings=reviews.map(r=>Number(r.rating)).filter(n=>Number.isFinite(n)&&n>=1&&n<=5);
+ const avg=validRatings.length?validRatings.reduce((sum,v)=>sum+v,0)/validRatings.length:0;
+ const checks=[
+  ['Nome cadastrado',2,filled(store.name)],
+  ['Categoria e grupo',4,filled(store.category)&&filled(store.group)],
+  ['Endereço',3,filled(store.address)],
+  ['Localização válida',4,coords],
+  ['Descrição',2,filled(store.description)],
+  ['Horário informado',2,hasHours],
+  ['Formas de pagamento',2,Array.isArray(store.payment_methods)&&store.payment_methods.some(filled)],
+  ['Contato',1,[store.phone,store.whatsapp,store.email,store.website].some(filled)],
+  ['Produto disponível',3,hasProduct],
+  ['Foto da loja',2,[store.logo_url,store.image_url].some(filled)]
+ ];
+ const breakdown=[{label:'Classificação: '+tierName,earned:base,max:70},
+  ...checks.map(([label,max,ok])=>({label,earned:ok?max:0,max})),
+  {label:'Avaliação dos clientes',earned:Math.round(avg),max:5}];
+ const earned=breakdown.slice(1).reduce((sum,r)=>sum+r.earned,0);
+ return{total:base+earned,tier,tierName,base,details:breakdown};
+}
+
 export function searchStores(data={},state={},position=null,options={}){
  const stores=data.stores||[],products=data.products||[],hours=data.hours||[],reviews=data.reviews||[],knowledge=data.knowledge||[],f=state.filters||{};
  const rating=ratingsMap(reviews),max=options.limit??6,now=options.now||new Date(),output=[];
  if(f.outOfStockOnly)return output;
- const byStore=new Map(),kByStore=new Map();
+ const byStore=new Map(),kByStore=new Map(),hoursByStore=new Map(),reviewsByStore=new Map();
+ for(const h of hours){if(!hoursByStore.has(h.store_id))hoursByStore.set(h.store_id,[]);hoursByStore.get(h.store_id).push(h)}
+ for(const r of reviews){if(!reviewsByStore.has(r.store_id))reviewsByStore.set(r.store_id,[]);reviewsByStore.get(r.store_id).push(r)}
  for(const p of products){if(!byStore.has(p.store_id))byStore.set(p.store_id,[]);byStore.get(p.store_id).push(p)}
  for(const k of knowledge)if(k.active!==false){if(!kByStore.has(k.store_id))kByStore.set(k.store_id,[]);kByStore.get(k.store_id).push(k)}
  for(const store of stores){
@@ -463,15 +503,15 @@ export function searchStores(data={},state={},position=null,options={}){
   if(norm(state.query).includes(norm(store.name))){score+=45;reasons.unshift('loja citada')}
   if(store.verified)score+=2;
   if(!score){const generic=STOP.has(norm(state.query))||/^(lojas?|comercios?|negocios?|estabelecimentos?|lugares?)\b/.test(norm(state.query));if(!generic)continue;score=1}
-  output.push({store,products:eligible,score,reason:reasons,distance:km,rating:avg,reviewCount:rv?.count||0,minPrice:eligible.length?Math.min(...eligible.map(p=>priceOf(p,now.getTime()))):null});
+  const ranking=storeRankingPoints(store,{products:byStore.get(store.id)||[],hours:hoursByStore.get(store.id)||[],reviews:reviewsByStore.get(store.id)||[]});
+  output.push({store,products:eligible,score,rankScore:ranking.total,reason:reasons,distance:km,rating:avg,reviewCount:rv?.count||0,minPrice:eligible.length?Math.min(...eligible.map(p=>priceOf(p,now.getTime()))):null});
  }
  const sort=f.sort;
- // Ordenação padrão: Patrocinada > Verificada > Normal.
- // Ordenações solicitadas (mais perto, menor preço ou melhor avaliação) continuam prioritárias.
- const tier=row=>row.store.sponsored===true?2:row.store.verified===true?1:0;
+ // O mesmo score 0–100 exibido no Admin determina a ordem padrão dos cards.
+ // Filtros continuam obrigatórios e ordenações explícitas têm precedência.
  output.sort((a,b)=>{
-  const byTier=tier(b)-tier(a);
-  const fallback=()=>byTier||(b.score-a.score)||String(a.store.name).localeCompare(String(b.store.name),'pt-BR');
+  const byRank=b.rankScore-a.rankScore;
+  const fallback=()=>byRank||(b.score-a.score)||String(a.store.name).localeCompare(String(b.store.name),'pt-BR');
   if(sort==='distance'){
    const aKm=a.distance??Infinity,bKm=b.distance??Infinity;
    return (aKm===bKm?0:aKm-bKm)||fallback();

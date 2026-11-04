@@ -1,5 +1,5 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
-import{groupsByCategory}from'./guru-store-groups.js?v=1';
+import{groupsByCategory}from'./ai-taxonomy.js?v=7';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const CLASS_URL='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/admin-pending-stores';
 const CORE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';

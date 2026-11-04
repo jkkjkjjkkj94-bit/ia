@@ -321,3 +321,16 @@ test('Site sem autorização de coleta preserva os produtos e desativa sincroniz
  assert.match(admin,/requer API ou feed autorizado/);
  assert.match(catalog,/if\(source\.auto_sync_enabled!==true\)return false/);
 });
+
+
+test('Erro HTTP 403 do robots bloqueia apenas a coleta, sem afetar produtos cadastrados',()=>{
+ const edge=source('supabase/functions/guru-approved-sources/index.ts');
+ const admin=source('admin-web-sources.js');
+ assert.match(edge,/robots\.status===401\|\|robots\.status===403/);
+ assert.match(edge,/auto_sync_enabled:false/);
+ assert.match(edge,/permission_required/);
+ assert.match(edge,/Os produtos já cadastrados continuam disponíveis/);
+ assert.match(admin,/explainSourceError/);
+ assert.match(admin,/Consulta automática indisponível/);
+ assert.match(admin,/sync\.disabled=!s\.enabled\|\|s\.auto_sync_enabled!==true/);
+});

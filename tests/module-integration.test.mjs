@@ -288,3 +288,13 @@ test('GURU V6 usa alternativas semânticas e correções locais apenas sem resul
  assert.match(module,/semanticAlternative/);
  assert.doesNotMatch(chat,/approvedSourceProducts|guru-approved-products/);
 });
+
+test('GURU V7 possui recuperação por conceito e alternativas sem fontes externas',()=>{
+ const ui=source('guru-engine-v4.js');
+ const guided=source('guru-search-v7.mjs');
+ assert.match(ui,/guidedSearchAlternatives/);
+ assert.match(ui,/noResultGuidance/);
+ assert.match(ui,/rerankSearchResults/);
+ assert.match(guided,/evidenceForRow/);
+ assert.doesNotMatch(ui,/approvedSourceProducts|displayWebProducts/);
+});

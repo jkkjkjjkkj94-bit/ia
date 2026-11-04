@@ -271,7 +271,7 @@ test('GURU não busca em fontes externas, somente no catálogo interno',()=>{
  const chat=source('guru-engine-v4.js');
  const admin=source('admin-post-login-loader.js');
  assert.match(chat,/rows=searchStores\(db,draft,position,\{limit:6\}\)/);
- assert.match(chat,/if\(!rows.length\)\{add\(explainEmptySearch/);
+ assert.match(chat,/if\(!rows.length\)\{\s*const guidance=noResultGuidance/);
  assert.doesNotMatch(chat,/approvedSourceProducts|displayWebProducts|guru-approved-products/);
  assert.doesNotMatch(admin,/admin-web-sources/);
  for(const path of ['guru-approved-products.mjs','admin-web-sources.js','supabase/functions/guru-approved-sources/index.ts'])
@@ -281,10 +281,20 @@ test('GURU não busca em fontes externas, somente no catálogo interno',()=>{
 test('GURU V6 usa alternativas semânticas e correções locais apenas sem resultados',()=>{
  const chat=source('guru-engine-v4.js');
  const module=source('guru-search-v6.mjs');
- assert.match(chat,/searchAlternatives\(text,db,taxonomy,aliases\)/);
+ assert.match(chat,/guidedSearchAlternatives\(text,db,taxonomy,aliases\)/);
  assert.match(chat,/preserveMandatoryFilters\(draft,nextState/);
  assert.match(module,/catalogVocabulary/);
  assert.match(module,/repairFromCatalog/);
  assert.match(module,/semanticAlternative/);
  assert.doesNotMatch(chat,/approvedSourceProducts|guru-approved-products/);
+});
+
+test('GURU V7 possui recuperação por conceito e alternativas sem fontes externas',()=>{
+ const ui=source('guru-engine-v4.js');
+ const guided=source('guru-search-v7.mjs');
+ assert.match(ui,/guidedSearchAlternatives/);
+ assert.match(ui,/noResultGuidance/);
+ assert.match(ui,/rerankSearchResults/);
+ assert.match(guided,/evidenceForRow/);
+ assert.doesNotMatch(ui,/approvedSourceProducts|displayWebProducts/);
 });

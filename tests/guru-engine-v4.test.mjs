@@ -444,3 +444,17 @@ test('múltiplos filtros, produto indisponível e ausência de resultados não i
  assert.deepEqual(searchStores(dataset,nextState(emptyState(),plan('pizzaria'))).map(r=>r.store.id),[]);
  assert.deepEqual(searchStores(dataset,nextState(emptyState(),plan('doceria em promoção'))).map(r=>r.store.id),[]);
 });
+
+
+test('filtros simultâneos de nota e preço aplicam quantias separadamente',()=>{
+ const st=shop('premium','Comida','Doceria',{delivery:true});
+ const ds={stores:[st],hours:[],reviews:[{store_id:'premium',rating:5}],knowledge:[],
+  products:[row('premium','Bolo de chocolate',{stock:5,price:35})]};
+ const p=plan('doceria com entrega nota acima de 4 e bolo até R$ 40');
+ assert.equal(p.filters.minRating,4);
+ assert.equal(p.filters.maxPrice,40);
+ assert.equal(p.filters.minPrice,undefined);
+ assert.deepEqual(searchStores(ds,nextState(emptyState(),p)).map(r=>r.store.id),['premium']);
+ const tooCheap=plan('doceria com entrega nota acima de 4 e bolo até R$ 20');
+ assert.deepEqual(searchStores(ds,nextState(emptyState(),tooCheap)).map(r=>r.store.id),[]);
+});

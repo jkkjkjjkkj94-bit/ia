@@ -8,7 +8,6 @@ await load('./admin-ai-editor.js?v=3','AI Editor');
 await load('./admin-store-group.js?v=4','Store Group');
 await load('./admin-pending-core.js?v=1','Pending Stores');
 await load('./admin-synonym-suggestions.js?v=2','Synonym Suggestions');
-await load('./admin-web-sources.js?v=5','Approved Web Sources');
 await load('./guru-quality-admin.js?v=2','Quality');
 await load('./admin-delete-controls.js?v=1','Delete Controls');
 await load('./admin-merchant-enhancements.js?v=3','Merchant Management');

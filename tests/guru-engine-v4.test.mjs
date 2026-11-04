@@ -598,3 +598,69 @@ test('retorno vazio por filtro distingue lojas disponíveis de categoria sem cad
  const disabled={...data,stores:[{...sweet,active:false}]};
  assert.match(explainEmptySearch(disabled,state),/Não há estabelecimentos ativos disponíveis/);
 });
+
+
+// Auditoria das 35 frases sugeridas ao usuário: contexto vs. filtro obrigatório.
+const pizzaPhrases=[
+ ['Por gentileza, você conseguiria me indicar uma pizzaria?',{}],
+ ['Gostaria muito de receber uma recomendação de pizzaria.',{}],
+ ['Seria possível me apresentar alguma pizzaria?',{}],
+ ['Você poderia fazer a gentileza de encontrar uma pizzaria para mim?',{}],
+ ['Se não for incômodo, poderia sugerir uma pizzaria?',{}],
+ ['Ficaria agradecido se encontrasse uma pizzaria.',{}],
+ ['Por acaso você saberia me dizer onde tem uma pizzaria?',{}],
+ ['Você teria alguma indicação de pizzaria para me passar?',{}],
+ ['Estou pensando em comer pizza, tem algum lugar?',{}],
+ ['Bateu vontade de pizza. Onde posso encontrar?',{}],
+ ['Tem algum lugar que prepare pizzas?',{}],
+ ['Onde consigo pedir uma pizza?',{}],
+ ['Queria descobrir um lugar legal para comer pizza.',{}],
+ ['Tô procurando uma pizzaria, conhece alguma?',{}],
+ ['Me ajuda a achar um lugar que venda pizza?',{}],
+ ['Sabe de algum estabelecimento especializado em pizzas?',{}],
+ ['Será que existe alguma pizzaria cadastrada por aqui?',{}],
+ ['Quais são as minhas opções para comer pizza?',{}],
+ ['O que você recomenda para quem está com vontade de pizza?',{}],
+ ['Se eu quiser comer pizza, onde devo procurar?',{}],
+ ['Você conhece algum restaurante que sirva pizza?',{}],
+ ['Que estabelecimentos oferecem pizzas?',{}],
+ ['Estou sem ideias de onde comer pizza. Pode ajudar?',{}],
+ ['Existe algum comércio voltado para a venda de pizzas?',{}],
+ ['Poderia me indicar uma pizaria?',{}],
+ ['Quero encontra uma pizzarria.',{}],
+ ['Tem alguna pizzaria cadastrada?',{}],
+ ['Me recomenda uma pizzaria pfvr',{}],
+ ['Por favor, consegue encontrar uma pizzaria que funcione aos sábados?',{day:6,ids:['a']}],
+ ['Gostaria de uma pizzaria que faça entrega e aceite Pix.',{delivery:true,payment:'pix',ids:['a']}],
+ ['Será que há alguma pizzaria aberta agora?',{openNow:true}],
+ ['Procuro uma pizzaria que abra no domingo.',{day:0,ids:['a']}],
+ ['Poderia recomendar uma pizzaria bem avaliada?',{sort:'rating'}],
+ ['Você tem alguma sugestão de pizzaria que permita retirada?',{pickup:true,ids:['a']}],
+ ['Preciso de uma pizzaria com entrega e avaliação acima de 4 estrelas.',{delivery:true,minRating:4,ids:['a']}]
+];
+const pizzaAuditData={
+ stores:[
+  shop('a','Comida','Pizzaria',{name:'Pizza Exemplo A',delivery:true,pickup:true,payment_methods:['Pix'],latitude:-23.5,longitude:-47.4}),
+  shop('b','Comida','Pizzaria',{name:'Pizza Exemplo B',delivery:false,pickup:false,payment_methods:[],latitude:-23.6,longitude:-47.4})
+ ],
+ hours:[
+  ...[0,2,6].map(weekday=>({store_id:'a',weekday,opens_at:'09:00',closes_at:'18:00',closed:false})),
+  {store_id:'b',weekday:2,opens_at:'09:00',closes_at:'18:00',closed:false},
+  ...[0,6].map(weekday=>({store_id:'b',weekday,closed:true}))
+ ],
+ products:[],knowledge:[],
+ reviews:[{store_id:'a',rating:5},{store_id:'b',rating:2}]
+};
+for(const [idx,[query,expected]] of pizzaPhrases.entries()){
+ test('auditoria das 35 frases de pizzaria #'+(idx+1),()=>{
+  const p=plan(query);
+  assert.equal(p.kind,'search',query+' deveria iniciar pesquisa');
+  assert.equal(p.taxon?.group,'Pizzaria',query+' deveria identificar a pizzaria');
+  assert.equal(p.productTerm,null,query+' não deve virar busca obrigatória de produto');
+  assert.deepEqual(p.nameTerms,[],query+' não solicita uma loja pelo nome');
+  for(const [key,value] of Object.entries(expected))if(key!=='ids')assert.deepEqual(p.filters[key],value,query+' filtro '+key);
+  const state=nextState(emptyState(),p);
+  const result=searchStores(pizzaAuditData,state,null,{now:new Date(2026,10,3,12,0,0)});
+  assert.deepEqual(result.map(r=>r.store.id).sort(),(expected.ids||['a','b']).slice().sort(),query+' deve retornar apenas lojas que atendem aos filtros');
+ });
+}

@@ -66,6 +66,32 @@ async function smoke(){
  await guru.submitText('loja de comida japonesa');
  const recentCards=[...document.querySelectorAll('.store-result-card h3')];
  if(!recentCards.some(x=>x.textContent==='Sushi Teste'))throw Error('loja de comida japonesa não encontrou estabelecimento válido');
+ // Audita no navegador as expressões que antes viravam filtros de produtos incorretos.
+ for(const query of [
+  'Por acaso você saberia me dizer onde tem uma pizzaria?',
+  'Estou pensando em comer pizza, tem algum lugar?',
+  'Estou sem ideias de onde comer pizza. Pode ajudar?',
+  'Poderia recomendar uma pizzaria bem avaliada?',
+  'Você tem alguma sugestão de pizzaria que permita retirada?'
+ ]){
+  const parsed=guru.interpret(query);
+  if(parsed.kind!=='search'||parsed.taxon?.group!=='Pizzaria'||parsed.productTerm)
+   throw Error('Interpretação de busca de pizzaria falhou: '+query);
+ }
+ if(guru.interpret('Gostaria de uma pizzaria que faça entrega e aceite Pix.').filters.delivery!==true)
+  throw Error('Frase faça entrega não ativou o filtro correto');
+ if(guru.interpret('Poderia recomendar uma pizzaria bem avaliada?').filters.sort!=='rating')
+  throw Error('Frase bem avaliada não ativou ordenação por nota');
+ if(guru.interpret('Você tem alguma sugestão de pizzaria que permita retirada?').filters.pickup!==true)
+  throw Error('Frase permita retirada não ativou filtro de retirada');
+ await guru.submitText('Tem algum lugar que prepare pizzas?');
+ const pizzaNaturalCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
+ if(pizzaNaturalCards?.querySelector('h3')?.textContent!=='Pizza Teste')
+  throw Error('Busca natural por pizza não trouxe a pizzaria cadastrada');
+ await guru.submitText('Gostaria de uma pizzaria que faça entrega e aceite Pix.');
+ const pizzaFilteredCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
+ if(pizzaFilteredCards?.querySelector('h3')?.textContent!=='Pizza Teste')
+  throw Error('Busca com entrega e Pix não trouxe a pizzaria cadastrada');
  await guru.submitText('pode me indicar uma confeitaria?');
  if(![...document.querySelectorAll('.store-result-card h3')].some(x=>x.textContent==='Doceria Teste'))throw Error('Sinônimo local foi perdido ao carregar taxonomia dinâmica');
  await guru.submitText('Por favor, quero uma doceria aberta no sábado');

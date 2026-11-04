@@ -65,10 +65,10 @@ function parseFilters(raw,prev={},options={}){
  if(/\bfim de semana\b/.test(n)){f.days=[0,6];f.day=null;f.openNow=false}
  const day=dayOf(n,options.today??new Date().getDay());if(day!==null){f.day=day;f.days=null;f.openNow=false}
  if(/\b(sem entrega|sem delivery|nao quero entrega|nao quero delivery)\b/.test(n))f.delivery=false;
- else if(/\b(com entrega|delivery|faz entrega|entrega rapida|entrega hoje)\b/.test(n))f.delivery=true;
- if(/\b(para retirar|com retirada|retirada na loja|buscar na loja)\b/.test(n))f.pickup=true;
+ else if(/\b(com entrega|delivery|faz entrega|faca entrega|oferece entrega|realiza entrega|entrega rapida|entrega hoje)\b/.test(n))f.delivery=true;
+ if(/\b(para retirar|com retirada|retirada na loja|buscar na loja|permita retirada|permite retirada|oferece retirada|faz retirada)\b/.test(n))f.pickup=true;
  else if(/\b(sem retirada)\b/.test(n))f.pickup=false;
- if(/\b(melhor avaliadas?|maior nota)\b/.test(n))f.sort='rating';
+ if(/\b(melhor avaliadas?|maior nota|bem avaliadas?|bem avaliados?)\b/.test(n))f.sort='rating';
  else if(/\b(mais proxim[oa]s?|mais perto|perto de mim)\b/.test(n))f.sort='distance';
  else if(/\b(mais barat[oa]s?|barat[oa]s?|economicos?|economicas?|menor preco)\b/.test(n))f.sort='price';
  const maxKm=amount(n,/\b(?:ate|no maximo|maximo)\s*(\d+(?:[.,]\d+)?)\s*km\b/);if(maxKm!==null)f.maxDistance=maxKm;
@@ -169,7 +169,7 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  if(ask&&prev.selectedStore&&!newType&&!/\b(nova|outra|outro|procuro|encontrar)\b/.test(n)&&!(/\b(?:quero|queria|busco|buscando)\s+(?:uma?|alguma?)\b/.test(n)&&mentionedType))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
  if(prev.selectedStore&&!ask&&!getTaxon(n,lexicon)&&!/(com entrega|sem entrega|mais perto|promocao|qualquer tipo)/.test(n))return{kind:'ask',ask:'knowledge',raw:text,filters:{}};
  if(ask&&!prev.selectedStore&&/\b(ela|ele|essa|esse|a loja|essa loja)\b/.test(n))return{kind:'clarify',raw:text,reason:'store'};
- const neg=n.match(/^(.*?)\b(?:nao quero|sem|exceto|menos|tirando|evitar|excluir)\b\s+(.+)$/);
+ const neg=n.match(/^(.*?)\b(?:nao quero|sem(?!\s+(?:ideias?|saber)\b)|exceto|menos|tirando|evitar|excluir)\b\s+(.+)$/);
  const after=neg?.[2]||'';
  const excludedTax=after?getTaxon(after,lexicon):null;
  const positive=neg?.[1]?.trim()||n;
@@ -191,7 +191,8 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  // Apenas nomes de lojas explicitamente identificados e atributos reconhecidos são exigências.
  const nameTerms=requestedStoreNameTerms(text,taxon,semanticTerms);
  const lookingForStore=/\b(?:tem|vende)\s+(?:(?:um|uma|algum|alguma)\s+)?(?:loja|lojas|comercio|comercios|estabelecimento|estabelecimentos)\b/.test(n);
- const productCue=!lookingForStore&&/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|preciso de|tem|vende|estoque)\b/.test(n);
+ const specificProductCue=/\b(camiseta|camisa|calca|vestido|tenis|sapato|notebook|celular|smartphone|fone|produto|comprar|estoque)\b/.test(n);
+ const productCue=!lookingForStore&&(specificProductCue||(!taxon?.group&&/\b(preciso de|tem|vende)\b/.test(n)));
  const genericProduct=/\b(produto|comprar|tem|vende|estoque)\b/.test(n);
  let productTerm=null;
  if(productCue){

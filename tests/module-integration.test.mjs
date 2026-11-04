@@ -321,3 +321,23 @@ test('Site sem autorização de coleta preserva os produtos e desativa sincroniz
  assert.match(admin,/requer API ou feed autorizado/);
  assert.match(catalog,/if\(source\.auto_sync_enabled!==true\)return false/);
 });
+
+test('Feed licenciado Nike/Awin exige admin, autorização, domínio e proteção de credenciais',()=>{
+ const fn=source('supabase/functions/guru-authorized-feed/index.ts');
+ const admin=source('admin-web-sources.js');
+ assert.match(fn,/authorizedUser\(req\)/);
+ assert.match(fn,/feed_authorized!==true/);
+ assert.match(fn,/source\.base_url/);
+ assert.match(fn,/u\.origin!==known\.origin/);
+ assert.match(fn,/merchant_deep_link/);
+ assert.match(fn,/product_name/);
+ assert.match(fn,/in_stock/);
+ assert.match(fn,/source_id,product_url/);
+ assert.match(fn,/GURU_NIKE_AWIN_FEED_URL/);
+ assert.match(fn,/datafeed\.api\.productserve\.com/);
+ assert.match(fn,/redirect:"error"/);
+ assert.doesNotMatch(admin,/GURU_NIKE_AWIN_FEED_URL\s*[:=]\s*["']/);
+ assert.match(admin,/guruFeedApproval/);
+ assert.match(admin,/importApprovedFeed/);
+ assert.match(admin,/syncPartnerFeed/);
+});

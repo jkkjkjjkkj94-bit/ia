@@ -23,11 +23,11 @@ const hours=[
  {store_id:'pizza',weekday:6,opens_at:'17:00',closes_at:'23:00',closed:false},
  {store_id:'sweet',weekday:6,opens_at:'09:00',closes_at:'18:00',closed:false}
 ];
-window.smokeFailHours=false;window.smokeFailReviews=false;
+window.smokeFailHours=false;window.smokeFailReviews=false;window.smokeDisableStore=null;
 window.fetch=async url=>{
  const path=String(url),table=(path.match(/\/rest\/v1\/(local_ai_[a-z_]+)/)||[])[1];
  if((table==='local_ai_store_hours'&&window.smokeFailHours)||(table==='local_ai_reviews'&&window.smokeFailReviews))return new Response('Falha simulada de rede',{status:503});
- const values={local_ai_stores:stores,local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[{store_id:'pizza',question:'tem estacionamento?',variations:['possui estacionamento?'],answer:'Sim, tem estacionamento.',active:true},{store_id:'pizza',question:'ela faz entrega?',variations:[],answer:'Não, ela não faz entrega.',active:true}],local_ai_taxonomy_categories:[{id:'c1',name:'Comida',active:true}],local_ai_taxonomy_groups:[{id:'g1',category_id:'c1',name:'Japonesa',active:true},{id:'g2',category_id:'c1',name:'Pizzaria',active:true},{id:'g3',category_id:'c1',name:'Doceria',active:true}],local_ai_taxonomy_terms:[{id:'t1',category_id:'c1',group_id:'g3',term:'doces',active:true}]};
+ const values={local_ai_stores:stores.filter(s=>s.id!==window.smokeDisableStore),local_ai_products:products,local_ai_store_hours:hours,local_ai_reviews:[],local_ai_store_knowledge:[{store_id:'pizza',question:'tem estacionamento?',variations:['possui estacionamento?'],answer:'Sim, tem estacionamento.',active:true},{store_id:'pizza',question:'ela faz entrega?',variations:[],answer:'Não, ela não faz entrega.',active:true}],local_ai_taxonomy_categories:[{id:'c1',name:'Comida',active:true}],local_ai_taxonomy_groups:[{id:'g1',category_id:'c1',name:'Japonesa',active:true},{id:'g2',category_id:'c1',name:'Pizzaria',active:true},{id:'g3',category_id:'c1',name:'Doceria',active:true}],local_ai_taxonomy_terms:[{id:'t1',category_id:'c1',group_id:'g3',term:'doces',active:true}]};
  return new Response(JSON.stringify(values[table]||[]),{status:200,headers:{'Content-Type':'application/json'}});
 };
 </script>
@@ -102,6 +102,10 @@ async function smoke(){
  if(!document.getElementById('msgs').textContent.includes('Não consegui consultar os horários agora'))throw Error('Falha de horários foi apresentada como ausência de lojas');
  if(guru.getState().selectedStore?.id!=='sweet')throw Error('Falha de rede apagou seleção anterior');
  window.smokeFailHours=false;await guru.refresh();
+ window.smokeDisableStore='sweet';
+ await guru.refresh();
+ if(guru.getState().selectedStore||guru.getState().lastResults.some(r=>r.store.id==='sweet'))throw Error('Loja removida do banco permaneceu selecionável após atualização');
+ window.smokeDisableStore=null;await guru.refresh();
  const input=document.getElementById('q');
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
  for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);

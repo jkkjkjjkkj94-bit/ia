@@ -3,7 +3,8 @@ import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from '.
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
 import {recordSearch,recordSelection} from './guru-telemetry-v5.mjs?v=1';
-import {searchAlternatives,preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
+import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
+import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './guru-search-v7.mjs?v=1';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
@@ -680,7 +681,7 @@ async function run(text){
  // só entram quando a consulta original não encontrou nenhum resultado.
  let finalState=draft,rows=searchStores(db,draft,position,{limit:6}),recovery=null;
  if(!rows.length){
-  for(const alt of searchAlternatives(text,db,taxonomy,aliases)){
+  for(const alt of guidedSearchAlternatives(text,db,taxonomy,aliases)){
    const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});
    if(alternatePlan.kind!=='search')continue;
    const alternateState=preserveMandatoryFilters(draft,nextState(state,alternatePlan));
@@ -691,11 +692,25 @@ async function run(text){
  }
  state=finalState;
  renderContext();save();
+ rows=rerankSearchResults(rows,text,db,state.filters?.sort);
  state.lastResults=rows;
  recordSearch(text,plan,rows);
- if(!rows.length){add(explainEmptySearch(db,state,position));save();return}
+ if(!rows.length){
+  const guidance=noResultGuidance(text,db,taxonomy,aliases);
+  add(explainEmptySearch(db,state,position));
+  const m=add(guidance.message),candidates=guidance.suggestions||[];
+  if(candidates.length){
+   const panel=el('div','guru-next-buttons');
+   for(const candidate of candidates){
+    const button=el('button','guru-next-button','Pesquisar: '+candidate);
+    button.type='button';button.addEventListener('click',()=>submitText(candidate));panel.appendChild(button);
+   }
+   m.appendChild(panel);
+  }
+  save();return;
+ }
  if(recovery){
-  const hint=recovery.mode==='correction'?'Corrigi uma possível palavra digitada incorretamente.':'Encontrei uma expressão relacionada no catálogo.';
+  const hint=recovery.mode==='correction'?'Identifiquei uma possível correção de escrita.':recovery.mode==='concept'?'Entendi a necessidade descrita e procurei uma categoria cadastrada.':'Encontrei uma expressão relacionada no catálogo.';
   add(hint+' Pesquisei por “'+recovery.query+'”.');
  }
  const natural=await hybridResponse(text,rows);

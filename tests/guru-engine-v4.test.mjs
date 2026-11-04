@@ -664,3 +664,33 @@ for(const [idx,[query,expected]] of pizzaPhrases.entries()){
   assert.deepEqual(result.map(r=>r.store.id).sort(),(expected.ids||['a','b']).slice().sort(),query+' deve retornar apenas lojas que atendem aos filtros');
  });
 }
+
+
+test('explica por que entrega e Pix não coincidem na mesma pizzaria',()=>{
+ const pix=shop('pix','Comida','Pizzaria',{name:'Loja do Misael Teste',delivery:false,payment_methods:['Pix']});
+ const delivery=shop('delivery','Comida','Pizzaria',{name:'Pizzaria',delivery:true,payment_methods:[]});
+ const dataset={stores:[pix,delivery],products:[],hours:[],reviews:[],knowledge:[]};
+ const query='Gostaria de uma pizzaria que faça entrega e aceite Pix';
+ const p=plan(query);
+ assert.equal(p.taxon?.group,'Pizzaria');
+ assert.equal(p.filters.delivery,true);
+ assert.equal(p.filters.payment,'pix');
+ const state=nextState(emptyState(),p);
+ assert.deepEqual(searchStores(dataset,state),[],'não pode combinar entrega de uma loja com Pix de outra');
+ const message=explainEmptySearch(dataset,state);
+ assert.match(message,/que fazem entrega e outros que aceitam Pix/);
+ assert.match(message,/nenhum atende aos dois requisitos ao mesmo tempo/);
+ const both={...dataset,stores:[pix,{...delivery,payment_methods:['Pix']}]};
+ assert.deepEqual(searchStores(both,state).map(r=>r.store.id),['delivery'],'só retorna a loja com ambos os requisitos');
+});
+test('diagnóstico combinado mantém filtros adicionais e não inventa Pix ou entrega',()=>{
+ const pix=shop('pix','Comida','Pizzaria',{name:'Só Pix',delivery:false,payment_methods:['Pix']});
+ const delivery=shop('delivery','Comida','Pizzaria',{name:'Só Entrega',delivery:true,payment_methods:[]});
+ const q=plan('pizzaria que faça entrega e aceite Pix');
+ const state=nextState(emptyState(),q);
+ assert.match(explainEmptySearch({stores:[delivery]},state),/fazem entrega, mas nenhum deles atende também à exigência de Pix/);
+ assert.match(explainEmptySearch({stores:[pix]},state),/aceitam Pix, mas nenhum deles atende também à exigência de entrega/);
+ const noHours={stores:[pix,delivery],hours:[],products:[],reviews:[],knowledge:[]};
+ const saturday=nextState(emptyState(),plan('pizzaria que faça entrega e aceite Pix aberta no sábado'));
+ assert.match(explainEmptySearch(noHours,saturday),/nenhum atende a todos os critérios/);
+});

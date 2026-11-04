@@ -98,6 +98,7 @@ async function syncSource(sourceId:string){
  if(!r.ok)return output({error:"Falha na lista de fontes."},503);
  const sources=await r.json(),s=sources[0];
  if(!s||!s.enabled)return output({error:"Fonte inexistente ou desativada."},404);
+ if(s.auto_sync_enabled===false)return output({status:"permission_required",products:0,message:"Esta fonte requer integração por API ou feed autorizado; a sincronização automática está desativada."},409);
  const site=safeURL(s.base_url),catalog=safeURL(s.catalog_url);
  if(!site||!catalog||site.hostname!==catalog.hostname||catalog.origin!==site.origin)
   return output({error:"O endereço da fonte precisa ser HTTPS e do domínio aprovado."},400);
@@ -110,7 +111,7 @@ async function syncSource(sourceId:string){
  let listingAllowed=false,robotsText="";
  try{
   const robots=await fetch(site.origin+"/robots.txt",{redirect:"error",signal:AbortSignal.timeout(5000)});
-  if(!robots.ok)throw Error("Não foi possível confirmar permissão de indexação no robots.txt.");
+  if(!robots.ok)throw Error("robots.txt HTTP "+robots.status+": não foi possível confirmar a permissão de indexação.");
   robotsText=(await robots.text()).slice(0,100000);
   if(!permittedByRobots(robotsText,catalog.pathname))throw Error("A página inicial do catálogo não permite indexação.");
   listingAllowed=true;

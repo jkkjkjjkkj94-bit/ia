@@ -30,7 +30,7 @@ const withApi=async(path)=>{
 export async function approvedSourceProducts(query,attemptRefresh=true){
  try{
   const [sources,products]=await Promise.all([
-   withApi('guru_web_sources?select=id,name,base_url,sync_status,last_synced_at&enabled=eq.true&limit=20'),
+   withApi('guru_web_sources?select=id,name,base_url,sync_status,last_synced_at,auto_sync_enabled&enabled=eq.true&limit=20'),
    withApi('guru_web_products?select=source_id,name,product_url,price,currency,availability,last_checked_at&limit=1000')
   ]);
   // Se o catálogo aprovado ainda não possui produtos, tenta indexar sob demanda.
@@ -38,6 +38,7 @@ export async function approvedSourceProducts(query,attemptRefresh=true){
   if(attemptRefresh){
     const topic=normalize(query);
     const candidates=sources.filter(source=>{
+      if(source.auto_sync_enabled!==true)return false;
       const name=normalize(source.name).split(' ')[0];
       const last=Date.parse(source.last_synced_at||'');
       const due=!Number.isFinite(last)||Date.now()-last>12*60*60*1000;

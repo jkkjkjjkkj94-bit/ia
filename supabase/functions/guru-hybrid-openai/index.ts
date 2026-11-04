@@ -60,11 +60,7 @@ Deno.serve(async (req: Request) => {
   const results = publicResults(body?.results);
   if (!question || !results.length) return json({ error: "Dados insuficientes." }, 400);
 
-  // O IP auxilia no limite por cliente, mas pode ser falsificado; o limite global é obrigatório.
-  const remoteAddress = (req.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim().slice(0,80);
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(remoteAddress + ":" + adminKey));
-  const clientHash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
-  let allowed = false;
+  // Cotas exclusivamente globais: nenhuma identificação ou limite por visitante.\n  let allowed = false;
   try {
     const r = await fetch(supabaseUrl + "/rest/v1/rpc/guru_hybrid_claim_quota", {
       method: "POST",
@@ -73,7 +69,7 @@ Deno.serve(async (req: Request) => {
         ...(adminKey.startsWith("eyJ") ? { Authorization: "Bearer " + adminKey } : {}),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ p_client: clientHash }),
+      body: JSON.stringify({ p_client: 'global' }),
       signal: AbortSignal.timeout(5000),
     });
     if (!r.ok) return json({ unavailable: true }, 503);

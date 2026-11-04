@@ -37,7 +37,7 @@ jobs:
           echo "Checked $count JavaScript files."
           exit "$failed"
       - name: Verify semantic search regression tests
-        run: node --test tests/guru-engine-v4.test.mjs tests/module-integration.test.mjs
+        run: node --test tests/guru-engine-v4.test.mjs tests/module-integration.test.mjs tests/guru-100-phrases-audit.test.mjs
 
       - name: Headless browser smoke test for GURU v4
         shell: bash

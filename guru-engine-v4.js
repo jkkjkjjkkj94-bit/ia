@@ -133,8 +133,9 @@ function updateSuggestions(){
   const name=norm(s.name);
   if(name&&(name.includes(key)||key.includes(name)))addItem(s.name,'Loja','loja '+s.name,name.startsWith(key)?100:85);
  }
+ const activeStoreIds=new Set((db.stores||[]).filter(s=>s.active===true&&s.status==='active').map(s=>s.id));
  for(const p of db.products||[]){
-  if(!eligibleProduct(p))continue;
+  if(!activeStoreIds.has(p.store_id)||!eligibleProduct(p))continue;
   const name=norm(p.name);
   if(name&&(name.includes(key)||key.includes(name)))addItem(p.name,'Produto',p.name,name.startsWith(key)?85:70);
  }
@@ -195,7 +196,7 @@ function renderContext(){
  const clear=el('button','guru-clear-filters','Limpar filtros');
  clear.type='button';clear.addEventListener('click',()=>{
   state.filters={};state.category=null;state.group=null;state.productTerm=null;state.semanticTerms=[];state.featureTerms=[];state.nameTerms=[];
-  state.excludedGroups=[];state.excludedCategories=[];state.excludedTerms=[];state.location={};
+  state.excludedGroups=[];state.excludedCategories=[];state.excludedTerms=[];state.location={};state.query='lojas';
   renderContext();save();if(db)refreshFilteredResults();
  });
  ctx.appendChild(clear);

@@ -173,6 +173,8 @@ function requestedStoreNameTerms(raw,taxon,semanticTerms){
 }
 // Produtos vêm do catálogo real já carregado, não de palavras usadas para fazer o pedido.
 function catalogSubject(query,catalog=[]){
+ // Nome próprio solicitado é uma consulta de estabelecimento, não de catálogo.
+ if(/\b(?:[Ll]oja|[Ee]stabelecimento)\s+(?:[Dd][aeo]\s+)?[\p{Lu}][\p{L}\p{N}]+/u.test(String(query||'')))return null;
  const n=normalizeQuery(query);
  const common=new Set('pizza pizzas produto produtos kit combo combos item itens especial especiais generico generica unidade unidades tamanho'.split(' '));
  let best=null;

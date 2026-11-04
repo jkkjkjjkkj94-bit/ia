@@ -9,6 +9,17 @@ function tokens(query){return normalize(query).split(' ').filter(x=>x.length>2&&
 const isSafeProductUrl=(url,base)=>{
  try{const page=new URL(url),host=new URL(base);return page.protocol==='https:'&&page.hostname===host.hostname&&page.port===''&&page.username===''&&page.password===''}catch{return false}
 };
+const refreshApproved=async(source)=>{
+ if(!source?.id)return false;
+ try{
+  const result=await fetch(BASE+'/functions/v1/guru-approved-sources',{
+   method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},
+   body:JSON.stringify({action:'refresh',sourceId:source.id}),
+   signal:AbortSignal.timeout(16000),
+  });
+  return result.ok&&(await result.json()).status==='ok';
+ }catch{return false}
+};
 const withApi=async(path)=>{
  const result=await fetch(BASE+'/rest/v1/'+path,{
   headers:{apikey:KEY,Accept:'application/json'},signal:AbortSignal.timeout(5500)
@@ -16,12 +27,25 @@ const withApi=async(path)=>{
  if(!result.ok)throw new Error('Catálogo de fontes indisponível.');
  return result.json();
 };
-export async function approvedSourceProducts(query){
+export async function approvedSourceProducts(query,attemptRefresh=true){
  try{
   const [sources,products]=await Promise.all([
    withApi('guru_web_sources?select=id,name,base_url,sync_status,last_synced_at&enabled=eq.true&limit=20'),
    withApi('guru_web_products?select=source_id,name,product_url,price,currency,availability,last_checked_at&limit=500')
   ]);
+  // Se o catálogo aprovado ainda não possui produtos, tenta indexar sob demanda.
+  // O servidor impede que a mesma fonte seja consultada repetidamente em menos de 12h.
+  if(attemptRefresh){
+    const topic=normalize(query);
+    const candidates=sources.filter(source=>{
+      const name=normalize(source.name).split(' ')[0];
+      const last=Date.parse(source.last_synced_at||'');
+      const due=!Number.isFinite(last)||Date.now()-last>12*60*60*1000;
+      return due&&(name&&topic.includes(name)||sources.length===1&&/\\b(tenis|camiseta|roupa|sapato|produto|comprar)\\b/.test(topic));
+    });
+    if(candidates.length&&await refreshApproved(candidates[0]))
+       return approvedSourceProducts(query,false);
+  }
   const trusted=new Map(sources.map(s=>[s.id,s]));
   const queryTerms=tokens(query);
   const matches=[];
@@ -38,6 +62,6 @@ export async function approvedSourceProducts(query){
     availability:p.availability,checkedAt:p.last_checked_at,score:hit});
   }
   matches.sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'pt-BR'));
-  return {items:matches.slice(0,8),sources:sources.map(s=>({name:s.name,url:s.base_url,status:s.sync_status}))};
+  return {items:matches.slice(0,8),sources:sources.map(s=>({id:s.id,name:s.name,url:s.base_url,status:s.sync_status,lastSync:s.last_synced_at}))};
  }catch{return{items:[],sources:[],unavailable:true}}
 }

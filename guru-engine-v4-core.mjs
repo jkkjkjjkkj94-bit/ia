@@ -145,11 +145,18 @@ function getReference(n){
 // Distingue nome próprio solicitado explicitamente de palavras de contexto conversacional.
 // Termos livres não se tornam exigências apenas por não estarem numa lista de STOP.
 function requestedStoreNameTerms(raw,taxon,semanticTerms){
- if(!taxon||!semanticTerms?.length)return [];
+ if(!semanticTerms?.length)return [];
  const n=normalizeQuery(raw);
+ // Nome próprio citado após "loja/estabelecimento" é uma exigência real,
+ // mesmo sem a categoria: evita encontrar "Outra Loja Teste" ao pedir "Misael Teste".
+ if(!taxon){
+  const named=String(raw||'').match(/\b(?:[Ll]oja|[Ee]stabelecimento)\s+(?:[Dd][aeo]\s+)?([\p{Lu}][\p{L}\p{N}]+(?:\s+[\p{Lu}][\p{L}\p{N}]+)*)/u);
+  if(named)return words(named[1]).filter(w=>semanticTerms.includes(w));
+ }
+ 
  const nameCues=new Set('nome chamada chamado denominada denominado apelidada apelidado'.split(' '));
  if(/\b(?:de nome|com o nome|chamad[oa]|denominad[oa])\b/.test(n))return semanticTerms.filter(t=>!nameCues.has(t));
- if(!taxon.group)return [];
+ if(!taxon?.group)return [];
  const originalWords=String(raw||'').match(/[\p{L}\p{N}]+/gu)||[];
  const normalizedWords=originalWords.map(w=>norm(w));
  const groupWords=words(taxon.term||taxon.group);
@@ -164,8 +171,27 @@ function requestedStoreNameTerms(raw,taxon,semanticTerms){
  }
  return [];
 }
+// Produtos vêm do catálogo real já carregado, não de palavras usadas para fazer o pedido.
+function catalogSubject(query,catalog=[]){
+ // Nome próprio solicitado é uma consulta de estabelecimento, não de catálogo.
+ if(/\b(?:[Ll]oja|[Ee]stabelecimento)\s+(?:[Dd][aeo]\s+)?[\p{Lu}][\p{L}\p{N}]+/u.test(String(query||'')))return null;
+ const n=normalizeQuery(query);
+ const common=new Set('pizza pizzas produto produtos kit combo combos item itens especial especiais generico generica unidade unidades tamanho'.split(' '));
+ let best=null;
+ for(const product of Array.isArray(catalog)?catalog:[]){
+  if(!product||!product.name)continue;
+  const meaningful=words(product.name).filter(w=>w.length>=3&&!STOP.has(w)&&!common.has(w));
+  const found=meaningful.filter(w=>has(n,w));
+  if(!found.length)continue;
+  const term=found.join(' '),score=found.length*20+Math.min(meaningful.length,found.length)*2;
+  if(!best||score>best.score)best={term,score};
+ }
+ return best?.term||null;
+}
 export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const text=String(raw||'').trim(),n=normalizeQuery(text),lexicon=buildLexicon(taxonomy,aliases);
+ const catalogTerm=catalogSubject(text,options.products);
+ const switchProduct=Boolean(catalogTerm&&/\b(?:agora|outra|outro|novo|nova|encontre|encontrar|busque|busca|achar|ache|procure|pesquise|onde|loja|lojas|estabelecimento)\b/.test(n)&&!/\b(?:ela|ele|essa|esse|dessa|desse)\b/.test(n));
  const reset=/\b(nova busca|nova pesquisa|novo chat|limpar contexto|limpar busca|comecar do zero|reiniciar)\b/.test(n);
  if(reset)return{kind:'reset',raw:text};
 
@@ -184,8 +210,8 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
   mentionedType.group?norm(mentionedType.group)!==norm(prev.selectedStore.group):
   norm(mentionedType.category)!==norm(prev.selectedStore.category)
  );
- if(ask&&prev.selectedStore&&!newType&&!/\b(nova|outra|outro|procuro|encontrar)\b/.test(n)&&!(/\b(?:quero|queria|busco|buscando)\s+(?:uma?|alguma?)\b/.test(n)&&mentionedType))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
- if(prev.selectedStore&&!ask&&!getTaxon(n,lexicon)&&!/(com entrega|sem entrega|mais perto|promocao|qualquer tipo)/.test(n))return{kind:'ask',ask:'knowledge',raw:text,filters:{}};
+ if(ask&&prev.selectedStore&&!newType&&!switchProduct&&!/\b(nova|outra|outro|procuro|encontrar)\b/.test(n)&&!(/\b(?:quero|queria|busco|buscando)\s+(?:uma?|alguma?)\b/.test(n)&&mentionedType))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
+ if(prev.selectedStore&&!ask&&!switchProduct&&!getTaxon(n,lexicon)&&!/(com entrega|sem entrega|mais perto|promocao|qualquer tipo)/.test(n))return{kind:'ask',ask:'knowledge',raw:text,filters:{}};
  if(ask&&!prev.selectedStore&&/\b(ela|ele|essa|esse|a loja|essa loja)\b/.test(n))return{kind:'clarify',raw:text,reason:'store'};
  const neg=n.match(/^(.*?)\b(?:nao quero|sem(?!\s+(?:ideias?|saber)\b)|exceto|menos|tirando|evitar|excluir)\b\s+(.+)$/);
  const after=neg?.[2]||'';
@@ -218,22 +244,25 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
  const ignoredFlavor=new Set('em na no de da do com sem para ate abaixo acima mais melhor boa bom pronta pronto disponivel disponiveis estoque entrega casa por aqui hoje agora amanha'.split(' '));
  const flavor=namedPizza&&!ignoredFlavor.has(namedPizza[1])&&!STOP.has(namedPizza[1])?namedPizza[1]:null;
  const stockedItem=n.match(/\b([a-z][a-z0-9]+)\s+em\s+estoque\b/);
- let productTerm=flavor||(stockedItem&&!STOP.has(stockedItem[1])?stockedItem[1]:null);
+ let productTerm=flavor||(stockedItem&&!STOP.has(stockedItem[1])?stockedItem[1]:null)||catalogTerm;
  if(!productTerm&&productCue&&!taxon?.group){
-  const list=words(searchContent).filter(w=>w.length>2&&!STOP.has(w)&&!COLORS.includes(w)&&!Object.keys(DAYS).includes(w)&&!['produto','comprar','tem','vende','estoque','tamanho','tam'].includes(w)&&!taxon?.group?.toLowerCase().includes(w)&&!words(taxon?.term||'').includes(w));
-  if(list.length)productTerm=list.slice(0,3).join(' ');
+  // Sem um item identificável, não monte um nome artificial com "buscar", "achar" etc.
+  const knownItems=['camiseta','camisa','calca','vestido','tenis','sapato','notebook','celular','smartphone','fone','brigadeiro','bolo','mochila'];
+  productTerm=knownItems.find(w=>has(searchContent,w))||null;
  }
+ if(!taxon&&!productTerm&&/\b(?:produtos?|itens?)\b/.test(n)&&!prev.selectedStore)
+  return{kind:'clarify',raw:text,reason:'product'};
  if(!productTerm&&genericProduct&&prev.selectedStore&&!taxon)return{kind:'ask',ask:'products',raw:text,filters};
  const broad=/^(lojas?|comercios?|negocios?|estabelecimentos?|lugares?)(?:\s+(?:abert[oa]s?\s+agora|com entrega|sem entrega|com retirada))?$/.test(n);
- return{kind:'search',raw:text,normalized:n,positive,taxon,filters,excludedGroups,excludedCategories,excludedTerms,semanticTerms,featureTerms,nameTerms,productTerm,broad,reference,ask};
+ return{kind:'search',raw:text,normalized:n,positive,taxon,filters,excludedGroups,excludedCategories,excludedTerms,semanticTerms,featureTerms,nameTerms,productTerm,freshProduct:switchProduct,broad,reference,ask};
 }
 export function emptyState(){return{category:null,group:null,query:null,semanticTerms:[],featureTerms:[],nameTerms:[],productTerm:null,excludedGroups:[],excludedCategories:[],excludedTerms:[],filters:{},lastResults:[],selectedStore:null,selectedProduct:null,location:{city:null,uf:null,neighborhood:null}}}
 export function nextState(current,plan){
  if(plan.kind!=='search')return current;
  const prev=current||emptyState(),changed=plan.taxon?.category&&plan.taxon.category!==prev.category;
  // Mencionar uma nova categoria/grupo inicia uma busca nova; refinamentos sem grupo preservam filtros.
- const freshTopic=Boolean(changed||plan.taxon||plan.broad);
- const next={...prev,filters:{...(freshTopic?{}:prev.filters),...plan.filters},category:plan.taxon?.category||prev.category,group:changed?null:prev.group,selectedStore:null,selectedProduct:null};
+ const freshTopic=Boolean(changed||plan.taxon||plan.broad||plan.freshProduct);
+ const next={...prev,filters:{...(freshTopic?{}:prev.filters),...plan.filters},category:plan.freshProduct&&!plan.taxon?null:plan.taxon?.category||prev.category,group:changed||plan.freshProduct&&!plan.taxon?null:prev.group,selectedStore:null,selectedProduct:null};
  if(plan.taxon?.group)next.group=plan.taxon.group;
  else if(plan.taxon?.category)next.group=null;
  if(plan.productTerm)next.productTerm=plan.productTerm;
@@ -408,7 +437,9 @@ export function searchStores(data={},state={},position=null,options={}){
   // Sem categoria reconhecida, os termos continuam obrigatórios (busca textual por nome/descrição).
   const nameTerms=state.nameTerms||[];
   if(nameTerms.length&&!nameTerms.every(t=>semanticHit(t,store.name)||storeNamePartialHit(t,store.name)||storeNameTypoHit(t,store.name)))continue;
-  if(!state.category&&!state.group&&semanticTerms.length&&hits.length<semanticTerms.length)continue;
+  // Quando não há grupo, bastam sinais relevantes do nome/catálogo; palavras
+  // conversacionais não são uma lista de requisitos cumulativos.
+  if(!state.category&&!state.group&&!state.productTerm&&semanticTerms.length&&!hits.length)continue;
   let score=0,reasons=[];
   if(state.category){score+=30;reasons.push('categoria '+state.category)}
   if(state.group){score+=45;reasons.push('grupo '+state.group)}

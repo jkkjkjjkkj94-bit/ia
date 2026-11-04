@@ -66,6 +66,13 @@ async function smoke(){
  await guru.submitText('loja de comida japonesa');
  const recentCards=[...document.querySelectorAll('.store-result-card h3')];
  if(!recentCards.some(x=>x.textContent==='Sushi Teste'))throw Error('loja de comida japonesa não encontrou estabelecimento válido');
+ // Consulta pelo item real do catálogo, independentemente de "ajuda", "achar" e outros verbos.
+ const catalogPlan=guru.interpret('Por favor, me ajude a achar um combo sushi');
+ if(catalogPlan.productTerm!=='sushi')throw Error('Busca ignorou o catálogo ou exigiu palavras conversacionais');
+ await guru.submitText('Por favor, você acha onde tem combo sushi disponível?');
+ const catalogCards=[...document.querySelectorAll('.store-results-grid')].at(-1);
+ if(catalogCards?.querySelector('h3')?.textContent!=='Sushi Teste')
+  throw Error('Pesquisa por produto real não encontrou a loja correspondente');
  // Audita no navegador as expressões que antes viravam filtros de produtos incorretos.
  for(const query of [
   'Por acaso você saberia me dizer onde tem uma pizzaria?',

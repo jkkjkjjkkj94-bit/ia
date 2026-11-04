@@ -1,6 +1,6 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=16';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=17';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
@@ -448,11 +448,16 @@ function replyAboutStore(text,ask,filter={}){
  add('Na '+s.name+', encontrei:\n'+ps.slice(0,8).map(p=>'• '+p.name+' — '+money(priceOf(p))+' · estoque '+p.stock).join('\n'));save();
 }
 async function run(text){
- const plan=interpret(text,taxonomy,aliases,state);
- if(plan.kind==='reset'){state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};renderContext();add('Contexto limpo. O que você quer encontrar?');return}
- if(plan.kind==='blocked'){add('“Loja” e “comércio” são tratados como varejo e não entram na categoria Comida. Pesquise por restaurante, pizzaria ou pelo tipo de comida.');return}
- if(plan.kind==='clarify'){add('Qual estabelecimento da lista você quer consultar? Pode dizer, por exemplo, “a segunda”.');return}
+ const prelim=interpret(text,taxonomy,aliases,state);
+ if(prelim.kind==='reset'){state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};renderContext();add('Contexto limpo. O que você quer encontrar?');return}
+ // Carregue o catálogo antes de compreender o produto solicitado.
  await loadData();
+ const plan=interpret(text,taxonomy,aliases,state,{products:db?.products||[]});
+ if(plan.kind==='blocked'){add('“Loja” e “comércio” são tratados como varejo e não entram na categoria Comida. Pesquise por restaurante, pizzaria ou pelo tipo de comida.');return}
+ if(plan.kind==='clarify'){
+  add(plan.reason==='product'?'Qual produto você está procurando? Informe o nome ou uma característica do item para eu consultar o catálogo.':'Qual estabelecimento da lista você quer consultar? Pode dizer, por exemplo, “a segunda”.');
+  return;
+ }
  if(plan.kind==='select'){
   const index=plan.index<0?state.lastResults.length-1:plan.index,row=state.lastResults[index];
   if(!row){add('Essa opção não existe na lista atual.');return}
@@ -519,5 +524,5 @@ if(form&&input&&msgs){
  form.addEventListener('submit',e=>{e.preventDefault();const q=input.value.trim();if(q){input.value='';submitText(q)}});
  restore();initShell();renderContext();
  loadData().catch(err=>console.warn('[GURU v4] Carregamento inicial não concluído:',err));
- window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state};
+ window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state,{products:db?.products||[]}),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state};
 }else console.error('[GURU v4] Formulário ausente.');

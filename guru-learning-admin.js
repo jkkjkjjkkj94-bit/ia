@@ -2,7 +2,7 @@ import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.95.0';
 import {patternKey} from './guru-knowledge-v11.mjs?v=1';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const $=id=>document.getElementById(id);
-let currentUser=null,proposals=[];
+let currentUser=null,proposals=[],suppressedPatterns=new Set();
 const STOP=new Set(('por favor por gentileza voce poderia consegue gostaria quero queria preciso um uma uns umas de da do dos das para com por sem em na no nas nos a o as os me eu tem alguma algum encontrar encontre buscar busque procurar procure ache achar que qual quais onde loja lojas estabelecimento estabelecimentos produto produtos hoje agora').split(' '));
 const norm=value=>String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 const safe=value=>{
@@ -25,6 +25,9 @@ async function load(){
  const {data,error}=await sb.from('guru_knowledge_proposals').select('*').order('occurrences',{ascending:false}).limit(500);
  if(error)throw error;
  proposals=data||[];
+ const {data:suppressed,error:suppressionError}=await sb.from('guru_suppressed_review_patterns').select('normalized_query').limit(1000);
+ if(suppressionError)throw suppressionError;
+ suppressedPatterns=new Set((suppressed||[]).map(x=>x.normalized_query));
  for(const status of ['pending','approved','rejected'])$(status).textContent=proposals.filter(p=>p.status===status).length;
  render();
 }
@@ -163,6 +166,27 @@ function render(){
   }else if(p.proposed_answer){
    card.appendChild(node('p','muted',p.proposed_answer));
   }
+  const del=node('button','danger','Excluir registro');
+  del.type='button';
+  del.title='Exclui definitivamente esta revisão e o conhecimento publicado vinculado, se existir.';
+  del.onclick=async()=>{
+   const prompt=p.status==='approved'
+    ?'Excluir definitivamente esta revisão e a resposta publicada na GURU? A ação não pode ser desfeita.'
+    :'Excluir definitivamente esta revisão? Ela não será recriada automaticamente pela análise. A ação não pode ser desfeita.';
+   if(!window.confirm(prompt))return;
+   del.disabled=true;
+   try{
+    const {data,error}=await sb.rpc('guru_v14_delete_review',{p_proposal_id:p.id});
+    if(error)throw error;
+    if(data!==true)throw Error('A exclusão não foi confirmada pelo servidor.');
+    await load();
+    message('Registro excluído. A pergunta não será recriada automaticamente.');
+   }catch(e){
+    message('Não foi possível excluir: '+e.message);
+    del.disabled=false;
+   }
+  };
+  card.appendChild(del);
   $('list').appendChild(card);
  }
 }
@@ -190,6 +214,7 @@ async function analyze(){
   const known=new Map(proposals.map(p=>[p.normalized_query,p]));
   let count=0;
   for(const entry of [...grouped.values()].sort((a,b)=>b.occurrences-a.occurrences).slice(0,100)){
+   if(suppressedPatterns.has(entry.normalized_query))continue;
    const previous=known.get(entry.normalized_query);
    if(previous){
     // Não reabre conhecimento aprovado ou rejeitado. A contagem é idempotente.

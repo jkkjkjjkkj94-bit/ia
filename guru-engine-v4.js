@@ -2,7 +2,7 @@
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
-import {recordSearch,recordSelection} from './guru-telemetry-v5.mjs?v=1';
+import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=2';
 import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
 import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './guru-search-v7.mjs?v=1';
 import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
@@ -322,7 +322,8 @@ async function loadData(force=false){
    read(AI,'local_ai_taxonomy_groups','&active=eq.true'),
    read(AI,'local_ai_taxonomy_terms','&active=eq.true'),
    read(AI,'local_ai_store_highlights','','store_id'),
-   read(AI,'guru_approved_aliases','&active=eq.true')
+   read(AI,'guru_approved_aliases','&active=eq.true'),
+   read(AI,'local_ai_qa','&active=eq.true')
   ]);
   const get=i=>all[i].status==='fulfilled'?all[i].value:[];
   if(all[0].status==='rejected')throw all[0].reason;
@@ -333,7 +334,7 @@ async function loadData(force=false){
   const highlightsByStore=new Map(get(8).map(h=>[h.store_id,h]));
   const now=Date.now();
   // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
-  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),sharedAliases:get(9),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
+  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
   lastLoad=Date.now();rehydrate();if(input?.value)updateSuggestions();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;
@@ -595,7 +596,7 @@ function replyAboutStore(text,ask,filter={}){
  const structuredAsk=['hours','total','delivery','payment','address','contact','rating'].includes(ask);
  const explicitCatalog=ask==='products'&&/\b(produtos|produto|cardapio|estoque|vende|vender|comprar|tamanho)\b/.test(n);
  if(record?.answer&&!structuredAsk&&!explicitCatalog){add(String(record.answer));return}
- if(ask==='knowledge'){if(db.unavailable.knowledge){add('Não consegui consultar as respostas cadastradas desta loja agora. Tente novamente.');return}add('Não encontrei uma resposta específica cadastrada. Dados da loja: '+[s.name,s.category,s.group,s.address].filter(Boolean).join(' · ')+'.');return}
+ if(ask==='knowledge'){if(db.unavailable.knowledge){add('Não consegui consultar as respostas cadastradas desta loja agora. Tente novamente.');return}recordUnansweredKnowledge(text,s.category);add('Não encontrei uma resposta específica cadastrada. Dados da loja: '+[s.name,s.category,s.group,s.address].filter(Boolean).join(' · ')+'.');return}
  if(ask==='hours'){
   if(db.unavailable.hours){add('Não consegui consultar os horários dessa loja agora. Tente novamente.');return}
   const entries=(db.hours||[]).filter(x=>x.store_id===s.id&&Number(x.weekday)===day);
@@ -638,6 +639,14 @@ async function run(text){
  if(prelim.kind==='reset'){state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};renderContext();add('Contexto limpo. O que você quer encontrar?');return}
  // Carregue o catálogo antes de compreender o produto solicitado.
  await loadData();
+ // Respostas gerais aprovadas são usadas apenas em correspondência exata de pergunta.
+ // Nunca substituem filtros, disponibilidade ou dados estruturados de uma loja selecionada.
+ if(!state.selectedStore){
+  const target=normalizeQuery(text);
+  const verified=(db.approvedAnswers||[]).find(entry=>entry.active===true&&
+   [entry.question,...(Array.isArray(entry.variations)?entry.variations:[])].some(q=>normalizeQuery(q)===target));
+  if(verified?.answer){add(String(verified.answer));return}
+ }
  const follow=contextualIntent(text,state);
  if(follow){
   const current=state.lastResults||[];

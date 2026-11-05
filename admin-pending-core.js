@@ -33,7 +33,14 @@ async function loadPending(){
    if($('pendingNavCount'))$('pendingNavCount').textContent=String(stores.length);
    if(!list)return;
    if(!stores.length){list.innerHTML='<div class="empty-state">Nenhuma loja aguardando aprovação.</div>';return}
-   list.innerHTML=stores.map(s=>`<div class="item"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot pending"></span><span class="badge warn">Pendente</span></div><div class="meta">${esc(s.category||'Sem categoria')}</div><div class="meta">${esc(s.address||'Endereço não informado')}</div></div><div class="actions-wrap"><button class="btn sm dark" data-papprove="${s.id}">Aprovar</button><button class="btn sm" data-psuspend="${s.id}">Suspender</button></div></div></div>`).join('');
+   list.innerHTML=stores.map(s=>{
+     const missing=[];
+     if(!s.owner_id)missing.push('vincular lojista');
+     if(!String(s.address||'').trim()||String(s.address).trim().length<5)missing.push('endereço');
+     if(s.latitude==null||s.longitude==null)missing.push('coordenadas');
+     const ready=missing.length===0;
+     return `<div class="item"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot pending"></span><span class="badge warn">Pendente</span></div><div class="meta">${esc(s.category||'Sem categoria')}</div><div class="meta">${esc(s.address||'Endereço não informado')}</div>${ready?'<div class="meta" style="color:#237245">Dados mínimos completos. Pronta para revisão.</div>':`<div class="meta" style="color:#975e11">Antes de aprovar: ${esc(missing.join(', '))}. <a href="guru-prospects.html">Abrir captação</a></div>`}</div><div class="actions-wrap"><button class="btn sm dark" data-papprove="${s.id}" ${ready?'':'disabled title="Complete os dados obrigatórios antes de aprovar"'}>Aprovar</button><button class="btn sm" data-psuspend="${s.id}">Suspender</button></div></div></div>`;
+   }).join('');
    list.querySelectorAll('[data-papprove]').forEach(b=>b.onclick=()=>act(b.dataset.papprove,'approve',b));
    list.querySelectorAll('[data-psuspend]').forEach(b=>b.onclick=()=>act(b.dataset.psuspend,'suspend',b));
  }catch(e){if(list)list.innerHTML='<div class="empty-state">'+esc(e.message||'Erro ao carregar pendências.')+'</div>';toast(e.message||'Erro ao carregar pendências.')}

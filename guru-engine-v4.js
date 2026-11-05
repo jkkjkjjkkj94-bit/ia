@@ -14,6 +14,7 @@ const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'
 const form=document.getElementById('chatForm'),input=document.getElementById('q'),msgs=document.getElementById('msgs'),ctx=document.getElementById('ctx'),toast=document.getElementById('toast');
 let state=emptyState(),db=null,loadPromise=null,lastLoad=0,position=null,searchBusy=false;
 let replyBuffer=null;
+let lastSearchText='';
 const minTypingMs=850;
 let taxonomy=structuredClone(fallbackTaxonomy),aliases=structuredClone(fallbackAliases);
 const memoryKey='guru_context_v4',ttl=2*60*60*1000;
@@ -388,6 +389,7 @@ function storeDetailIcon(kind){
 }
 function chooseStore(row){
  recordSelection(row.store?.id);
+ rememberSelection(lastSearchText||state.query,row.store?.id);
  state.selectedStore=row.store;
  state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;
  renderContext();save();
@@ -664,6 +666,7 @@ async function run(text){
   const index=plan.index<0?state.lastResults.length-1:plan.index,row=state.lastResults[index];
   if(!row){add('Essa opção não existe na lista atual.');return}
   recordSelection(row.store?.id);
+  if(plan.ask)rememberSelection(lastSearchText||state.query,row.store?.id);
   state.selectedStore=row.store;state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;
   if(plan.ask){replyAboutStore(text,plan.ask,plan.filters);renderContext();save()}else chooseStore(row);
   return;
@@ -681,20 +684,21 @@ async function run(text){
  if(db.unavailable.reviews&&(draft.filters.minRating!=null||draft.filters.sort==='rating')){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
  // Busca híbrida: resultados literais primeiro; sinônimos e erros de escrita
  // só entram quando a consulta original não encontrou nenhum resultado.
- let finalState=draft,rows=searchStores(db,draft,position,{limit:6}),recovery=null;
+ let finalState=draft,rows=searchStores(db,draft,position,{limit:60}),recovery=null;
  if(!rows.length){
   for(const alt of [...guidedSearchAlternatives(text,db,taxonomy,aliases),...catalogAwareAlternatives(text,db,taxonomy,aliases)]){
    const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});
    if(alternatePlan.kind!=='search')continue;
    const alternateState=preserveMandatoryFilters(draft,nextState(state,alternatePlan));
    applyLocation(text,alternateState);
-   const found=searchStores(db,alternateState,position,{limit:6});
+   const found=searchStores(db,alternateState,position,{limit:60});
    if(found.length){rows=found;finalState=alternateState;recovery=alt;break}
   }
  }
  state=finalState;
  renderContext();save();
- rows=rerankSearchResults(rows,text,db,state.filters?.sort);
+ rows=rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort).slice(0,6);
+ lastSearchText=text;
  state.lastResults=rows;
  recordSearch(text,plan,rows);
  if(!rows.length){
@@ -767,5 +771,5 @@ if(form&&input&&msgs){
  input.addEventListener('blur',()=>setTimeout(()=>{if(!suggestions?.contains(document.activeElement))setSuggestions()},100));
  restore();initShell();renderContext();
  loadData().catch(err=>console.warn('[GURU v4] Carregamento inicial não concluído:',err));
- window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state,{products:db?.products||[]}),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state};
+ window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state,{products:db?.products||[]}),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state,learningStats};
 }else console.error('[GURU v4] Formulário ausente.');

@@ -249,7 +249,7 @@ test('V5 mostra transparência de qualidade e recomendações sem dados inventad
  const ui=source('guru-engine-v4.js');
  assert.match(ui,/recordSearch\(text,plan,rows\)/);
  assert.match(ui,/Pontuação GURU:/);
- assert.match(ui,/renderNextQuestions\(m,rows\)/);
+ assert.match(ui,/renderNextQuestions\(m,rows,offset\)/);
  assert.match(ui,/renderComparison\(follow.indices,text\)/);
 });
 test('V5 sanitiza pesquisas para métricas e protege métricas no servidor',async()=>{
@@ -270,7 +270,7 @@ test('V5 sanitiza pesquisas para métricas e protege métricas no servidor',asyn
 test('GURU não busca em fontes externas, somente no catálogo interno',()=>{
  const chat=source('guru-engine-v4.js');
  const admin=source('admin-post-login-loader.js');
- assert.match(chat,/rows=searchStores\(db,draft,position,\{limit:6\}\)/);
+ assert.match(chat,/rows=searchStores\(db,draft,position,\{limit:60\}\)/);
  assert.match(chat,/if\(!rows.length\)\{\s*const guidance=noResultGuidance/);
  assert.doesNotMatch(chat,/approvedSourceProducts|displayWebProducts|guru-approved-products/);
  assert.doesNotMatch(admin,/admin-web-sources/);

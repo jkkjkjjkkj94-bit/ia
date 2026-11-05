@@ -4,7 +4,8 @@ const normalized=s=>normalizeQuery(s);
 const present=(text,phrase)=>(' '+text+' ').includes(' '+phrase+' ');
 export function validatedAliases(rows=[],data={}){
  const active=(data.stores||[]).filter(s=>s.active===true&&s.status==='active');
- const products=(data.products||[]).filter(p=>p.active===true&&p.show_in_ai===true&&Number(p.stock)>0);
+ const activeIds=new Set(active.map(s=>s.id));
+ const products=(data.products||[]).filter(p=>activeIds.has(p.store_id)&&p.active===true&&p.show_in_ai===true&&Number(p.stock)>0);
  const catalog=normalized([
   ...active.flatMap(s=>[s.name,s.category,s.group,...(Array.isArray(s.groups)?s.groups:[])]),
   ...products.map(p=>p.name)
@@ -23,7 +24,7 @@ export function validatedAliases(rows=[],data={}){
 }
 export function sharedAlternatives(raw,rows=[],data={}){
  const query=normalized(raw);
- if(!query||query.length>280)return [];
+ if(!query||query.length>280||/(^| )(sem|nao|exceto|evitar|tirando)( |$)/.test(query))return [];
  const aliases=validatedAliases(rows,data);
  const output=[],seen=new Set([query]);
  for(const {phrase,replacement} of aliases){

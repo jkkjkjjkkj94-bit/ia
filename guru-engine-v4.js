@@ -911,7 +911,7 @@ async function run(text){
  }
  if(pendingNeed?.stage==='budget'){
   const answer=norm(text);
-  const amountMatch=answer.match(/[0-9]+(?:[.,][0-9]{1,2})?/);
+  const amountMatch=String(text).match(/[0-9][0-9.,]*/);
   if(/^(sem orcamento|nao sei|nao defini)$/.test(answer)||amountMatch){
    const amount=amountMatch?normalizeBudget(amountMatch[0]):null;
    if(amount!==null||!amountMatch){

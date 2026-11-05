@@ -45,3 +45,20 @@ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:
  body:has(.msgs .guru-city-choice) .msgs,
  body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 112px)}
 }
+
+/* Área de conversa mais ampla para resultados em três colunas. */
+@media(min-width:901px){
+ .chat .msgs{width:min(1120px,calc(100% - 64px));}
+ .chat .send{width:min(900px,calc(100% - 64px));}
+ .chat .ctx{width:min(900px,calc(100% - 64px));}
+ .chat .guru-suggestions{width:min(900px,calc(100% - 64px));}
+}
+@media(min-width:681px) and (max-width:900px){
+ .chat .msgs{width:calc(100% - 40px);}
+ .chat .send,.chat .ctx{width:calc(100% - 46px);}
+}
+@media(max-width:680px){
+ .chat .msgs{width:calc(100% - 28px);padding-inline:2px;}
+ .chat .send{width:calc(100% - 24px);}
+ .chat .ctx{width:calc(100% - 28px);}
+}

@@ -15,6 +15,7 @@ const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_z
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
 const form=document.getElementById('chatForm'),input=document.getElementById('q'),msgs=document.getElementById('msgs'),ctx=document.getElementById('ctx'),toast=document.getElementById('toast');
 let state=emptyState(),db=null,loadPromise=null,lastLoad=0,position=null,searchBusy=false;
+let locationAttempted=false;
 let replyBuffer=null;
 let lastSearchText='';
 const minTypingMs=850;
@@ -189,7 +190,7 @@ async function refreshFilteredResults(){
  if(searchBusy)return;
  try{
   await loadData();
-  const rows=searchStores(db,state,position,{limit:6});
+  const rows=prioritizeNearby(searchStores(db,state,position,{limit:60})).slice(0,6);
   state.lastResults=rows;save();
   if(rows.length)displayResults(rows);
   else add(explainEmptySearch(db,state,position));
@@ -358,6 +359,7 @@ function isLocationSearch(raw,plan){
  return /perto de mim|proxim[oa] de mim|mais perto|ate \d+(?:[.,]\d+)? km/.test(n)||plan.filters?.sort==='distance'||plan.filters?.maxDistance!=null;
 }
 async function locate(show=true){
+ locationAttempted=true;
  if(!navigator.geolocation){if(show)notice('Seu navegador não permite obter a localização.');return null}
  return new Promise(resolve=>navigator.geolocation.getCurrentPosition(pos=>{
   position={lat:pos.coords.latitude,lng:pos.coords.longitude};if(show)notice('Localização disponível para calcular as distâncias.');resolve(position)
@@ -573,11 +575,36 @@ function renderComparison(indices,question){
  }
  wrap.appendChild(table);m.appendChild(wrap);
 }
+function prioritizeNearby(rows){
+ if(!position||!Array.isArray(rows))return rows;
+ return [...rows].sort((a,b)=>{
+  const ak=a.distance==null?Infinity:a.distance,bk=b.distance==null?Infinity:b.distance;
+  return ak-bk||(b.rankScore||0)-(a.rankScore||0)||(b.score||0)-(a.score||0);
+ });
+}
+function kmLabel(distance){
+ return Number(distance).toLocaleString('pt-BR',{maximumFractionDigits:1,minimumFractionDigits:1})+' km';
+}
 function displayResults(rows){
+ const ordered=prioritizeNearby(rows);
  const m=add('',false);m.classList.add('hashtag-result-msg');
- m.appendChild(el('div','hashtag-intro',rows.length===1?'Encontrei 1 opção cadastrada:':'Encontrei '+rows.length+' opções cadastradas:'));
- const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,i)));m.appendChild(grid);
- renderNextQuestions(m,rows);return m;
+ m.appendChild(el('div','hashtag-intro',ordered.length===1?'Encontrei 1 opção cadastrada:':'Encontrei '+ordered.length+' opções cadastradas:'));
+ const near=position?ordered.filter(r=>r.distance!=null):[];
+ if(near.length){
+  m.appendChild(el('div','guru-nearest-headline','📍 Loja mais próxima com localização cadastrada: '+near[0].store.name+' · '+kmLabel(near[0].distance)+' em linha reta.'));
+  m.appendChild(el('div','guru-nearest-detail','Distância aproximada em linha reta, não tempo ou trajeto de carro. Lojas sem coordenadas ficam depois das que têm distância conhecida.'));
+  const lacking=(db?.stores||[]).filter(s=>s.active===true&&s.status==='active'&&distanceKm(position,s)==null).length;
+  if(lacking)m.appendChild(el('div','guru-nearest-detail',lacking+' loja(s) ativa(s) ainda sem coordenadas não podem ser comparadas por distância.'));
+ }else if(position){
+  m.appendChild(el('div','guru-nearest-detail','As lojas encontradas ainda não possuem coordenadas confirmadas; não é possível afirmar qual é a mais próxima ou informar quilômetros.'));
+ }else{
+  const button=el('button','guru-next-button','📍 Usar minha localização para ver a loja mais próxima');
+  button.type='button';
+  button.onclick=async()=>{const location=await locate(true);if(location){await refreshFilteredResults()}};
+  m.appendChild(button);
+ }
+ const grid=el('div','store-results-grid');ordered.forEach((r,i)=>grid.appendChild(makeCard(r,i)));m.appendChild(grid);
+ renderNextQuestions(m,ordered);return m;
 }
 function productListFor(store,query=''){
  const list=(db.products||[]).filter(p=>p.store_id===store.id&&eligibleProduct(p));
@@ -698,6 +725,9 @@ async function run(text){
   await locate(false);
   if(!position){add('Para aplicar distância ou proximidade real, permita o acesso à localização no navegador. Não vou apresentar opções como próximas sem confirmar isso.');return}
  }
+ // A busca comum pode usar localização, com consentimento do navegador;
+ // não repetir pedidos se a pessoa recusar, nem bloquear pesquisas sem localização.
+ if(!position&&!locationAttempted)await locate(false);
  // Valide dados obrigatórios antes de trocar o contexto. Uma falha não deve apagar a loja selecionada.
  const draft=nextState(state,plan);
  applyLocation(text,draft);
@@ -718,7 +748,7 @@ async function run(text){
  }
  state=finalState;
  renderContext();save();
- rows=rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort).slice(0,6);
+ rows=prioritizeNearby(rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort)).slice(0,6);
  lastSearchText=text;
  state.lastResults=rows;
  recordSearch(text,plan,rows);

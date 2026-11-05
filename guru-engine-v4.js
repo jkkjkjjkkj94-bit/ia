@@ -1,5 +1,5 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
-import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
+import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
@@ -142,7 +142,17 @@ async function showAssistantReply(fragment){
  }
 }
 const notice=t=>{if(toast){toast.textContent=t;toast.classList.add('on');setTimeout(()=>toast.classList.remove('on'),3200)}};
-const msgError=err=>{console.error('[GURU v4]',err);add('Não consegui consultar os dados agora. Confira a conexão e tente novamente.')};
+const msgError=err=>{
+ console.error('[GURU v4]',err);
+ const message=String(err?.message||'');
+ if(/fetch|network|failed to fetch|abort|timeout|HTTP (?:429|5\\d\\d)/i.test(message)){
+  add('Não foi possível acessar o catálogo agora. Verifique a conexão e tente novamente.');
+ }else if(/HTTP 401|HTTP 403/i.test(message)){
+  add('A consulta ao catálogo foi bloqueada por uma configuração de acesso. O administrador precisa verificar as permissões.');
+ }else{
+  add('Ocorreu um erro ao processar a pesquisa. Tente novamente ou inicie uma nova busca.');
+ }
+};
 const suggestions=document.getElementById('guruSuggestions');
 let visibleSuggestions=[];
 function setSuggestions(items=[]){

@@ -33,3 +33,22 @@ test('entrada inválida e localStorage indisponível não quebram ranking',()=>{
  assert.deepEqual(rankV9(null,'teste'),[]);
  assert.equal(rememberSelection('',null),false);
 });
+
+test('regras existentes impedem recomendação de lojas inativas e sem estoque',async()=>{
+ const {searchStores}=await import('../guru-engine-v4-core.mjs');
+ const data={
+  stores:[
+   {id:'active',name:'Loja Ativa',category:'Tecnologia',group:'Celulares',active:true,status:'active',delivery:true},
+   {id:'off',name:'Loja Inativa',category:'Tecnologia',group:'Celulares',active:false,status:'inactive'}
+  ],
+  products:[
+   {id:'p1',store_id:'active',name:'Celular Azul',active:true,show_in_ai:true,stock:0,price:100},
+   {id:'p2',store_id:'off',name:'Celular Azul',active:true,show_in_ai:true,stock:10,price:100}
+  ],
+  hours:[],reviews:[],knowledge:[]
+ };
+ const state={category:'Tecnologia',group:'Celulares',productTerm:'celular',filters:{delivery:true},location:{},semanticTerms:[],featureTerms:[],nameTerms:[],excludedCategories:[],excludedGroups:[],excludedTerms:[],query:'celular'};
+ assert.equal(searchStores(data,state,null,{limit:60}).length,0);
+ data.products[0].stock=5;
+ assert.deepEqual(searchStores(data,state,null,{limit:60}).map(r=>r.store.id),['active']);
+});

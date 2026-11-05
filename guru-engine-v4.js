@@ -622,12 +622,19 @@ function makeCard(row,index){
  if(phone.length>=10&&phone.length<=15){const a=el('a','store-action link','WhatsApp');a.href='https://wa.me/'+phone;a.target='_blank';a.rel='noopener noreferrer';actions.appendChild(a)}
  card.appendChild(actions);return card;
 }
-function renderNextQuestions(host,rows){
+function renderNextQuestions(host,rows,offset=0){
  const questions=followupPrompts(rows,state);
- if(!questions.length)return;
+ const total=(state.lastResults||[]).length;
+ const remaining=Math.max(0,total-offset-rows.length);
+ if(!questions.length&&!remaining)return;
  const panel=el('div','guru-next-questions');
  panel.appendChild(el('div','guru-next-label','Você também pode perguntar:'));
  const buttons=el('div','guru-next-buttons');
+ if(remaining){
+  const more=el('button','guru-next-button guru-more-question','Mostrar mais '+Math.min(RESULT_PAGE_SIZE,remaining)+' opções');
+  more.type='button';more.onclick=()=>submitText('mais opções');
+  buttons.appendChild(more);
+ }
  for(const question of questions){
   const b=el('button','guru-next-button',question);b.type='button';
   b.addEventListener('click',()=>submitText(question));buttons.appendChild(b);
@@ -684,13 +691,8 @@ function displayResults(rows,offset=0){
   m.appendChild(button);
  }
  const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,offset+i)));m.appendChild(grid);
- if(end<total){
-  const footer=el('div','guru-more-results');
-  footer.appendChild(el('span','guru-more-count','Exibindo '+end+' de '+total+' opções'));
-  const button=el('button','guru-next-button guru-more-button','Mostrar mais '+Math.min(RESULT_PAGE_SIZE,total-end)+' opções');
-  button.type='button';button.onclick=()=>submitText('mais opções');footer.appendChild(button);m.appendChild(footer);
- }
- renderNextQuestions(m,rows);return m;
+ if(end<total)m.appendChild(el('div','guru-more-count guru-results-progress','Exibindo '+end+' de '+total+' opções'));
+ renderNextQuestions(m,rows,offset);return m;
 }
 function showNextResultPage(){
  const all=state.lastResults||[];

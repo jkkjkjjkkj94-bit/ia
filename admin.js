@@ -13,7 +13,7 @@ let pendingStatus=null;
 let rankingByStore=new Map();
 let sourceHealth={core:true,ai:true};
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(window.__t);window.__t=setTimeout(()=>e.classList.remove('on'),3200)}
-function showApp(on=true){$('loginView').classList.toggle('hidden',on);$('appView').classList.toggle('hidden',!on)}
+function showApp(on=true){$('loginView').classList.toggle('hidden',on);$('appView').classList.toggle('hidden',!on);if(on&&new URLSearchParams(location.search).get('view')==='merchants')switchView('merchants')}
 function switchView(id){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id===id));document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('on',x.dataset.view===id));$('pageTitle').textContent=document.querySelector(`[data-view="${id}"]`)?.textContent||'Painel'}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
 async function logAction(action,entityType,entityId=null,details={}){if(!session)return;try{await sb.from('local_ai_admin_audit').insert({admin_user_id:session.user.id,action,entity_type:entityType,entity_id:entityId,details})}catch{}}

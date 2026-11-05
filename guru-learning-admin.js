@@ -41,6 +41,25 @@ function editableField(label,value,maxLength=200,multiline=false){
  wrap.appendChild(field);
  return {wrap,field};
 }
+const CONTEXT_TYPES=[
+ ['general','Conhecimento geral'],['store','Informações sobre lojas'],
+ ['product','Produtos e estoque'],['hours','Horários de funcionamento'],
+ ['delivery','Entrega e frete'],['payment','Formas de pagamento'],
+ ['location','Endereço e localização'],['reviews','Avaliações de clientes']
+];
+function contextPicker(value){
+ const wrap=node('label','edit-field');
+ wrap.appendChild(node('span','muted','Direcionar pergunta para o contexto'));
+ const field=node('select','review-input');
+ for(const [key,label] of CONTEXT_TYPES){
+  const option=node('option','',label);option.value=key;
+  field.appendChild(option);
+ }
+ field.value=CONTEXT_TYPES.some(([key])=>key===value)?value:'general';
+ wrap.appendChild(field);
+ wrap.appendChild(node('span','muted','Contextos de loja consultam dados reais cadastrados, sem substituir estoque, horários ou entrega por respostas genéricas.'));
+ return {wrap,field};
+}
 function render(){
  const status=$('statusFilter').value,items=proposals.filter(p=>status==='all'||p.status===status);
  $('list').replaceChildren();
@@ -54,9 +73,10 @@ function render(){
    const editBox=node('div','review-edit');
    const question=editableField('Pergunta revisada',p.sample_question,200);
    const category=editableField('Categoria',p.suggested_category||'',100);
+   const context=contextPicker(p.context_type||'general');
    const answer=editableField('Resposta revisada',p.proposed_answer||'',2000,true);
    answer.field.placeholder='Escreva uma resposta factual e verificada.';
-   editBox.append(question.wrap,category.wrap,answer.wrap);
+   editBox.append(question.wrap,category.wrap,context.wrap,answer.wrap);
    card.appendChild(editBox);
    const bar=node('div','toolbar');
    let busy=false;
@@ -65,6 +85,7 @@ function render(){
    const fields=()=>({
     sample_question:question.field.value.trim(),
     suggested_category:category.field.value.trim()||null,
+    context_type:context.field.value,
     proposed_answer:answer.field.value.trim()||null
    });
    const validate=(mustHaveAnswer=false)=>{
@@ -82,7 +103,8 @@ function render(){
     if(p.status==='approved'){
      const {error}=await sb.rpc('guru_v12_edit_approved_proposal',{
       p_proposal_id:p.id,p_question:value.sample_question,
-      p_answer:value.proposed_answer,p_category:value.suggested_category||''
+      p_answer:value.proposed_answer,p_category:value.suggested_category||'',
+      p_context_type:value.context_type
      });
      if(error)throw error;
     }else{

@@ -268,13 +268,13 @@ export function nextState(current,plan){
  else if(freshTopic||plan.semanticTerms?.length)next.specialtyTerm=null;
  if(plan.taxon?.group)next.group=plan.taxon.group;
  else if(plan.taxon?.category)next.group=null;
- if(plan.productTerm)next.productTerm=plan.productTerm;
- else if(freshTopic)next.productTerm=null;
+ if(plan.productTerm&&!specialtyTopic)next.productTerm=plan.productTerm;
+ else if(freshTopic||specialtyTopic)next.productTerm=null;
  if(plan.taxon?.category||plan.productTerm||plan.broad||plan.semanticTerms?.length){next.semanticTerms=plan.semanticTerms;next.featureTerms=plan.featureTerms;next.nameTerms=plan.nameTerms||[]}
  if(plan.broad&&!plan.taxon){next.category=null;next.group=null;next.productTerm=null;next.semanticTerms=[];next.featureTerms=[];next.nameTerms=[];next.specialtyTerm=null}
- next.excludedGroups=[...new Set([...(freshTopic?[]:prev.excludedGroups),...plan.excludedGroups])];
- next.excludedCategories=[...new Set([...(freshTopic?[]:prev.excludedCategories),...plan.excludedCategories])];
- next.excludedTerms=[...new Set([...(freshTopic?[]:prev.excludedTerms),...plan.excludedTerms])];
+ next.excludedGroups=[...new Set([...(freshTopic||specialtyTopic?[]:prev.excludedGroups),...plan.excludedGroups])];
+ next.excludedCategories=[...new Set([...(freshTopic||specialtyTopic?[]:prev.excludedCategories),...plan.excludedCategories])];
+ next.excludedTerms=[...new Set([...(freshTopic||specialtyTopic?[]:prev.excludedTerms),...plan.excludedTerms])];
  next.query=plan.raw;
  return next;
 }

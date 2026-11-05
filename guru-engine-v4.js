@@ -739,6 +739,12 @@ function specialtyMentionInQuery(text){
  }
  return [...found.entries()].sort((a,b)=>b[0].length-a[0].length)[0]?.[1]||null;
 }
+function isBareCategoryOrGroupQuery(text,plan){
+ if(!plan?.taxon)return false;
+ const raw=norm(text);
+ const terms=[plan.taxon.term,plan.taxon.group,plan.taxon.category].filter(Boolean).map(norm);
+ return terms.includes(raw);
+}
 function isNewSpecialtyRequest(text,specialty){
  return Boolean(specialty)&&/\b(?:busca|buscar|busque|encontra|encontrar|encontre|procuro|procurar|procure|pesquisa|pesquisar|pesquise|recomenda|recomendar|recomende|indica|indicar|indique|especialidade|especializada|especializado|quero|preciso)\b/.test(norm(text));
 }
@@ -795,9 +801,13 @@ async function run(text){
  }
  const specialtyMention=specialtyMentionInQuery(text);
  const newSpecialty=isNewSpecialtyRequest(text,specialtyMention);
- const intentState=newSpecialty?{...state,selectedStore:null}:state;
- const plan=interpret(text,taxonomy,aliases,intentState,{products:db?.products||[]});
- if(plan.kind==='search'&&newSpecialty)plan.specialtyTerm=specialtyMention;
+ // Consulta direta de categoria/grupo não pode virar pergunta sobre a loja
+ // anterior nem herdar filtros antigos.
+ const rawPlan=interpret(text,taxonomy,aliases,{...state,selectedStore:null},{products:db?.products||[]});
+ const bareTaxonomy=isBareCategoryOrGroupQuery(text,rawPlan);
+ const intentState=newSpecialty||bareTaxonomy?{...state,selectedStore:null}:state;
+ const plan=bareTaxonomy?rawPlan:interpret(text,taxonomy,aliases,intentState,{products:db?.products||[]});
+ if(plan.kind==='search'&&newSpecialty&&!bareTaxonomy)plan.specialtyTerm=specialtyMention;
  if(plan.kind==='blocked'){add('“Loja” e “comércio” são tratados como varejo e não entram na categoria Comida. Pesquise por restaurante, pizzaria ou pelo tipo de comida.');return}
  if(plan.kind==='clarify'){
   add(plan.reason==='product'?'Qual produto você está procurando? Informe o nome ou uma característica do item para eu consultar o catálogo.':'Qual estabelecimento da lista você quer consultar? Pode dizer, por exemplo, “a segunda”.');
@@ -826,13 +836,25 @@ async function run(text){
  }
  // Sem solicitação de GPS obrigatória: apenas distância opcional nos resultados.
  // Valide dados obrigatórios antes de trocar o contexto. Uma falha não deve apagar a loja selecionada.
- const draft=nextState(state,plan);
+ const draft=nextState(bareTaxonomy?emptyState():state,plan);
+ // Uma categoria ou grupo digitado isoladamente representa nova pesquisa.
+ // Não exigir produto, entrega ou outra especialidade da conversa anterior.
+ if(bareTaxonomy){draft.productTerm=null;draft.specialtyTerm=null}
  draft.location={...(draft.location||{}),city:userCity,uf:null,neighborhood:null};
  if(db.unavailable.hours&&(draft.filters.openNow||draft.filters.day!=null||(Array.isArray(draft.filters.days)&&draft.filters.days.length)||draft.filters.start!=null||draft.filters.end!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
  if(db.unavailable.reviews&&(draft.filters.minRating!=null||draft.filters.sort==='rating')){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
  // Busca híbrida: resultados literais primeiro; sinônimos e erros de escrita
  // só entram quando a consulta original não encontrou nenhum resultado.
  let finalState=draft,rows=searchStores(db,draft,position,{limit:60}),recovery=null;
+ // Segurança para grupos com estabelecimentos cadastrados: não informar
+ // falsamente "nenhum atende" quando somente filtros herdados bloquearam.
+ if(!rows.length&&plan.taxon?.group&&!plan.productTerm&&Object.keys(plan.filters||{}).length===0){
+  const fresh=nextState(emptyState(),{...plan,specialtyTerm:null});
+  fresh.productTerm=null;fresh.specialtyTerm=null;
+  fresh.location={city:userCity,uf:null,neighborhood:null};
+  const found=searchStores(db,fresh,position,{limit:60});
+  if(found.length){rows=found;finalState=fresh}
+ }
  if(!rows.length){
   for(const alt of [...guidedSearchAlternatives(text,db,taxonomy,aliases),...catalogAwareAlternatives(text,db,taxonomy,aliases),...sharedAlternatives(text,db.sharedAliases,db)]){
    const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});

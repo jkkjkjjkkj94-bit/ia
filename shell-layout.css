@@ -62,3 +62,31 @@ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:
  .chat .send{width:calc(100% - 24px);}
  .chat .ctx{width:calc(100% - 28px);}
 }
+
+/* Teclado móvel: campo de perguntas acompanha a área visual, inclusive no iOS. */
+@media(max-width:680px){
+ .chat .send{
+  bottom:calc(18px + var(--guru-keyboard-inset,0px) + env(safe-area-inset-bottom,0px));
+  z-index:5;
+ }
+ .chat .ctx{
+  bottom:calc(88px + var(--guru-keyboard-inset,0px) + env(safe-area-inset-bottom,0px));
+  z-index:5;
+ }
+ .chat .msgs,
+ .chat-started .chat .msgs,
+ body:has(.msgs .guru-city-choice) .chat .msgs,
+ body:has(.msgs .hashtag-result-msg) .chat .msgs{
+  height:calc(100% - 112px - var(--guru-keyboard-inset,0px) - env(safe-area-inset-bottom,0px));
+  min-height:0;
+ }
+ .chat .guru-suggestions{
+  bottom:calc(80px + var(--guru-keyboard-inset,0px) + env(safe-area-inset-bottom,0px));
+  max-height:min(210px,35dvh);
+ }
+ body:has(.ctx:not([hidden])) .chat .guru-suggestions,
+ .chat-started:has(.ctx:not([hidden])) .chat .guru-suggestions{
+  bottom:calc(142px + var(--guru-keyboard-inset,0px) + env(safe-area-inset-bottom,0px));
+ }
+ .guru-keyboard-open .app-footer-note{display:none}
+}

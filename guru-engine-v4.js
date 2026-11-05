@@ -628,14 +628,16 @@ function makeCard(row,index){
   }
   card.appendChild(audit);
  }
- const score=el('div','guru-score-line', 'Pontuação GURU: '+Number(row.rankScore||0).toFixed(0)+' pontos');
- score.title='Classificação interna da GURU, diferente da avaliação dos clientes';
+ const score=el('div','guru-score-line','Qualidade do cadastro: '+Number(row.rankScore||0).toFixed(0)+'/100'+(row.searchMatch?' · Relevância: '+row.searchMatch.score+'/100':''));
+ score.title='Qualidade cadastral e relevância da busca são diferentes da avaliação dos clientes';
  card.appendChild(score);
  const quality=storeDataQuality(s,db||{});
  if(quality.stale)card.appendChild(el('div','guru-data-alert','Informações da loja podem estar desatualizadas ('+quality.daysSinceUpdate+' dias).'));
  const why=el('button','smart-why-btn','Por que apareceu?');why.type='button';
  const panel=el('div','smart-why-panel');
- panel.appendChild(el('div','','Pontuação interna: '+Number(row.rankScore||0).toFixed(0)+' pontos. Avaliações de clientes são exibidas separadamente.'));
+ panel.appendChild(el('div','','Qualidade cadastral: '+Number(row.rankScore||0).toFixed(0)+'/100 (não é avaliação de clientes).'));
+ if(row.searchMatch)panel.appendChild(el('div','','Relevância desta consulta: '+row.searchMatch.score+'/100 (75% correspondência, 25% qualidade).'));
+ for(const evidence of explainMatch(row))panel.appendChild(el('div','',evidence));
  if(Number(row.contextScore)>0)panel.appendChild(el('div','','Relevância contextual: '+row.contextScore+' pontos.'));
  row.reason.forEach(t=>panel.appendChild(el('div','',t)));
  const qualityInfo=storeDataQuality(s,db||{});
@@ -793,7 +795,7 @@ function renderNeedPlan(need){
 }
 function showNeedStores(need){
  if(!userCity){askForCity();return}
- const rows=findStoresForNeed(db,need,userCity,position,searchStores,emptyState,60);
+ const rows=contextualRank(findStoresForNeed(db,need,userCity,position,searchStores,emptyState,60),describeNeed(need)?.title||'',null);
  state=emptyState();
  state.location={city:userCity,uf:null,neighborhood:null};
  state.shoppingNeed={...need};

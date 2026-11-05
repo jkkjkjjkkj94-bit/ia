@@ -1,5 +1,5 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
-import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=1';
+import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=2';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
@@ -891,7 +891,13 @@ async function run(text){
  const newlyDetectedNeed=detectNeed(text);
  if(newlyDetectedNeed){
   if(!userCity){askForCity(text);return}
-  state.shoppingNeed=newlyDetectedNeed;save();renderNeedQuestion(newlyDetectedNeed);return;
+  state.shoppingNeed=newlyDetectedNeed;save();
+  // Se a pessoa já especificou o ambiente ou etapa, evite perguntar novamente.
+  if(newlyDetectedNeed.variant){
+   await loadData();
+   renderNeedPlan(newlyDetectedNeed);showNeedStores(newlyDetectedNeed);
+  }else renderNeedQuestion(newlyDetectedNeed);
+  return;
  }
  if(pendingNeed){state.shoppingNeed=null;save()}
  const broad=suggestBroadConversation(text);

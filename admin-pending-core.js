@@ -18,7 +18,7 @@ function ensureUI(){
    b.onclick=()=>{document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='pendingStores'));document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('on',x===b));$('pageTitle').textContent='Pendentes';loadPending()};
  }
  if(!$('pendingStores')){
-   const s=document.createElement('section');s.id='pendingStores';s.className='view';s.innerHTML='<div class="card"><div class="section-head"><div><h3>Lojas pendentes</h3><div class="meta">Cadastros aguardando aprovação administrativa.</div></div><button id="pendingRefresh" class="btn sm" type="button">Atualizar</button></div><div id="pendingStoreList" class="list" style="margin-top:14px"></div></div>';
+   const s=document.createElement('section');s.id='pendingStores';s.className='view';s.innerHTML='<div class="card"><div class="section-head"><div><h3>Lojas pendentes</h3><div class="meta">Cadastros aguardando aprovação administrativa.</div></div><div class="row"><a class="btn sm" href="guru-prospects.html">Criar contas para lojas sem responsável</a><button id="pendingRefresh" class="btn sm" type="button">Atualizar</button></div></div><div id="pendingStoreList" class="list" style="margin-top:14px"></div></div>';
    main.appendChild(s);$('pendingRefresh').onclick=loadPending;
  }
  return true;

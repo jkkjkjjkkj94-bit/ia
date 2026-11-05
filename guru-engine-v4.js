@@ -4,7 +4,7 @@ import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForN
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
-import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=2';
+import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
 import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
 import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './guru-search-v7.mjs?v=1';
 import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';

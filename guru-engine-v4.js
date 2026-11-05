@@ -6,6 +6,7 @@ import {recordSearch,recordSelection} from './guru-telemetry-v5.mjs?v=1';
 import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
 import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './guru-search-v7.mjs?v=1';
 import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
+import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=1';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};

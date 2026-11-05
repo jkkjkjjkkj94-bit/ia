@@ -3,7 +3,10 @@ import {describeNeed} from './guru-needs-v1.mjs?v=1';
 const MAX_ITEMS=40;
 export function normalizeBudget(raw){
  if(raw===null||raw===undefined||raw==='')return null;
- const value=Number(String(raw).replace(/\s/g,'').replace(',','.'));
+ const cleaned=String(raw).trim().replace(/[^0-9.,]/g,'');
+ const normalized=cleaned.includes(',')?cleaned.replace(/\./g,'').replace(',','.'):
+  /^\d{1,3}(?:\.\d{3})+$/.test(cleaned)?cleaned.replace(/\./g,''):cleaned;
+ const value=Number(normalized);
  return Number.isFinite(value)&&value>0&&value<=10000000?Math.round(value*100)/100:null;
 }
 export function createShoppingPlan(need,budget=null){

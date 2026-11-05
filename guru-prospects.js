@@ -235,6 +235,26 @@ function leadCard(p){
  const edit=el('button','','Editar');edit.type='button';actions.append(edit);
  const create=el('button','primary',p.existing_store_id?'Loja já criada':'Criar loja');
  create.type='button';create.disabled=Boolean(p.existing_store_id)||bulkRunning;actions.append(create);
+ if(p.existing_store_id&&!p.merchant_user_id){
+  const createMerchant=el('button','primary','Criar conta de lojista');
+  createMerchant.type='button';createMerchant.disabled=accountBatchRunning||bulkRunning;
+  createMerchant.title='Criar um acesso provisório para esta loja e vinculá-lo ao cadastro pendente.';
+  createMerchant.onclick=async()=>{
+   if(accountBatchRunning||bulkRunning)return;
+   const confirmMessage='Criar uma conta provisória de lojista para '+p.name+' e vinculá-la a esta loja?\\n\\nO acesso será mostrado uma única vez. A loja continuará pendente e você precisará entregar as credenciais somente ao responsável autorizado.';
+   if(!window.confirm(confirmMessage.replaceAll('\\n','\n')))return;
+   createMerchant.disabled=true;
+   msg('Criando a conta e vinculando à loja '+p.name+'...');
+   try{
+    const result=await registerMerchantAccountForStore(p);
+    renderAccessResults([result]);
+    try{await load();await loadMerchants()}catch(e){msg('Conta processada; falha ao atualizar a lista: '+e.message);return}
+    msg(result.error?'Conta criada com pendência: '+result.error:result.password?'Conta de lojista criada. Copie o login e a senha exibidos.':'Conta existente conferida. '+(result.warning||'Verifique o vínculo no painel.'));
+   }catch(e){msg('Não foi possível criar a conta para '+p.name+': '+e.message)}
+   finally{createMerchant.disabled=false}
+  };
+  actions.append(createMerchant);
+ }
  if(p.existing_store_id){
   const link=el('a','btn','Ver no painel de lojas');link.href='admin.html?view=stores';actions.append(link);
   if(p.merchant_user_id){

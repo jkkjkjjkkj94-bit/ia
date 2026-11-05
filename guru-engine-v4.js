@@ -640,78 +640,66 @@ function renderNextQuestions(host,rows,offset=0){
 function renderComparison(indices,question){
  const all=state.lastResults||[];
  const offset=Math.max(0,(Number(state.resultOffset)||RESULT_PAGE_SIZE)-RESULT_PAGE_SIZE);
- // Ordinais como "primeira" e "segunda" devem se referir ao trio exibido.
  const rows=[...new Set(indices)].map(index=>all[offset+index]).filter(Boolean);
  if(rows.length<2){add('Preciso de pelo menos duas opções deste grupo para comparar.');return}
  const items=compareStores(rows,db||{});
- const m=add('',false);m.classList.add('guru-comparison-message');
- const wrapper=el('section','guru-compare-experience');
- wrapper.appendChild(el('div','guru-compare-kicker','COMPARAÇÃO DE ESTABELECIMENTOS'));
- wrapper.appendChild(el('h3','guru-compare-title','Qual opção combina mais com você?'));
- wrapper.appendChild(el('p','guru-compare-intro','Compare os dados cadastrados das lojas lado a lado. Informações ausentes não são tratadas como vantagens ou desvantagens.'));
- const table=el('div','guru-compare-panel');
- table.style.setProperty('--guru-compare-columns',String(items.length));
- const labels=el('div','guru-compare-heading');
- labels.appendChild(el('div','guru-compare-corner','Critérios'));
- items.forEach((item,i)=>{
-  const head=el('div','guru-compare-store-heading');
-  head.appendChild(el('span','guru-compare-number','OPÇÃO '+(i+1)));
-  head.appendChild(el('strong','guru-compare-store-name',item.name));
-  const loc=item.location?getCityFromAddress(item.location):'';
-  if(loc)head.appendChild(el('span','guru-compare-store-location',loc));
-  table.dataset.options=String(items.length);
-  labels.appendChild(head);
- });
- table.appendChild(labels);
- const number=value=>typeof value==='number'&&Number.isFinite(value);
- const metricRows=[
-  {label:'Pontuação GURU',hint:'Relevância interna, não avaliação de clientes',format:x=>number(x.score)?Math.round(x.score)+' pontos':'Não informada',measure:x=>number(x.score)?x.score:null,direction:'max'},
-  {label:'Entrega',hint:'Serviço informado no cadastro',format:x=>x.delivery?'Disponível':'Não cadastrada',measure:x=>x.delivery?1:null,direction:'max'},
-  {label:'Taxa de entrega',hint:'Não inclui o valor dos produtos',format:x=>x.delivery&&number(x.deliveryFee)?money(x.deliveryFee):'Não informada',measure:x=>x.delivery&&number(x.deliveryFee)?x.deliveryFee:null,direction:'min'},
-  {label:'Menor preço cadastrado',hint:'Produtos podem ser diferentes entre lojas',format:x=>number(x.price)?money(x.price):'Sem preço cadastrado',measure:x=>number(x.price)?x.price:null,direction:null},
-  {label:'Distância aproximada',hint:'Em linha reta; depende da localização',format:x=>number(x.distance)?x.distance.toLocaleString('pt-BR',{maximumFractionDigits:1,minimumFractionDigits:1})+' km':'Não disponível',measure:x=>number(x.distance)?x.distance:null,direction:'min'},
-  {label:'Avaliações',hint:'Média das avaliações registradas',format:x=>number(x.rating)?x.rating.toLocaleString('pt-BR',{maximumFractionDigits:1,minimumFractionDigits:1})+'/5 · '+x.ratingCount+' avaliações':'Sem avaliações',measure:x=>number(x.rating)?x.rating:null,direction:'max'},
-  {label:'Produtos cadastrados',hint:'Quantidade de produtos disponíveis no catálogo',format:x=>x.productCount===0?'Nenhum cadastrado':x.productCount+' '+(x.productCount===1?'produto':'produtos'),measure:x=>null,direction:null}
+ const section=add('',false);section.classList.add('guru-comparison-message');
+ const wrap=el('section','guru-compare-experience');
+ wrap.appendChild(el('div','guru-compare-kicker','COMPARAR LOJAS'));
+ wrap.appendChild(el('h3','guru-compare-title','Comparação entre estabelecimentos'));
+ wrap.appendChild(el('p','guru-compare-intro','Informações disponíveis nos cadastros da GURU.'));
+ const available=value=>typeof value==='number'&&Number.isFinite(value);
+ const metrics=[
+  {label:'Pontuação GURU',detail:'Relevância interna',format:x=>available(x.score)?Math.round(x.score)+' pontos':'Não informada',measure:x=>available(x.score)?x.score:null,better:'max',badge:'Maior pontuação'},
+  {label:'Entrega',detail:'Serviço cadastrado',format:x=>x.delivery?'Disponível':'Não cadastrada',measure:x=>x.delivery?1:null,better:'max',badge:'Entrega disponível'},
+  {label:'Taxa de entrega',detail:'Valor cadastrado',format:x=>x.delivery&&available(x.deliveryFee)?money(x.deliveryFee):'Não informada',measure:x=>x.delivery&&available(x.deliveryFee)?x.deliveryFee:null,better:'min',badge:'Menor taxa'},
+  {label:'Preço cadastrado',detail:'Produtos podem ser diferentes',format:x=>available(x.price)?money(x.price):'Sem preço',measure:x=>null,better:null},
+  {label:'Distância',detail:'Aproximada, em linha reta',format:x=>available(x.distance)?x.distance.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' km':'Não disponível',measure:x=>available(x.distance)?x.distance:null,better:'min',badge:'Mais próxima'},
+  {label:'Avaliações',detail:'Média dos clientes',format:x=>available(x.rating)?x.rating.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'/5 · '+x.ratingCount+' avaliações':'Sem avaliações',measure:x=>available(x.rating)?x.rating:null,better:'max',badge:'Mais bem avaliada'},
+  {label:'Produtos cadastrados',detail:'Catálogo disponível',format:x=>x.productCount?x.productCount+' '+(x.productCount===1?'produto':'produtos'):'Nenhum cadastrado',measure:x=>null,better:null}
  ];
- let differences=0;
- for(const metric of metricRows){
-  const tr=el('div','guru-compare-metric-row');
-  const key=el('div','guru-compare-metric-key');
-  key.appendChild(el('strong','',metric.label));
-  key.appendChild(el('span','',metric.hint));
-  tr.appendChild(key);
+ const bestByMetric=metrics.map(metric=>{
+  if(!metric.better)return null;
   const values=items.map(metric.measure);
-  const valid=values.filter(number);
-  const unique=new Set(valid);
-  // Só realça uma diferença se todas as lojas têm dados comparáveis.
-  const hasComparable=metric.direction&&valid.length===items.length&&unique.size>1;
-  const best=hasComparable?(metric.direction==='min'?Math.min(...valid):Math.max(...valid)):null;
-  if(hasComparable)differences++;
-  items.forEach((item,i)=>{
-   const cell=el('div','guru-compare-metric-value');
-   const value=el('span','',metric.format(item));
-   cell.appendChild(value);
-   if(hasComparable&&values[i]===best){
-    cell.classList.add('guru-compare-advantage');
-    cell.appendChild(el('span','guru-compare-advantage-label',metric.label==='Pontuação GURU'?'Maior pontuação':metric.label==='Distância aproximada'?'Mais próxima':metric.label==='Taxa de entrega'?'Menor taxa':metric.label==='Entrega'?'Oferece entrega':'Maior avaliação'));
-   }
-   tr.appendChild(cell);
-  });
-  table.appendChild(tr);
- }
- wrapper.appendChild(table);
- const note=el('p','guru-compare-disclaimer',
-  differences?'Destaques indicam apenas diferenças em critérios com dados disponíveis para todas as opções.':'Ainda faltam dados comparáveis para destacar diferenças entre estas lojas.');
- wrapper.appendChild(note);
- const actions=el('div','guru-compare-actions');
+  if(values.some(v=>!available(v))||new Set(values).size<2)return null;
+  return metric.better==='min'?Math.min(...values):Math.max(...values);
+ });
+ const cards=el('div','guru-compare-cards');
+ cards.style.setProperty('--guru-compare-count',String(items.length));
  items.forEach((item,index)=>{
-  const button=el('button','guru-next-button guru-compare-open','Ver '+item.name);
+  const card=el('article','guru-compare-card');
+  const head=el('div','guru-compare-card-head');
+  head.appendChild(el('span','guru-compare-number','OPÇÃO '+(index+1)));
+  head.appendChild(el('h4','guru-compare-card-name',item.name));
+  const city=item.location?getCityFromAddress(item.location):'';
+  if(city)head.appendChild(el('span','guru-compare-card-city',city));
+  card.appendChild(head);
+  const list=el('div','guru-compare-card-metrics');
+  metrics.forEach((metric,idx)=>{
+   const row=el('div','guru-compare-card-metric');
+   const left=el('div','guru-compare-card-label');
+   left.appendChild(el('span','',metric.label));
+   const right=el('div','guru-compare-card-data');
+   const text=el('strong','',metric.format(item));
+   const val=metric.measure(item);
+   if(bestByMetric[idx]!==null&&val===bestByMetric[idx]){
+    row.classList.add('guru-compare-card-best');
+    right.appendChild(el('span','guru-compare-best-tag',metric.badge));
+   }
+   right.prepend(text);
+   row.append(left,right);
+   list.appendChild(row);
+  });
+  card.appendChild(list);
+  const button=el('button','guru-compare-card-open','Ver loja');
   button.type='button';
   button.onclick=()=>chooseStore(rows[index]);
-  actions.appendChild(button);
+  card.appendChild(button);
+  cards.appendChild(card);
  });
- wrapper.appendChild(actions);
- m.appendChild(wrapper);
+ wrap.appendChild(cards);
+ wrap.appendChild(el('p','guru-compare-disclaimer','Destaques aparecem somente quando há dados comparáveis. Pontuação GURU não é avaliação de clientes; preços de produtos diferentes não indicam a loja mais barata.'));
+ section.appendChild(wrap);
 }
 function citySearchState(source=state){
  return {...source,location:{...(source.location||{}),city:userCity,uf:null,neighborhood:null}};

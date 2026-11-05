@@ -32,43 +32,112 @@ function node(tag,cls,text){
  const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;
  return el;
 }
+function editableField(label,value,maxLength=200,multiline=false){
+ const wrap=node('label','edit-field');
+ wrap.appendChild(node('span','muted',label));
+ const field=node(multiline?'textarea':'input','review-input');
+ field.value=String(value||'');field.maxLength=maxLength;
+ if(!multiline)field.type='text';
+ wrap.appendChild(field);
+ return {wrap,field};
+}
 function render(){
  const status=$('statusFilter').value,items=proposals.filter(p=>status==='all'||p.status===status);
  $('list').replaceChildren();
  if(!items.length){$('list').appendChild(node('p','muted','Nenhuma sugestão nesta categoria.'));return}
  for(const p of items){
   const card=node('article','item');
-  card.appendChild(node('h3','',p.sample_question));
+  const title=node('h3','',p.sample_question);
+  card.appendChild(title);
   card.appendChild(node('div','meta',p.occurrences+' ocorrência(s) · '+p.status+' · '+(p.suggested_category||'sem categoria')));
-  if(p.status==='pending'){
-   card.appendChild(node('label','muted','Resposta revisada pelo administrador'));
-   const answer=node('textarea');answer.placeholder='Escreva uma resposta factual, verificável e que não dependa de informações desatualizadas.';answer.maxLength=2000;
-   if(p.proposed_answer)answer.value=p.proposed_answer;
-   card.appendChild(answer);
+  if(p.status==='pending'||p.status==='approved'){
+   const editBox=node('div','review-edit');
+   const question=editableField('Pergunta revisada',p.sample_question,200);
+   const category=editableField('Categoria',p.suggested_category||'',100);
+   const answer=editableField('Resposta revisada',p.proposed_answer||'',2000,true);
+   answer.field.placeholder='Escreva uma resposta factual e verificada.';
+   editBox.append(question.wrap,category.wrap,answer.wrap);
+   card.appendChild(editBox);
    const bar=node('div','toolbar');
-   const approve=node('button','primary','Aprovar e publicar');
-   approve.onclick=async()=>{
-    const value=answer.value.trim();
-    if(value.length<15){message('A resposta deve ter pelo menos 15 caracteres.');return}
-    approve.disabled=true;
-    try{
-     const {error}=await sb.rpc('guru_v11_approve_proposal',{p_proposal_id:p.id,p_answer:value});
-     if(error)throw error;
-     message('Conhecimento aprovado e publicado.');await load();
-    }catch(e){message('Não foi possível aprovar: '+e.message)}
-    finally{approve.disabled=false}
+   let busy=false;
+   const buttons=[];
+   const setBusy=value=>{busy=value;for(const b of buttons)b.disabled=value};
+   const fields=()=>({
+    sample_question:question.field.value.trim(),
+    suggested_category:category.field.value.trim()||null,
+    proposed_answer:answer.field.value.trim()||null
+   });
+   const validate=(mustHaveAnswer=false)=>{
+    const value=fields();
+    if(value.sample_question.length<3){message('A pergunta deve ter pelo menos 3 caracteres.');return null}
+    if(mustHaveAnswer&&(!value.proposed_answer||value.proposed_answer.length<15)){
+     message('A resposta deve ter pelo menos 15 caracteres.');return null;
+    }
+    if(value.proposed_answer&&value.proposed_answer.length<15){
+     message('A resposta deve ter pelo menos 15 caracteres ou ficar em branco.');return null;
+    }
+    return value;
    };
-   const reject=node('button','','Rejeitar');
-   reject.onclick=async()=>{
-    reject.disabled=true;
-    try{
-     const {error}=await sb.from('guru_knowledge_proposals').update({status:'rejected',reviewed_at:new Date().toISOString(),reviewed_by:currentUser.id}).eq('id',p.id).eq('status','pending');
+   const persist=async(value)=>{
+    if(p.status==='approved'){
+     const {error}=await sb.rpc('guru_v12_edit_approved_proposal',{
+      p_proposal_id:p.id,p_question:value.sample_question,
+      p_answer:value.proposed_answer,p_category:value.suggested_category||''
+     });
      if(error)throw error;
-     message('Sugestão rejeitada.');await load();
-    }catch(e){message('Erro ao rejeitar: '+e.message)}
-    finally{reject.disabled=false}
+    }else{
+     const {data,error}=await sb.from('guru_knowledge_proposals')
+      .update(value).eq('id',p.id).eq('status','pending').select('id').maybeSingle();
+     if(error)throw error;
+     if(!data)throw Error('Esta revisão não está mais pendente. Atualize a lista.');
+    }
    };
-   bar.append(approve,reject);card.appendChild(bar);
+   const save=node('button','','Salvar alterações');
+   buttons.push(save);
+   save.onclick=async()=>{
+    if(busy)return;
+    const value=validate(p.status==='approved');if(!value)return;
+    setBusy(true);
+    try{await persist(value);message('Alterações salvas com sucesso.');await load()}
+    catch(e){message('Não foi possível salvar: '+e.message)}
+    finally{setBusy(false)}
+   };
+   bar.appendChild(save);
+   if(p.status==='pending'){
+    const approve=node('button','primary','Aprovar e publicar');
+    buttons.push(approve);
+    approve.onclick=async()=>{
+     if(busy)return;
+     const value=validate(true);if(!value)return;
+     setBusy(true);
+     try{
+      // O rascunho é gravado primeiro para que pergunta e categoria publicadas sejam as editadas.
+      await persist(value);
+      const {error}=await sb.rpc('guru_v11_approve_proposal',{p_proposal_id:p.id,p_answer:value.proposed_answer});
+      if(error)throw error;
+      message('Revisão salva, aprovada e publicada.');await load();
+     }catch(e){message('Não foi possível publicar: '+e.message)}
+     finally{setBusy(false)}
+    };
+    const reject=node('button','','Rejeitar');
+    buttons.push(reject);
+    reject.onclick=async()=>{
+     if(busy)return;
+     setBusy(true);
+     try{
+      const {data,error}=await sb.from('guru_knowledge_proposals')
+       .update({status:'rejected',reviewed_at:new Date().toISOString(),reviewed_by:currentUser.id})
+       .eq('id',p.id).eq('status','pending').select('id').maybeSingle();
+      if(error)throw error;
+      if(!data)throw Error('A revisão não está mais pendente.');
+      message('Sugestão rejeitada.');await load();
+     }catch(e){message('Erro ao rejeitar: '+e.message)}
+     finally{setBusy(false)}
+    };
+    bar.append(approve,reject);
+   }
+   card.appendChild(bar);
+   card.appendChild(node('p','muted',p.status==='approved'?'Alterações nesta revisão atualizam também a resposta publicada.':'Salvar alterações mantém a revisão pendente até a aprovação.'));
   }else if(p.proposed_answer){
    card.appendChild(node('p','muted',p.proposed_answer));
   }

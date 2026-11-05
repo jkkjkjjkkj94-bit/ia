@@ -38,7 +38,7 @@ const STRICT=/\b(sem|nao|ate|menos de|mais de|exatamente|tamanho|estoque|abert|e
 const LINEAR=/\b(onde|qual|quais|loja|lojas|comercio|estabelecimento)\b/;
 export function semanticAlternatives(raw,data={}){
  const n=clean(raw),available=(data.stores||[]).filter(s=>s.active===true&&s.status==='active');
- if(!n||STRICT.test(n)||n.length>160||!available.length)return [];
+ if(!n||STRICT.test(n.replace(/\bsem comida\b/g,''))||n.length>160||!available.length)return [];
  const matches=[];
  const present=tokens(n);
  for(const token of present){

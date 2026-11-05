@@ -3,6 +3,9 @@ const ai=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable
 const API='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/admin-pending-stores';
 const ADDRESS_API='https://innziuzgtpfsiywqmies.supabase.co/functions/v1/address-search';
 const $=id=>document.getElementById(id);
+const openLocations=new Set();
+const openEditors=new Set();
+let pendingLoadSequence=0;
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.classList.add('on');clearTimeout(window.__pcToast);window.__pcToast=setTimeout(()=>e.classList.remove('on'),2800)};
 
@@ -27,9 +30,11 @@ function ensureUI(){
 
 async function loadPending(){
  if(!ensureUI())return;
+ const sequence=++pendingLoadSequence;
  const list=$('pendingStoreList');if(list)list.innerHTML='<div class="meta">Carregando lojas pendentes...</div>';
  try{
    const{stores=[]}=await request();
+   if(sequence!==pendingLoadSequence)return;
    if($('aPending'))$('aPending').textContent=String(stores.length);
    if($('pendingNavCount'))$('pendingNavCount').textContent=String(stores.length);
    if(!list)return;
@@ -40,7 +45,7 @@ async function loadPending(){
      if(!String(s.address||'').trim()||String(s.address).trim().length<5)missing.push('endereço');
      if(s.latitude==null||s.longitude==null)missing.push('coordenadas');
      const ready=missing.length===0;
-     return `<div class="item"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot pending"></span><span class="badge warn">Pendente</span></div><div class="meta">${esc(s.category||'Sem categoria')}</div><div class="meta">${esc(s.address||'Endereço não informado')}</div>${ready?'<div class="meta" style="color:#237245">Dados mínimos completos. Pronta para revisão.</div>':`<div class="meta" style="color:#975e11">Antes de aprovar: ${esc(missing.join(', '))}. <a href="guru-prospects.html">Abrir captação</a></div>`}</div><div class="actions-wrap"><button class="btn sm" type="button" data-pedit="${s.id}">Editar loja</button><button class="btn sm" type="button" data-plocation="${s.id}">Coordenadas</button><button class="btn sm dark" data-papprove="${s.id}" ${ready?'':'disabled title="Complete os dados obrigatórios antes de aprovar"'}>Aprovar</button><button class="btn sm" data-psuspend="${s.id}">Suspender</button></div></div><div data-pedit-form="${s.id}" hidden style="padding:14px;margin:10px 0;border:1px solid #e5e5e5;border-radius:10px">
+     return `<div class="item"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot pending"></span><span class="badge warn">Pendente</span></div><div class="meta">${esc(s.category||'Sem categoria')}</div><div class="meta">${esc(s.address||'Endereço não informado')}</div>${ready?'<div class="meta" style="color:#237245">Dados mínimos completos. Pronta para revisão.</div>':`<div class="meta" style="color:#975e11">Antes de aprovar: ${esc(missing.join(', '))}. <a href="guru-prospects.html">Abrir captação</a></div>`}</div><div class="actions-wrap"><button class="btn sm" type="button" data-pedit="${s.id}" aria-expanded="${openEditors.has(s.id)}">Editar loja</button><button class="btn sm" type="button" data-plocation="${s.id}" aria-controls="pending-location-${s.id}" aria-expanded="${openLocations.has(s.id)}">Coordenadas</button><button class="btn sm dark" data-papprove="${s.id}" ${ready?'':'disabled title="Complete os dados obrigatórios antes de aprovar"'}>Aprovar</button><button class="btn sm" data-psuspend="${s.id}">Suspender</button></div></div><div data-pedit-form="${s.id}" ${openEditors.has(s.id)?'':'hidden'} style="padding:14px;margin:10px 0;border:1px solid #e5e5e5;border-radius:10px">
  <div class="meta" style="margin-bottom:10px">Editar informações da loja pendente. O cadastro não será aprovado automaticamente.</div>
  <div class="row" style="gap:10px;flex-wrap:wrap">
  <label class="field" style="flex:1;min-width:190px">Nome<input data-edit-name="${s.id}" maxlength="140" value="${esc(s.name||'')}" required></label>
@@ -52,15 +57,18 @@ async function loadPending(){
  <div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Latitude<input data-edit-latitude="${s.id}" type="number" step="any" min="-34" max="6" value="${s.latitude==null?'':esc(s.latitude)}"></label><label class="field" style="flex:1;min-width:150px">Longitude<input data-edit-longitude="${s.id}" type="number" step="any" min="-74" max="-32" value="${s.longitude==null?'':esc(s.longitude)}"></label></div>
  <div class="meta">Ao alterar o endereço, confira a localização novamente. Você pode deixar ambas as coordenadas vazias enquanto aguarda confirmação.</div>
  <div class="row" style="margin-top:12px;gap:8px"><button class="btn sm dark" type="button" data-psaveedit="${s.id}">Salvar alterações</button><button class="btn sm" type="button" data-pcanceledit="${s.id}">Cancelar</button></div>
- </div><div data-plocation-form="${s.id}" hidden style="padding:12px;margin:10px 0;border:1px solid #e5e5e5;border-radius:10px"><div class="meta" style="margin-bottom:9px">Confirme as coordenadas exatas deste comércio. O endereço preenchido, sozinho, não fornece latitude e longitude.</div><div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Latitude<input data-lat="${s.id}" inputmode="decimal" type="number" min="-34" max="6" step="any" placeholder="Ex.: -23.6" value="${s.latitude==null?'':esc(s.latitude)}"></label><label class="field" style="flex:1;min-width:150px">Longitude<input data-lng="${s.id}" inputmode="decimal" type="number" min="-74" max="-32" step="any" placeholder="Ex.: -47.5" value="${s.longitude==null?'':esc(s.longitude)}"></label></div><div class="row" style="margin-top:10px;gap:9px;flex-wrap:wrap"><button class="btn sm" type="button" data-pautolocation="${s.id}">Buscar coordenadas automaticamente</button><button class="btn sm dark" data-psavelocation="${s.id}">Salvar coordenadas</button><a class="btn sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([s.name,s.address].filter(Boolean).join(' '))}" target="_blank" rel="noopener noreferrer">Conferir no Google Maps</a></div><div data-pautopreview="${s.id}" aria-live="polite" style="margin-top:10px"></div></div></div>`;
+ </div><div id="pending-location-${s.id}" data-plocation-form="${s.id}" ${openLocations.has(s.id)?'':'hidden'} style="padding:12px;margin:10px 0;border:1px solid #e5e5e5;border-radius:10px"><div class="meta" style="margin-bottom:9px">Confirme as coordenadas exatas deste comércio. O endereço preenchido, sozinho, não fornece latitude e longitude.</div><div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Latitude<input data-lat="${s.id}" inputmode="decimal" type="number" min="-34" max="6" step="any" placeholder="Ex.: -23.6" value="${s.latitude==null?'':esc(s.latitude)}"></label><label class="field" style="flex:1;min-width:150px">Longitude<input data-lng="${s.id}" inputmode="decimal" type="number" min="-74" max="-32" step="any" placeholder="Ex.: -47.5" value="${s.longitude==null?'':esc(s.longitude)}"></label></div><div class="row" style="margin-top:10px;gap:9px;flex-wrap:wrap"><button class="btn sm" type="button" data-pautolocation="${s.id}">Buscar coordenadas automaticamente</button><button class="btn sm dark" data-psavelocation="${s.id}">Salvar coordenadas</button><a class="btn sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([s.name,s.address].filter(Boolean).join(' '))}" target="_blank" rel="noopener noreferrer">Conferir no Google Maps</a></div><div data-pautopreview="${s.id}" aria-live="polite" style="margin-top:10px"></div></div></div>`;
    }).join('');
-   list.querySelectorAll('[data-pedit]').forEach(btn=>btn.onclick=()=>{
-     const form=list.querySelector('[data-pedit-form="'+btn.dataset.pedit+'"]');
-     if(form)form.hidden=!form.hidden;
+   list.querySelectorAll('[data-pedit]').forEach(btn=>btn.onclick=(event)=>{
+     event.preventDefault();event.stopPropagation();
+     const id=btn.dataset.pedit,form=list.querySelector('[data-pedit-form="'+id+'"]');
+     if(!form)return;
+     if(openEditors.has(id)){openEditors.delete(id);form.hidden=true;btn.setAttribute('aria-expanded','false')}
+     else{openEditors.add(id);form.hidden=false;btn.setAttribute('aria-expanded','true')}
    });
    list.querySelectorAll('[data-pcanceledit]').forEach(btn=>btn.onclick=()=>{
      const form=list.querySelector('[data-pedit-form="'+btn.dataset.pcanceledit+'"]');
-     if(form)form.hidden=true;
+     if(form){form.hidden=true;openEditors.delete(btn.dataset.pcanceledit)}
    });
    list.querySelectorAll('[data-psaveedit]').forEach(btn=>btn.onclick=async()=>{
      const id=btn.dataset.psaveedit;
@@ -93,9 +101,12 @@ async function loadPending(){
        await loadPending();
      }catch(err){toast('Não foi possível salvar: '+(err.message||'Erro na edição'));btn.disabled=false}
    });
-   list.querySelectorAll('[data-plocation]').forEach(btn=>btn.onclick=()=>{
-     const form=list.querySelector('[data-plocation-form="'+btn.dataset.plocation+'"]');
-     if(form)form.hidden=!form.hidden;
+   list.querySelectorAll('[data-plocation]').forEach(btn=>btn.onclick=(event)=>{
+     event.preventDefault();event.stopPropagation();
+     const id=btn.dataset.plocation,form=list.querySelector('[data-plocation-form="'+id+'"]');
+     if(!form)return;
+     if(openLocations.has(id)){openLocations.delete(id);form.hidden=true;btn.setAttribute('aria-expanded','false')}
+     else{openLocations.add(id);form.hidden=false;btn.setAttribute('aria-expanded','true')}
    });
    list.querySelectorAll('[data-pautolocation]').forEach(btn=>btn.onclick=async()=>{
      const id=btn.dataset.pautolocation;
@@ -169,7 +180,7 @@ async function loadPending(){
      }
      if(!window.confirm('Salvar as coordenadas verificadas para esta loja?'))return;
      btn.disabled=true;
-     try{await request('POST',{action:'save_location',id,latitude,longitude});toast('Coordenadas salvas. Verifique se a loja está pronta para aprovação.');await loadPending()}
+     try{await request('POST',{action:'save_location',id,latitude,longitude});openLocations.delete(id);toast('Coordenadas salvas. Verifique se a loja está pronta para aprovação.');await loadPending()}
      catch(e){toast(e.message||'Não foi possível salvar as coordenadas.');btn.disabled=false}
    });
    list.querySelectorAll('[data-papprove]').forEach(b=>b.onclick=()=>act(b.dataset.papprove,'approve',b));

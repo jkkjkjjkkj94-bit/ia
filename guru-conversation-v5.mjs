@@ -23,7 +23,7 @@ export function contextualIntent(raw,state={}){
  }
  const prior=aboutPrevious.test(n)||/^e\s+(?:qual|quais|com|a|as|os|tem)/.test(n)||/^(?:qual|quais|alguma|algum|tem|mostra|mostre|quero|me diga|me mostre|prefiro)\b/.test(n);
  if(prior){
-  if(deliveryRe.test(n)&&/\b(qual|quais|alguma|algum|tem|com|entrega)\b/.test(n)&&!/\b(preco|taxa|quanto|valor|horario)\b/.test(n))return{kind:'filterPrevious',attribute:/\b(sem|nao)\s+(?:faz|tem|oferece)?\s*(?:entrega|delivery)\b/.test(n)?'noDelivery':'delivery'};
+  if(deliveryRe.test(n)&&/\b(qual|quais|alguma|algum|tem|com|entrega|entregam|fazem)\b/.test(n)&&!/\b(preco|taxa|quanto|valor|horario)\b/.test(n))return{kind:'filterPrevious',attribute:/\b(sem|nao)\s+(?:faz|tem|oferece)?\s*(?:entrega|delivery)\b/.test(n)?'noDelivery':'delivery'};
   if(cheaper.test(n))return{kind:'sortPrevious',attribute:'price'};
   if(closer.test(n))return{kind:'sortPrevious',attribute:'distance'};
   if(higherRated.test(n))return{kind:'sortPrevious',attribute:'rating'};

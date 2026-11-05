@@ -96,7 +96,7 @@ test('V7 preserva apenas o catálogo interno e a seleção de resultado',()=>{
  assert.match(ui,/guidedSearchAlternatives\(text,db,taxonomy,aliases\)/);
  assert.match(ui,/rerankSearchResults\(rows,text,db,state\.filters\?\.sort\)/);
  assert.match(ui,/noResultGuidance\(text,db,taxonomy,aliases\)/);
- assert.match(ui,/if\(!rows.length\)\{\s*for\(const alt of guidedSearchAlternatives/);
+ assert.match(ui,/if\(!rows.length\)\{\s*for\(const alt of \[\.\.\.guidedSearchAlternatives/);
  assert.doesNotMatch(ui,/approvedSourceProducts|displayWebProducts|guru-approved-sources/);
 });
 test('V7 testa 100 maneiras de solicitar o mesmo serviço sem resultados inventados',()=>{

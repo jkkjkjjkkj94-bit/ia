@@ -25,6 +25,6 @@ test('não altera consultas que não descrevem necessidade conhecida',()=>{
 test('necessidade complexa usa apenas categorias cadastradas',()=>{
  const extended={stores:[...data.stores,{id:4,active:true,status:'active',group:'Pizzaria',category:'Comida'}]};
  assert.equal(semanticNeedAlternatives('Estou com vontade de pizza',extended)[0]?.query,'pizzaria');
- assert.equal(semanticNeedAlternatives('Preciso trocar a bateria do celular',extended)[0]?.query,'preciso assistencia tecnica');
+ assert.equal(semanticNeedAlternatives('Preciso trocar a bateria do celular',extended)[0]?.query,'assistencia tecnica');
  assert.deepEqual(semanticNeedAlternatives('Estou com vontade de pizza',data),[]);
 });

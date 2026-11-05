@@ -33,3 +33,15 @@ body:has(.ctx:not([hidden])) .guru-suggestions{bottom:160px}
  .chat-started:has(.ctx:not([hidden])) .guru-suggestions{bottom:136px}
  .ctx{max-height:66px}
 }
+
+/* GURU: cidade escolhida também inicia a área de conversa, mesmo sem mensagem do usuário. */
+body:has(.msgs .guru-city-choice) .hero,
+body:has(.msgs .guru-city-choice) .quick,
+body:has(.msgs .hashtag-result-msg) .hero,
+body:has(.msgs .hashtag-result-msg) .quick{display:none}
+body:has(.msgs .guru-city-choice) .msgs,
+body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:22px}
+@media(max-width:680px){
+ body:has(.msgs .guru-city-choice) .msgs,
+ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 112px)}
+}

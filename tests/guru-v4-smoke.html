@@ -43,6 +43,9 @@ async function smoke(){
  for(let i=0;i<100&&!window.GuruEngineV4;i++)await sleep(50);
  if(!window.GuruEngineV4)throw Error('motor não inicializou');
  const guru=window.GuruEngineV4;
+ // Identifica a última consulta caso o teste visual pare antes de concluir.
+ const submitOriginal=guru.submitText;
+ guru.submitText=(...args)=>{document.body.setAttribute('data-report','Verificando: '+String(args[0]).slice(0,90));return submitOriginal(...args)};
  await guru.refresh();
  const inputSuggest=document.getElementById('q');
  inputSuggest.value='Pizza';inputSuggest.dispatchEvent(new Event('input',{bubbles:true}));

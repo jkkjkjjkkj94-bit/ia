@@ -1,6 +1,4 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
-import {createShoppingPlan,normalizeBudget} from './guru-planner-v2.mjs?v=2';
-import {mountBudgetPrompt,mountShoppingPlanner} from './guru-planner-ui-v2.mjs?v=2';
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=1';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
@@ -259,7 +257,7 @@ function restore(){
  try{
   const x=JSON.parse(sessionStorage.getItem(memoryKey)||'null');
   if(!x||Date.now()-x.updatedAt>ttl)return;
-  const s=x.state||{};const keys=['category','group','specialtyTerm','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters','resultOffset','shoppingNeed','shoppingPlan'];
+  const s=x.state||{};const keys=['category','group','specialtyTerm','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters','resultOffset','shoppingNeed'];
   for(const k of keys)if(s[k]!=null)state[k]=s[k];
   state._selectedId=s.selectedStore||null;state._lastIds=s.lastResults||[];state._productId=s.selectedProduct||null;
   renderContext();
@@ -771,34 +769,23 @@ function renderNeedQuestion(need){
  }
  card.appendChild(options);host.appendChild(card);
 }
-function renderNeedBudgetQuestion(need){
- const host=add('',false);host.classList.add('guru-need-message');
- mountBudgetPrompt(host,need,budget=>{
-  const plan=createShoppingPlan(need,budget);
-  if(!plan){notice('Não consegui criar a lista.');return}
-  state.shoppingNeed={...need,stage:'ready'};state.shoppingPlan=plan;save();
-  renderNeedPlan(need);
- });
-}
 function renderNeedPlan(need){
- if(!state.shoppingPlan||state.shoppingPlan.need?.key!==need.key){
-  state.shoppingPlan=createShoppingPlan(need,null);save();
- }
+ const info=describeNeed(need);if(!info)return;
  const host=add('',false);host.classList.add('guru-need-message');
- mountShoppingPlanner(host,need,
-  ()=>state.shoppingPlan,
-  next=>{state.shoppingPlan=next;save()},
-  async()=>{try{await loadData();showNeedStores(need)}catch(error){notice(error.message||'Não foi possível consultar as lojas.')}},
-  notice);
+ const card=el('section','guru-need-card');
+ card.appendChild(el('div','guru-need-eyebrow','SUGESTÃO DE COMPRA'));
+ card.appendChild(el('h3','guru-need-heading',info.title+(need.variant?' · '+need.variant:'')));
+ card.appendChild(el('p','guru-need-description','Materiais para considerar, não uma confirmação de produtos disponíveis. Verifique itens, quantidades e especificações antes de comprar.'));
+ const list=el('div','guru-need-item-list');
+ info.items.forEach(item=>list.appendChild(el('span','guru-need-item',item)));
+ card.appendChild(list);host.appendChild(card);
 }
 function showNeedStores(need){
  if(!userCity){askForCity();return}
  const rows=findStoresForNeed(db,need,userCity,position,searchStores,emptyState,60);
- const savedPlan=state.shoppingPlan;
  state=emptyState();
  state.location={city:userCity,uf:null,neighborhood:null};
- state.shoppingNeed={...need,stage:'ready'};
- state.shoppingPlan=savedPlan;
+ state.shoppingNeed={...need};
  state.query=describeNeed(need)?.title||'Busca por necessidade';
  state.lastResults=rows;
  state.resultOffset=0;
@@ -888,51 +875,23 @@ async function run(text){
  const routed=routeConversation(text);
  if(routed.kind==='social'){add(routed.answer);return}
  text=routed.query;
- const normalizedRequest=norm(text);
- if(/^(quero |gostaria de |preciso )?(planejar uma compra|planejar compra|planejamento de compra|ajuda para planejar compras)$/.test(normalizedRequest)){
-  const m=add('O que você gostaria de planejar? Escolha uma necessidade para começar.'),choices=el('div','guru-need-options');
-  const suggestions=[
-   ['Pintura','Quero pintar minha casa'],['Reforma','Preciso reformar meu quarto'],
-   ['Festa','Quero organizar uma festa'],['Jardinagem','Quero cuidar do jardim'],
-   ['Cuidados com pets','Preciso cuidar do meu pet'],['Limpeza','Preciso fazer uma faxina na minha casa']
-  ];
-  suggestions.forEach(([label,query])=>{const button=el('button','guru-next-button guru-need-choice',label);button.type='button';button.onclick=()=>submitText(query);choices.append(button)});
-  m.append(choices);return;
- }
- if(state.shoppingPlan&&/^(mostrar minha lista|minha lista|meu planejamento|continuar planejamento|ver planejamento|abrir planejamento)$/.test(normalizedRequest)){
-  renderNeedPlan(state.shoppingNeed||state.shoppingPlan.need);return;
- }
  const pendingNeed=state.shoppingNeed;
- const chosenNeed=pendingNeed?.stage==='choice'?choiceForNeed(pendingNeed,text):null;
+ const chosenNeed=pendingNeed?choiceForNeed(pendingNeed,text):null;
  if(chosenNeed){
   if(!userCity){askForCity(text);return}
-  const need={...pendingNeed,variant:chosenNeed,stage:'budget'};
-  state.shoppingNeed=need;save();renderNeedBudgetQuestion(need);return;
- }
- if(pendingNeed?.stage==='budget'){
-  const answer=norm(text);
-  const amountMatch=String(text).match(/[0-9][0-9.,]*/);
-  if(/^(sem orcamento|nao sei|nao defini)$/.test(answer)||amountMatch){
-   const amount=amountMatch?normalizeBudget(amountMatch[0]):null;
-   if(amount!==null||!amountMatch){
-    const plan=createShoppingPlan(pendingNeed,amount);
-    if(plan){state.shoppingPlan=plan;state.shoppingNeed={...pendingNeed,stage:'ready'};save();renderNeedPlan(pendingNeed);return}
-   }
-  }
+  await loadData();
+  const need={...pendingNeed,variant:chosenNeed};
+  renderNeedPlan(need);showNeedStores(need);return;
  }
  if(pendingNeed&&isFindStoresForNeed(text)){
   if(!userCity){askForCity(text);return}
   await loadData();
-  if(!state.shoppingPlan)renderNeedPlan(pendingNeed);
-  showNeedStores(pendingNeed);
-  return;
+  renderNeedPlan(pendingNeed);showNeedStores(pendingNeed);return;
  }
  const newlyDetectedNeed=detectNeed(text);
  if(newlyDetectedNeed){
   if(!userCity){askForCity(text);return}
-  state.shoppingNeed={...newlyDetectedNeed,stage:'choice'};state.shoppingPlan=null;save();
-  renderNeedQuestion(newlyDetectedNeed);
-  return;
+  state.shoppingNeed=newlyDetectedNeed;save();renderNeedQuestion(newlyDetectedNeed);return;
  }
  if(pendingNeed){state.shoppingNeed=null;save()}
  const broad=suggestBroadConversation(text);

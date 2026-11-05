@@ -40,8 +40,59 @@ async function loadPending(){
      if(!String(s.address||'').trim()||String(s.address).trim().length<5)missing.push('endereço');
      if(s.latitude==null||s.longitude==null)missing.push('coordenadas');
      const ready=missing.length===0;
-     return `<div class="item"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot pending"></span><span class="badge warn">Pendente</span></div><div class="meta">${esc(s.category||'Sem categoria')}</div><div class="meta">${esc(s.address||'Endereço não informado')}</div>${ready?'<div class="meta" style="color:#237245">Dados mínimos completos. Pronta para revisão.</div>':`<div class="meta" style="color:#975e11">Antes de aprovar: ${esc(missing.join(', '))}. <a href="guru-prospects.html">Abrir captação</a></div>`}</div><div class="actions-wrap"><button class="btn sm" type="button" data-plocation="${s.id}">Coordenadas</button><button class="btn sm dark" data-papprove="${s.id}" ${ready?'':'disabled title="Complete os dados obrigatórios antes de aprovar"'}>Aprovar</button><button class="btn sm" data-psuspend="${s.id}">Suspender</button></div></div><div data-plocation-form="${s.id}" hidden style="padding:12px;margin:10px 0;border:1px solid #e5e5e5;border-radius:10px"><div class="meta" style="margin-bottom:9px">Confirme as coordenadas exatas deste comércio. O endereço preenchido, sozinho, não fornece latitude e longitude.</div><div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Latitude<input data-lat="${s.id}" inputmode="decimal" type="number" min="-34" max="6" step="any" placeholder="Ex.: -23.6" value="${s.latitude==null?'':esc(s.latitude)}"></label><label class="field" style="flex:1;min-width:150px">Longitude<input data-lng="${s.id}" inputmode="decimal" type="number" min="-74" max="-32" step="any" placeholder="Ex.: -47.5" value="${s.longitude==null?'':esc(s.longitude)}"></label></div><div class="row" style="margin-top:10px;gap:9px;flex-wrap:wrap"><button class="btn sm" type="button" data-pautolocation="${s.id}">Buscar coordenadas automaticamente</button><button class="btn sm dark" data-psavelocation="${s.id}">Salvar coordenadas</button><a class="btn sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([s.name,s.address].filter(Boolean).join(' '))}" target="_blank" rel="noopener noreferrer">Conferir no Google Maps</a></div><div data-pautopreview="${s.id}" aria-live="polite" style="margin-top:10px"></div></div></div>`;
+     return `<div class="item"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot pending"></span><span class="badge warn">Pendente</span></div><div class="meta">${esc(s.category||'Sem categoria')}</div><div class="meta">${esc(s.address||'Endereço não informado')}</div>${ready?'<div class="meta" style="color:#237245">Dados mínimos completos. Pronta para revisão.</div>':`<div class="meta" style="color:#975e11">Antes de aprovar: ${esc(missing.join(', '))}. <a href="guru-prospects.html">Abrir captação</a></div>`}</div><div class="actions-wrap"><button class="btn sm" type="button" data-pedit="${s.id}">Editar loja</button><button class="btn sm" type="button" data-plocation="${s.id}">Coordenadas</button><button class="btn sm dark" data-papprove="${s.id}" ${ready?'':'disabled title="Complete os dados obrigatórios antes de aprovar"'}>Aprovar</button><button class="btn sm" data-psuspend="${s.id}">Suspender</button></div></div><div data-pedit-form="${s.id}" hidden style="padding:14px;margin:10px 0;border:1px solid #e5e5e5;border-radius:10px">
+ <div class="meta" style="margin-bottom:10px">Editar informações da loja pendente. O cadastro não será aprovado automaticamente.</div>
+ <div class="row" style="gap:10px;flex-wrap:wrap">
+ <label class="field" style="flex:1;min-width:190px">Nome<input data-edit-name="${s.id}" maxlength="140" value="${esc(s.name||'')}" required></label>
+ <label class="field" style="flex:1;min-width:160px">Categoria<input data-edit-category="${s.id}" maxlength="100" value="${esc(s.category||'')}" required></label></div>
+ <label class="field">Endereço comercial completo<input data-edit-address="${s.id}" maxlength="300" value="${esc(s.address||'')}"></label>
+ <div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Telefone<input data-edit-phone="${s.id}" maxlength="50" value="${esc(s.phone||'')}"></label><label class="field" style="flex:1;min-width:150px">WhatsApp<input data-edit-whatsapp="${s.id}" maxlength="50" value="${esc(s.whatsapp||'')}"></label></div>
+ <div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Site<input data-edit-website="${s.id}" maxlength="500" value="${esc(s.website||'')}"></label><label class="field" style="flex:1;min-width:150px">Instagram<input data-edit-instagram="${s.id}" maxlength="300" value="${esc(s.instagram||'')}"></label></div>
+ <label class="field">Descrição<textarea data-edit-description="${s.id}" maxlength="2000" rows="3">${esc(s.description||'')}</textarea></label>
+ <div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Latitude<input data-edit-latitude="${s.id}" type="number" step="any" min="-34" max="6" value="${s.latitude==null?'':esc(s.latitude)}"></label><label class="field" style="flex:1;min-width:150px">Longitude<input data-edit-longitude="${s.id}" type="number" step="any" min="-74" max="-32" value="${s.longitude==null?'':esc(s.longitude)}"></label></div>
+ <div class="meta">Ao alterar o endereço, confira a localização novamente. Você pode deixar ambas as coordenadas vazias enquanto aguarda confirmação.</div>
+ <div class="row" style="margin-top:12px;gap:8px"><button class="btn sm dark" type="button" data-psaveedit="${s.id}">Salvar alterações</button><button class="btn sm" type="button" data-pcanceledit="${s.id}">Cancelar</button></div>
+ </div><div data-plocation-form="${s.id}" hidden style="padding:12px;margin:10px 0;border:1px solid #e5e5e5;border-radius:10px"><div class="meta" style="margin-bottom:9px">Confirme as coordenadas exatas deste comércio. O endereço preenchido, sozinho, não fornece latitude e longitude.</div><div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Latitude<input data-lat="${s.id}" inputmode="decimal" type="number" min="-34" max="6" step="any" placeholder="Ex.: -23.6" value="${s.latitude==null?'':esc(s.latitude)}"></label><label class="field" style="flex:1;min-width:150px">Longitude<input data-lng="${s.id}" inputmode="decimal" type="number" min="-74" max="-32" step="any" placeholder="Ex.: -47.5" value="${s.longitude==null?'':esc(s.longitude)}"></label></div><div class="row" style="margin-top:10px;gap:9px;flex-wrap:wrap"><button class="btn sm" type="button" data-pautolocation="${s.id}">Buscar coordenadas automaticamente</button><button class="btn sm dark" data-psavelocation="${s.id}">Salvar coordenadas</button><a class="btn sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([s.name,s.address].filter(Boolean).join(' '))}" target="_blank" rel="noopener noreferrer">Conferir no Google Maps</a></div><div data-pautopreview="${s.id}" aria-live="polite" style="margin-top:10px"></div></div></div>`;
    }).join('');
+   list.querySelectorAll('[data-pedit]').forEach(btn=>btn.onclick=()=>{
+     const form=list.querySelector('[data-pedit-form="'+btn.dataset.pedit+'"]');
+     if(form)form.hidden=!form.hidden;
+   });
+   list.querySelectorAll('[data-pcanceledit]').forEach(btn=>btn.onclick=()=>{
+     const form=list.querySelector('[data-pedit-form="'+btn.dataset.pcanceledit+'"]');
+     if(form)form.hidden=true;
+   });
+   list.querySelectorAll('[data-psaveedit]').forEach(btn=>btn.onclick=async()=>{
+     const id=btn.dataset.psaveedit;
+     const original=stores.find(x=>x.id===id);
+     const read=name=>list.querySelector('[data-edit-'+name+'="'+id+'"]')?.value.trim()||'';
+     const name=read('name'),category=read('category'),address=read('address');
+     if(name.length<2||name.length>140||category.length<2||category.length>100){
+       toast('Preencha nome e categoria corretamente.');return;
+     }
+     const latText=read('latitude'),lngText=read('longitude');
+     if(Boolean(latText)!==Boolean(lngText)){toast('Informe latitude e longitude juntas, ou deixe as duas vazias.');return}
+     const latitude=latText?Number(latText.replace(',','.')):null;
+     const longitude=lngText?Number(lngText.replace(',','.')):null;
+     if(latText&&(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -34||latitude > 6||longitude < -74||longitude > -32)){
+       toast('Coordenadas inválidas.');return;
+     }
+     if(original&&address!==String(original.address||'').trim()&&latitude!==null&&
+        Number(original.latitude)===latitude&&Number(original.longitude)===longitude){
+       toast('Endereço alterado: confira e atualize as coordenadas, ou apague ambas antes de salvar.');return;
+     }
+     if(!window.confirm('Salvar as alterações desta loja pendente? Ela continuará inativa até ser aprovada.'))return;
+     const payload={action:'edit_pending_store',id,name,category,address,
+       description:read('description'),phone:read('phone'),whatsapp:read('whatsapp'),
+       website:read('website'),instagram:read('instagram'),latitude,longitude};
+     btn.disabled=true;
+     try{
+       const result=await request('POST',payload);
+       if(!result?.ok||!result.store)throw Error('O servidor não confirmou a edição.');
+       toast('Loja pendente atualizada.');
+       await loadPending();
+     }catch(err){toast('Não foi possível salvar: '+(err.message||'Erro na edição'));btn.disabled=false}
+   });
    list.querySelectorAll('[data-plocation]').forEach(btn=>btn.onclick=()=>{
      const form=list.querySelector('[data-plocation-form="'+btn.dataset.plocation+'"]');
      if(form)form.hidden=!form.hidden;

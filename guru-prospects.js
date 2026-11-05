@@ -1,7 +1,7 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.95.0';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const $=id=>document.getElementById(id);
-const statuses={identified:'Identificado',contacted:'Contatado',interested:'Interessado',awaiting_approval:'Aguardando aprovação',approved:'Validado para cadastro',declined:'Não interessado'};
+const statuses={identified:'Identificado',contacted:'Contatado',interested:'Interessado',account_created:'Conta criada',awaiting_approval:'Aguardando aprovação',approved:'Validado para cadastro',declined:'Não interessado'};
 const normal=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'').trim();
 const msg=s=>{$('message').textContent=s};
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
@@ -125,7 +125,7 @@ function displayLead(p){
    showCredentials(email,password);
    const {data:linked,error:linkError}=await sb.from('guru_commerce_prospects').update({
     merchant_user_id:result.user_id,merchant_email:email,
-    merchant_created_at:new Date().toISOString(),status:'awaiting_approval',
+    merchant_created_at:new Date().toISOString(),status:'account_created',
     updated_at:new Date().toISOString()
    }).eq('id',p.id).is('merchant_user_id',null).select('id').maybeSingle();
    if(linkError||!linked){

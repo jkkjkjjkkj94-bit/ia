@@ -38,8 +38,8 @@ test('erros de digitação são corrigidos somente com vocabulário cadastrado',
 });
 test('busca literal tem precedência e alternativa só tenta depois de zero resultados',()=>{
  const ui=read('guru-engine-v4.js');
- assert.match(ui,/rows=searchStores\(db,draft,position,\{limit:6\}\)/);
- assert.match(ui,/if\(!rows.length\)\{?\s*for\(const alt of guidedSearchAlternatives/);
+ assert.match(ui,/rows=searchStores\(db,draft,position,\{limit:60\}\)/);
+ assert.match(ui,/if\(!rows.length\)\{\s*for\(const alt of \[\.\.\.guidedSearchAlternatives/);
  assert.doesNotMatch(ui,/approvedSourceProducts|guru-approved-products|displayWebProducts/);
 });
 test('uma frase com typo recupera produto apenas com estoque e preço compatíveis',()=>{

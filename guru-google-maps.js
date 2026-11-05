@@ -84,6 +84,7 @@ $('connect').onclick=async()=>{
  }catch(e){notice('Erro na conexão: '+e.message);button.disabled=false}
 };
 function point(){
+ if($('zone').value==='map'&&googleMap){const center=googleMap.getCenter();return {lat:center.lat(),lng:center.lng()}}
  const [dy,dx]=offsets[Number($('zone').value)||0];
  return {lat:base.lat+dy,lng:base.lng+dx};
 }
@@ -95,7 +96,7 @@ async function search(){
  try{
   const {places}=await placesClass.searchNearby({
    fields:['id','displayName','formattedAddress','location','googleMapsURI'],
-   locationRestriction:{center,radius},includedPrimaryTypes:[type],
+   locationRestriction:{center,radius},...(type?{includedPrimaryTypes:[type]}:{}),
    maxResultCount:20,rankPreference:$('rank').value
   });
   lastResults=(places||[]).filter(p=>p.id&&

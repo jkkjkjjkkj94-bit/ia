@@ -45,11 +45,19 @@
     const query = String(event.results?.[event.resultIndex]?.[0]?.transcript || '').trim();
     if (!query || submitted) return;
     submitted = true;
-    // Mostra a transcrição para confirmar antes de iniciar a busca.
-    input.value = query;
-    input.dispatchEvent(new Event('input', { bubbles:true }));
-    input.focus({preventScroll:true});
-    setStatus('Confira o texto reconhecido e toque em enviar. A GURU responderá apenas por escrito.');
+    setStatus('Pesquisando: ' + query);
+    // Reutiliza a mesma busca do chat; respostas não são reproduzidas em áudio.
+    if (window.GuruEngineV4?.submitText) {
+      Promise.resolve(window.GuruEngineV4.submitText(query)).then(() => {
+        setStatus('');
+      }).catch(() => {
+        setStatus('Não foi possível concluir a pesquisa por voz.');
+      });
+    } else {
+      input.value = query;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      setStatus('A pesquisa está carregando. Toque em enviar.');
+    }
   };
   recognition.onerror = event => {
     const messages = {

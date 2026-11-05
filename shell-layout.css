@@ -408,3 +408,115 @@ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:
     flex-shrink:0;
   }
 }
+
+/* v18: filtros passam a fazer parte da regiao das mensagens, sem sobrepor texto. */
+@media(max-width:680px) {
+  body .chat {
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) auto;
+    min-height:0;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  body .chat > .guru-messages-region {
+    grid-row:1;
+    grid-column:1;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr);
+    min-height:0;
+    min-width:0;
+    height:100%;
+    overflow:hidden;
+  }
+  body .chat .guru-messages-region > .ctx,
+  body.chat-started .chat .guru-messages-region > .ctx {
+    position:relative;
+    inset:auto;
+    left:auto;
+    right:auto;
+    top:auto;
+    bottom:auto;
+    transform:none;
+    grid-row:1;
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-start;
+    align-content:flex-start;
+    gap:5px;
+    width:100%;
+    min-width:0;
+    max-height:min(104px,18dvh);
+    padding:6px 2px;
+    margin:0;
+    overflow-x:hidden;
+    overflow-y:auto;
+    z-index:auto;
+    box-sizing:border-box;
+    background:var(--bg,#fff);
+  }
+  body .chat .guru-messages-region > .ctx:empty,
+  body .chat .guru-messages-region > .ctx[hidden] {display:none;}
+  body .chat .guru-messages-region > .msgs,
+  body.chat-started .chat .guru-messages-region > .msgs,
+  body:has(.msgs .guru-city-choice) .chat .guru-messages-region > .msgs,
+  body:has(.msgs .hashtag-result-msg) .chat .guru-messages-region > .msgs {
+    position:relative;
+    grid-row:2;
+    left:auto;
+    right:auto;
+    top:auto;
+    bottom:auto;
+    transform:none;
+    height:100%;
+    max-height:100%;
+    min-height:0;
+    min-width:0;
+    width:100%;
+    padding:12px 2px 18px;
+    margin:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    box-sizing:border-box;
+    overscroll-behavior-y:contain;
+  }
+  body .chat > .guru-chat-dock {
+    grid-row:2;
+    grid-column:1;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    width:100%;
+    max-height:none;
+    min-width:0;
+    padding:8px 0 0;
+    margin:0;
+    background:var(--bg,#fff);
+    box-shadow:none;
+    z-index:2;
+  }
+  body .chat .guru-chat-dock > .send,
+  body.chat-started .chat .guru-chat-dock > .send {
+    position:relative;
+    inset:auto;
+    left:auto;
+    right:auto;
+    bottom:auto;
+    top:auto;
+    transform:none;
+    display:flex;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    margin:0;
+    flex:0 0 auto;
+  }
+  body .chat .guru-messages-region .guru-filter-chip,
+  body .chat .guru-messages-region .guru-clear-filters {
+    max-width:100%;
+    min-width:0;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+}

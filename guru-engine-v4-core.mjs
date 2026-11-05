@@ -262,13 +262,16 @@ export function nextState(current,plan){
  const prev=current||emptyState(),changed=plan.taxon?.category&&plan.taxon.category!==prev.category;
  // Mencionar uma nova categoria/grupo inicia uma busca nova; refinamentos sem grupo preservam filtros.
  const freshTopic=Boolean(changed||plan.taxon||plan.broad||plan.freshProduct);
- const next={...prev,filters:{...(freshTopic?{}:prev.filters),...plan.filters},category:plan.freshProduct&&!plan.taxon?null:plan.taxon?.category||prev.category,group:changed||plan.freshProduct&&!plan.taxon?null:prev.group,selectedStore:null,selectedProduct:null};
+ const specialtyTopic=Boolean(plan.specialtyTerm);
+ const next={...prev,filters:{...(freshTopic||specialtyTopic?{}:prev.filters),...plan.filters},category:specialtyTopic?plan.taxon?.category||null:plan.freshProduct&&!plan.taxon?null:plan.taxon?.category||prev.category,group:specialtyTopic?plan.taxon?.group||null:changed||plan.freshProduct&&!plan.taxon?null:prev.group,selectedStore:null,selectedProduct:null};
+ if(specialtyTopic)next.specialtyTerm=plan.specialtyTerm;
+ else if(freshTopic||plan.semanticTerms?.length)next.specialtyTerm=null;
  if(plan.taxon?.group)next.group=plan.taxon.group;
  else if(plan.taxon?.category)next.group=null;
  if(plan.productTerm)next.productTerm=plan.productTerm;
  else if(freshTopic)next.productTerm=null;
  if(plan.taxon?.category||plan.productTerm||plan.broad||plan.semanticTerms?.length){next.semanticTerms=plan.semanticTerms;next.featureTerms=plan.featureTerms;next.nameTerms=plan.nameTerms||[]}
- if(plan.broad&&!plan.taxon){next.category=null;next.group=null;next.productTerm=null;next.semanticTerms=[];next.featureTerms=[];next.nameTerms=[]}
+ if(plan.broad&&!plan.taxon){next.category=null;next.group=null;next.productTerm=null;next.semanticTerms=[];next.featureTerms=[];next.nameTerms=[];next.specialtyTerm=null}
  next.excludedGroups=[...new Set([...(freshTopic?[]:prev.excludedGroups),...plan.excludedGroups])];
  next.excludedCategories=[...new Set([...(freshTopic?[]:prev.excludedCategories),...plan.excludedCategories])];
  next.excludedTerms=[...new Set([...(freshTopic?[]:prev.excludedTerms),...plan.excludedTerms])];
@@ -460,6 +463,7 @@ export function searchStores(data={},state={},position=null,options={}){
   if(state.category&&norm(store.category)!==norm(state.category))continue;
   const groups=storeGroups(store);
   if(state.group&&!groups.includes(norm(state.group)))continue;
+  if(state.specialtyTerm&&!(Array.isArray(store.specialties)?store.specialties:[]).some(s=>norm(s)===norm(state.specialtyTerm)))continue;
   if((state.excludedCategories||[]).includes(norm(store.category)))continue;
   if(groups.some(g=>(state.excludedGroups||[]).includes(g)))continue;
   if(f.delivery===true&&!store.delivery)continue;
@@ -509,6 +513,7 @@ export function searchStores(data={},state={},position=null,options={}){
    score+=exactSpecialty?55:45;
    reasons.push((exactSpecialty?'especialidade ':'grupo ')+state.group);
   }
+  if(state.specialtyTerm&&!state.group){score+=55;reasons.push('especialidade '+state.specialtyTerm)}
   if(eligible.length&&mustHaveProduct){score+=35;reasons.push('produto disponível em estoque')}
   if(hits.length){score+=hits.length*9;reasons.push('correspondência com sua descrição')}
   if(f.delivery===true){score+=8;reasons.push('faz entrega')}

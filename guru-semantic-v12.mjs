@@ -8,6 +8,9 @@ const RULES=[
  {pattern:/\b(?:consertar|arrumar|reparar)\s+(?:o\s+|a\s+|meu\s+|minha\s+)?(?:computador|notebook|pc)\b/,categories:['assistencia tecnica','informatica']},
  {pattern:/\b(?:consertar|arrumar|reparar|trocar\s+a\s+tela\s+d[eo])\s+(?:o\s+|meu\s+)?(?:celular|smartphone)\b/,categories:['assistencia tecnica','conserto de celulares']},
  {pattern:/\b(?:meu\s+)?pneu\s+(?:furou|furado)\b/,categories:['borracharia']},
+ {pattern:/\b(?:preciso\s+)?(?:trocar|substituir)\s+(?:a\s+)?bateria\s+d[oe]\s+celular\b/,categories:['assistencia tecnica','conserto de celulares']},
+ {pattern:/\b(?:preciso\s+de\s+um\s+lugar\s+para\s+)?(?:cortar|aparar)\s+(?:o\s+)?cabelo\b/,categories:['barbearia','salao de beleza']},
+ {pattern:/\b(?:estou\s+)?com\s+vontade\s+de\s+(?:comer\s+)?pizza\b/,categories:['pizzaria']},
  {pattern:/\b(?:meu|minha)\s+(?:carro|moto)\s+(?:quebrou|nao\s+liga)\b/,categories:['oficina mecanica','mecanica']},
  {pattern:/\b(?:quero|preciso|gostaria\s+de)\s+(?:um\s+)?(?:lugar\s+)?(?:para\s+)?jantar\b/,categories:['restaurante']},
  {pattern:/\b(?:encomendar|comprar|pedir)\s+(?:um\s+)?bolo\s+de\s+aniversario\b/,categories:['confeitaria','padaria']}

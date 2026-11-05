@@ -13,7 +13,6 @@ const RULES=[
  {pattern:/\b(?:encomendar|comprar|pedir)\s+(?:um\s+)?bolo\s+de\s+aniversario\b/,categories:['confeitaria','padaria']}
 ];
 const NEGATIVE=/\b(?:nao|sem|exceto|evitar|tirando)\b/;
-const words=s=>normalizeQuery(s).split(' ').filter(Boolean);
 const includesPhrase=(text,term)=>(' '+text+' ').includes(' '+term+' ');
 function activeCategories(data={}){
  const out=new Set();
@@ -28,7 +27,7 @@ function activeCategories(data={}){
 }
 export function semanticNeedAlternatives(raw,data={}){
  const n=normalizeQuery(raw);
- if(!n||n.length>280||NEGATIVE.test(n))return [];
+ if(!n||n.length>280||NEGATIVE.test(n.replace(/\bnao liga\b/g,'')))return [];
  const active=activeCategories(data),out=[],seen=new Set([n]);
  for(const rule of RULES){
   if(!rule.pattern.test(n))continue;

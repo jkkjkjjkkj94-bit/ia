@@ -349,9 +349,8 @@ async function loadData(force=false){
  return loadPromise;
 }
 function getCityFromAddress(address=''){
- const s=String(address);
- const m=s.match(/(?:^|,|·)\s*([^,·-]{2,55})\s*-\s*([A-Z]{2})(?:\b|$)/i);
- return m?m[1].trim():null;
+ const match=String(address).match(/^(.*?)\s+-\s+([A-Z]{2})\s*$/i);
+ return match?match[1].split(/,|\s+-\s+/).pop().trim():null;
 }
 function applyLocation(raw,target=state){
  if(!db)return;
@@ -770,14 +769,16 @@ async function run(text){
  }
  if(plan.kind==='ask'){if(!userCity){askForCity(text);return}replyAboutStore(text,plan.ask,plan.filters);renderContext();save();return}
  if(plan.kind!=='search')return;
- if(isLocationSearch(text,plan)&&!position){
-  await locate(false);
-  if(!position){add('Para aplicar distância ou proximidade real, permita o acesso à localização no navegador. Não vou apresentar opções como próximas sem confirmar isso.');return}
- }
- // A busca comum pode usar localização, com consentimento do navegador;
- // não repetir pedidos se a pessoa recusar, nem bloquear pesquisas sem localização.
- // A busca não solicita GPS automaticamente. Cidade manual também funciona.
  if(!userCity){askForCity(text);return}
+ if(plan.filters?.maxDistance!=null&&!position){
+  const message=add('Para filtrar por quilômetros, autorize sua localização. A busca continuará limitada a '+userCity+'.',false);
+  const b=el('button','guru-next-button','Usar localização e calcular km');
+  b.type='button';
+  b.onclick=async()=>{if(await locate(true))await run(text)};
+  message.appendChild(b);
+  return;
+ }
+ // Sem solicitação de GPS obrigatória: apenas distância opcional nos resultados.
  // Valide dados obrigatórios antes de trocar o contexto. Uma falha não deve apagar a loja selecionada.
  const draft=nextState(state,plan);
  draft.location={...(draft.location||{}),city:userCity,uf:null,neighborhood:null};

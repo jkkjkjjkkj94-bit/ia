@@ -149,8 +149,8 @@ test('GURU híbrida nunca exige OpenAI para buscar nem expõe chave privada no f
  const edge=source('supabase/functions/guru-hybrid-openai/index.ts');
  assert.doesNotMatch(html,/guru-turnstile-site-key/);
  assert.match(ui,/if\(!Array\.isArray\(rows\)\|\|!rows\.length\)return ''/);
- assert.match(ui,/const natural=await hybridResponse\(text,rows\)/);
- assert.match(ui,/displayResults\(rows\)/);
+ assert.match(ui,/const natural=await hybridResponse\(text,rows\.slice\(0,RESULT_PAGE_SIZE\)\)/);
+ assert.match(ui,/showNextResultPage\(\)/);
  assert.doesNotMatch(ui,/OPENAI_API_KEY|sk-proj-|Bearer sk-|turnstile/i);
  assert.match(edge,/Deno\.env\.get\("OPENAI_API_KEY"\)/);
  assert.match(edge,/guru_hybrid_claim_quota/);

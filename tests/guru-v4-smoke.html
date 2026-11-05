@@ -209,9 +209,10 @@ async function smoke(){
  if(!document.getElementById('msgs').textContent.includes('Não há estabelecimentos ativos cadastrados como Doceria'))throw Error('Falta de docerias foi descrita incorretamente como erro de filtros');
  window.smokeDisableStore=null;await guru.refresh();
  const input=document.getElementById('q');
+ const cardsBeforeSubmit=document.querySelectorAll('.store-results-grid').length;
  input.value='lojas com entrega';document.getElementById('chatForm').requestSubmit();
- for(let i=0;i<80&&!document.getElementById('msgs').textContent.includes('opções cadastradas');i++)await sleep(50);
- if(!document.getElementById('msgs').textContent.includes('opções cadastradas'))throw Error('submit do formulário falhou');
+ for(let i=0;i<80&&document.querySelectorAll('.store-results-grid').length<=cardsBeforeSubmit;i++)await sleep(50);
+ if(document.querySelectorAll('.store-results-grid').length<=cardsBeforeSubmit)throw Error('submit do formulário não gerou novos resultados');
  for(let i=0;i<120&&input.disabled;i++)await sleep(50);
  if(input.disabled)throw Error('Envio anterior não terminou antes do teste de filtros');
  guru.reset();

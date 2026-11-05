@@ -23,6 +23,8 @@ try{userCity=String(sessionStorage.getItem(userCityKey)||'').trim().slice(0,90)}
 let replyBuffer=null;
 let lastSearchText='';
 const minTypingMs=850;
+const RESULT_PAGE_SIZE=3;
+const isMoreResultsRequest=text=>/^(?:(?:por favor\s*)?(?:quero|queria|pode|poderia|me mostra|me mostre|mostra|mostrar|mostre|ver|tem|me de|exiba|traga|buscar|preciso de|gostaria de)\s+)?(?:mais\s+(?:\d+\s+)?(?:opcoes|opcao|resultados|lojas|estabelecimentos|alternativas|sugestoes)|outras\s+(?:opcoes|lojas|alternativas|sugestoes)|proximas\s+(?:opcoes|lojas|alternativas)|proximos\s+(?:resultados|tres|3)|mais\s+tres|mais\s+3|mostrar\s+mais|ver\s+mais)(?:\s+por favor)?$/.test(norm(text));
 let taxonomy=structuredClone(fallbackTaxonomy),aliases=structuredClone(fallbackAliases);
 const memoryKey='guru_context_v4',ttl=2*60*60*1000;
 
@@ -196,9 +198,9 @@ async function refreshFilteredResults(){
   await loadData();
   if(!userCity){askForCity();return}
   state.location=citySearchState().location;
-  const rows=searchStores(db,citySearchState(),position,{limit:6});
-  state.lastResults=rows;save();
-  if(rows.length)displayResults(rows);
+  const rows=searchStores(db,citySearchState(),position,{limit:60});
+  state.lastResults=rows;state.resultOffset=0;save();
+  if(rows.length)showNextResultPage();
   else add(explainEmptySearch(db,state,position));
  }catch(err){msgError(err)}
 }
@@ -256,7 +258,7 @@ function restore(){
  try{
   const x=JSON.parse(sessionStorage.getItem(memoryKey)||'null');
   if(!x||Date.now()-x.updatedAt>ttl)return;
-  const s=x.state||{};const keys=['category','group','specialtyTerm','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters'];
+  const s=x.state||{};const keys=['category','group','specialtyTerm','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters','resultOffset'];
   for(const k of keys)if(s[k]!=null)state[k]=s[k];
   state._selectedId=s.selectedStore||null;state._lastIds=s.lastResults||[];state._productId=s.selectedProduct||null;
   renderContext();
@@ -276,6 +278,7 @@ function rehydrate(){
   // Reaplica todos os filtros para impedir seleção de loja desativada ou sem requisito obrigatório.
   const valid=new Map((userCity?searchStores(db,citySearchState(),position,{limit:db.stores.length}):[]).map(row=>[row.store.id,row]));
   state.lastResults=ids.map(id=>valid.get(id)).filter(Boolean);
+  state.resultOffset=Math.min(Number(state.resultOffset)||0,state.lastResults.length);
  }else state.lastResults=[];
  delete state._lastIds;delete state._selectedId;delete state._productId;
  renderContext();
@@ -367,7 +370,7 @@ function setUserCity(city){
  userCity=value;
  try{sessionStorage.setItem(userCityKey,value)}catch{}
  state.location={...(state.location||{}),city:value,uf:null,neighborhood:null};
- state.selectedStore=null;state.selectedProduct=null;state.lastResults=[];
+ state.selectedStore=null;state.selectedProduct=null;state.lastResults=[];state.resultOffset=0;
  renderContext();save();return true;
 }
 async function findUserCity(coords){
@@ -384,7 +387,7 @@ async function runPendingCityQuery(){
  pendingCityQuery='';
  if(query){await run(query);return}
  // Escolher a cidade não é uma busca; aguardar o pedido explícito do usuário.
- state.lastResults=[];
+ state.lastResults=[];state.resultOffset=0;
  state.query='';
  renderContext();
  save();
@@ -660,9 +663,13 @@ function renderComparison(indices,question){
 function citySearchState(source=state){
  return {...source,location:{...(source.location||{}),city:userCity,uf:null,neighborhood:null}};
 }
-function displayResults(rows){
+function displayResults(rows,offset=0){
  const m=add('',false);m.classList.add('hashtag-result-msg');
- m.appendChild(el('div','hashtag-intro',rows.length===1?'Encontrei 1 opção em '+userCity+':':'Encontrei '+rows.length+' opções em '+userCity+':'));
+ const end=offset+rows.length,total=(state.lastResults||[]).length;
+ const intro=offset===0
+  ?(rows.length===1?'Encontrei 1 opção em '+userCity+':':'Estas são as primeiras '+rows.length+' opções em '+userCity+':')
+  :'Mais '+rows.length+' '+(rows.length===1?'opção':'opções')+' em '+userCity+' ('+(offset+1)+'–'+end+' de '+total+'):';
+ m.appendChild(el('div','hashtag-intro',intro));
  if(position){
   m.appendChild(el('div','guru-city-distance-note','Distâncias aproximadas em linha reta. A classificação continua sendo por relevância, não por proximidade.'));
  }else{
@@ -671,13 +678,28 @@ function displayResults(rows){
   button.onclick=async()=>{if(await locate(true)){
    const activeResults=(state.lastResults||[]).map(r=>({...r,distance:distanceKm(position,r.store)}));
    state.lastResults=activeResults;save();
-   const fresh=displayResults(activeResults);
+   const fresh=displayResults(activeResults.slice(offset,offset+rows.length),offset);
    m.replaceWith(fresh);
   }};
   m.appendChild(button);
  }
- const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,i)));m.appendChild(grid);
+ const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,offset+i)));m.appendChild(grid);
+ if(end<total){
+  const footer=el('div','guru-more-results');
+  footer.appendChild(el('span','guru-more-count','Exibindo '+end+' de '+total+' opções'));
+  const button=el('button','guru-next-button guru-more-button','Mostrar mais '+Math.min(RESULT_PAGE_SIZE,total-end)+' opções');
+  button.type='button';button.onclick=()=>submitText('mais opções');footer.appendChild(button);m.appendChild(footer);
+ }
  renderNextQuestions(m,rows);return m;
+}
+function showNextResultPage(){
+ const all=state.lastResults||[];
+ const offset=Math.min(Math.max(0,Number(state.resultOffset)||0),all.length);
+ if(offset>=all.length){add('Não há mais opções nesta pesquisa. Você pode procurar outra categoria ou produto.');return false}
+ const page=all.slice(offset,offset+RESULT_PAGE_SIZE);
+ state.resultOffset=offset+page.length;
+ save();displayResults(page,offset);
+ return true;
 }
 function productListFor(store,query=''){
  const list=(db.products||[]).filter(p=>p.store_id===store.id&&eligibleProduct(p));
@@ -749,6 +771,10 @@ function isNewSpecialtyRequest(text,specialty){
  return Boolean(specialty)&&/\b(?:busca|buscar|busque|encontra|encontrar|encontre|procuro|procurar|procure|pesquisa|pesquisar|pesquise|recomenda|recomendar|recomende|indica|indicar|indique|especialidade|especializada|especializado|quero|preciso)\b/.test(norm(text));
 }
 async function run(text){
+ if(isMoreResultsRequest(text)){
+  if(!(state.lastResults||[]).length){add('Ainda não tenho resultados para continuar. Faça uma pesquisa primeiro.');return}
+  showNextResultPage();return;
+ }
  const routed=routeConversation(text);
  if(routed.kind==='social'){add(routed.answer);return}
  text=routed.query;
@@ -785,9 +811,9 @@ async function run(text){
    const reason=follow.attribute==='price'?'preços dos produtos':follow.attribute==='distance'?'distâncias confirmadas':follow.attribute==='rating'?'avaliações verificadas':follow.attribute==='delivery'?'opções com entrega':follow.attribute==='noDelivery'?'opções sem entrega':'produtos em estoque';
    add('Ainda não tenho '+reason+' suficientes nessas opções. Posso fazer uma nova busca se você quiser.');return;
   }
-  state.lastResults=matching.slice(0,6);save();
+  state.lastResults=matching;state.resultOffset=0;save();
   add(follow.kind==='sortPrevious'?'Organizei as opções com base nas informações cadastradas.':'Separei as opções da lista que atendem ao que você pediu.');
-  displayResults(state.lastResults);return;
+  showNextResultPage();return;
  }
  // O tipo de contexto revisado pelo administrador direciona perguntas exatas
  // para respostas estruturadas e específicas da loja selecionada.
@@ -815,7 +841,8 @@ async function run(text){
  }
  if(plan.kind==='select'){
   if(!userCity){askForCity(text);return}
-  const index=plan.index<0?state.lastResults.length-1:plan.index,row=state.lastResults[index];
+  const visibleOffset=Math.max(0,(Number(state.resultOffset)||RESULT_PAGE_SIZE)-RESULT_PAGE_SIZE);
+  const index=plan.index<0?state.lastResults.length-1:visibleOffset+plan.index,row=state.lastResults[index];
   if(!row){add('Essa opção não existe na lista atual.');return}
   recordSelection(row.store?.id);
   if(plan.ask)rememberSelection(lastSearchText||state.query,row.store?.id);
@@ -868,9 +895,9 @@ async function run(text){
  }
  state=finalState;
  renderContext();save();
- rows=rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort).slice(0,6);
+ rows=rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort).slice(0,60);
  lastSearchText=text;
- state.lastResults=rows;
+ state.lastResults=rows;state.resultOffset=0;
  recordSearch(text,plan,rows);
  if(!rows.length){
   const guidance=noResultGuidance(text,db,taxonomy,aliases);
@@ -890,9 +917,9 @@ async function run(text){
   const hint=recovery.mode==='correction'?'Identifiquei uma possível correção de escrita.':recovery.mode==='concept'?'Entendi a necessidade descrita e procurei uma categoria cadastrada.':'Encontrei uma expressão relacionada no catálogo.';
   add(hint+' Pesquisei por “'+recovery.query+'”.');
  }
- const natural=await hybridResponse(text,rows);
+ const natural=await hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE));
  if(natural)add(natural);
- displayResults(rows);
+ showNextResultPage();
  save();
 }
 async function submitText(raw){

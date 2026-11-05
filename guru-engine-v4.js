@@ -9,7 +9,7 @@ import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=1';
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=22';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=23';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
@@ -725,6 +725,22 @@ function replyAboutStore(text,ask,filter={}){
  if(ps.length===1)state.selectedProduct=ps[0];
  add('Na '+s.name+', encontrei:\n'+ps.slice(0,8).map(p=>'• '+p.name+' — '+money(priceOf(p))+' · estoque '+p.stock).join('\n'));save();
 }
+function specialtyMentionInQuery(text){
+ const request=norm(text);
+ const found=new Map();
+ for(const store of db?.stores||[]){
+  if(store.active!==true||store.status!=='active')continue;
+  for(const name of Array.isArray(store.specialties)?store.specialties:[]){
+   const key=norm(name);
+   if(key.length<4||found.has(key))continue;
+   if((' '+request+' ').includes(' '+key+' '))found.set(key,name);
+  }
+ }
+ return [...found.entries()].sort((a,b)=>b[0].length-a[0].length)[0]?.[1]||null;
+}
+function isNewSpecialtyRequest(text,specialty){
+ return Boolean(specialty)&&/\b(?:busca|buscar|busque|encontra|encontrar|encontre|procuro|procurar|procure|pesquisa|pesquisar|pesquise|recomenda|recomendar|recomende|indica|indicar|indique|especialidade|especializada|especializado|quero|preciso)\b/.test(norm(text));
+}
 async function run(text){
  const routed=routeConversation(text);
  if(routed.kind==='social'){add(routed.answer);return}
@@ -776,7 +792,11 @@ async function run(text){
    renderContext();save();return;
   }
  }
- const plan=interpret(text,taxonomy,aliases,state,{products:db?.products||[]});
+ const specialtyMention=specialtyMentionInQuery(text);
+ const newSpecialty=isNewSpecialtyRequest(text,specialtyMention);
+ const intentState=newSpecialty?{...state,selectedStore:null}:state;
+ const plan=interpret(text,taxonomy,aliases,intentState,{products:db?.products||[]});
+ if(plan.kind==='search'&&newSpecialty)plan.specialtyTerm=specialtyMention;
  if(plan.kind==='blocked'){add('“Loja” e “comércio” são tratados como varejo e não entram na categoria Comida. Pesquise por restaurante, pizzaria ou pelo tipo de comida.');return}
  if(plan.kind==='clarify'){
   add(plan.reason==='product'?'Qual produto você está procurando? Informe o nome ou uma característica do item para eu consultar o catálogo.':'Qual estabelecimento da lista você quer consultar? Pode dizer, por exemplo, “a segunda”.');
@@ -817,6 +837,7 @@ async function run(text){
    const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});
    if(alternatePlan.kind!=='search')continue;
    const alternateState=preserveMandatoryFilters(draft,nextState(state,alternatePlan));
+   if(draft.specialtyTerm)alternateState.specialtyTerm=draft.specialtyTerm;
    alternateState.location={...(alternateState.location||{}),city:userCity,uf:null,neighborhood:null};
    const found=searchStores(db,alternateState,position,{limit:60});
    if(found.length){rows=found;finalState=alternateState;recovery=alt;break}

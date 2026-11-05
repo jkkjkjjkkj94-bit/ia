@@ -9,7 +9,7 @@ import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=1';
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=23';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=24';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
@@ -210,6 +210,7 @@ function renderContext(){
  if(state.selectedStore)chip('Loja: '+state.selectedStore.name,()=>{state.selectedStore=null;state.selectedProduct=null});
  if(state.category)chip('Categoria: '+state.category,()=>{state.category=null;state.group=null;state.nameTerms=[]});
  if(state.group)chip('Grupo: '+state.group,()=>{state.group=null});
+ if(state.specialtyTerm)chip('Especialidade: '+state.specialtyTerm,()=>{state.specialtyTerm=null});
  if(userCity)chip('Cidade: '+userCity,()=>{userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};state.location={...(state.location||{}),city:null};state.selectedStore=null;state.lastResults=[];askForCity()});
  const f=state.filters||{};
  if(f.openNow)chip('Abertas agora',()=>{delete f.openNow});
@@ -239,7 +240,7 @@ function renderContext(){
  }
  const clear=el('button','guru-clear-filters','Limpar filtros');
  clear.type='button';clear.addEventListener('click',()=>{
-  state.filters={};state.category=null;state.group=null;state.productTerm=null;state.semanticTerms=[];state.featureTerms=[];state.nameTerms=[];
+  state.filters={};state.category=null;state.group=null;state.specialtyTerm=null;state.productTerm=null;state.semanticTerms=[];state.featureTerms=[];state.nameTerms=[];
   state.excludedGroups=[];state.excludedCategories=[];state.excludedTerms=[];state.location={};state.query='lojas';
   state.location={...(state.location||{}),city:userCity};renderContext();save();if(db)refreshFilteredResults();
  });
@@ -255,7 +256,7 @@ function restore(){
  try{
   const x=JSON.parse(sessionStorage.getItem(memoryKey)||'null');
   if(!x||Date.now()-x.updatedAt>ttl)return;
-  const s=x.state||{};const keys=['category','group','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters'];
+  const s=x.state||{};const keys=['category','group','specialtyTerm','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters'];
   for(const k of keys)if(s[k]!=null)state[k]=s[k];
   state._selectedId=s.selectedStore||null;state._lastIds=s.lastResults||[];state._productId=s.selectedProduct||null;
   renderContext();

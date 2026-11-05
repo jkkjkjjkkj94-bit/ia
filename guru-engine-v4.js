@@ -8,7 +8,7 @@ import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './g
 import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=1';
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
-import {approvedAnswerFor} from './guru-knowledge-v11.mjs?v=1';
+import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
@@ -666,6 +666,16 @@ async function run(text){
   state.lastResults=matching.slice(0,6);save();
   add(follow.kind==='sortPrevious'?'Organizei as opções com base nas informações cadastradas.':'Separei as opções da lista que atendem ao que você pediu.');
   displayResults(state.lastResults);return;
+ }
+ // O tipo de contexto revisado pelo administrador direciona perguntas exatas
+ // para respostas estruturadas e específicas da loja selecionada.
+ // Não usamos o texto genérico aprovado para afirmar estoque, entrega ou horário.
+ if(state.selectedStore){
+  const contextual=approvedStoreContextFor(text,db.approvedAnswers||[]);
+  if(contextual){
+   replyAboutStore(text,contextual.ask);
+   renderContext();save();return;
+  }
  }
  const plan=interpret(text,taxonomy,aliases,state,{products:db?.products||[]});
  if(plan.kind==='blocked'){add('“Loja” e “comércio” são tratados como varejo e não entram na categoria Comida. Pesquise por restaurante, pizzaria ou pelo tipo de comida.');return}

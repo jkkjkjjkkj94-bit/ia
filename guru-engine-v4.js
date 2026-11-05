@@ -981,7 +981,10 @@ function resetConversation(){
  state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};
  msgs.replaceChildren(el('div','msg bot','Olá! Diga o que você procura.'));
  document.body.classList.remove('chat-started');
- input.value='';setSuggestions();renderContext();input.focus();
+ input.value='';setSuggestions();renderContext();
+ if(userCity){document.body.classList.add('chat-started');add('O que você deseja encontrar em '+userCity+'?')}
+ else askForCity();
+ input.focus({preventScroll:true});
 }
 function initMobileKeyboardLayout(){
  const viewport=window.visualViewport;
@@ -1032,6 +1035,19 @@ if(form&&input&&msgs){
  input.addEventListener('keydown',e=>{if(e.key==='Escape')setSuggestions();if(e.key==='ArrowDown'&&visibleSuggestions.length){e.preventDefault();suggestions?.querySelector('button')?.focus()}});
  input.addEventListener('blur',()=>setTimeout(()=>{if(!suggestions?.contains(document.activeElement))setSuggestions()},100));
  restore();initShell();initMobileKeyboardLayout();renderContext();
- loadData().catch(err=>console.warn('[GURU v4] Carregamento inicial não concluído:',err));
+ // Inicie a conversa de forma útil, sem deixar apenas o título estático.
+ // A escolha da cidade não dispara uma busca de lojas.
+ if(!userCity){
+  askForCity();
+ }else{
+  state.location={...(state.location||{}),city:userCity};
+  renderContext();
+  document.body.classList.add('chat-started');
+  add('Cidade selecionada: '+userCity+'. O que você deseja encontrar?');
+ }
+ loadData().catch(err=>{
+  console.warn('[GURU v4] Carregamento inicial não concluído:',err);
+  add('Não consegui carregar o catálogo agora. Você ainda pode escrever sua pergunta e tentar novamente.');
+ });
  window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state,{products:db?.products||[]}),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state,learningStats};
 }else console.error('[GURU v4] Formulário ausente.');

@@ -64,8 +64,101 @@ function renderOverview(){const active=stores.filter(x=>x.status==='active'&&x.a
  const cities={};stores.forEach(s=>{const c=cityFromAddress(s.address)||'Não identificada';cities[c]=(cities[c]||0)+1});$('coverageList').innerHTML=barRows(cities,8);const cats={};stores.forEach(s=>{const c=s.category||'Sem categoria';cats[c]=(cats[c]||0)+1});$('categoryList').innerHTML=barRows(cats,8);$('recentSearches').innerHTML=events.filter(x=>x.query).slice(0,8).map(e=>`<div class="item"><div class="row"><span>${esc(e.query)}</span><span class="badge ${e.matched?'good':'warn'}">${e.matched?'Encontrou':'Sem resultado'}</span></div><div class="meta">${fmtDate(e.created_at)}</div></div>`).join('')||'<div class="empty-state">Sem buscas registradas.</div>'}
 function renderStoreFilters(){const cats=[...new Set(stores.map(x=>x.category).filter(Boolean))].sort(),states=[...new Set(stores.map(x=>stateFromAddress(x.address)).filter(Boolean))].sort();const cat=$('storeCategory').value,st=$('storeState').value;$('storeCategory').innerHTML='<option value="">Categoria</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');$('storeCategory').value=cat;$('storeState').innerHTML='<option value="">Estado</option>'+states.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');$('storeState').value=st}
 function filteredStores(){const q=norm($('storeSearch').value),status=$('storeStatus').value,state=$('storeState').value,city=norm($('storeCity').value),cat=norm($('storeCategory').value),verified=$('storeVerified').value,highlight=$('storeHighlight').value,quality=$('storeQuality').value,source=$('storeSource').value;return stores.filter(s=>(!q||norm([s.name,s.category,s.address].join(' ')).includes(q))&&(!status||s.status===status)&&(!state||stateFromAddress(s.address)===state)&&(!city||norm(cityFromAddress(s.address)).includes(city))&&(!cat||norm(s.category)===cat)&&(!verified||(verified==='yes'?highlightType(s.id)==='verified':highlightType(s.id)!=='verified'))&&(!highlight||highlightType(s.id)===highlight)&&(!quality||qualityLevel(s)===quality)&&(!source||source==='core')).sort((a,b)=>(rankingByStore.get(b.id)?.total||0)-(rankingByStore.get(a.id)?.total||0)||String(a.name||'').localeCompare(String(b.name||''),'pt-BR'))}
-function renderStores(){const list=filteredStores();$('adminStores').innerHTML=list.map(s=>{const issues=storeQuality(s),account=getAccount(s.owner_id),level=qualityLevel(s),rank=rankingByStore.get(s.id)||{total:0,tierName:'Normal',details:[]};return `<div class="item store-admin-item" data-ranking-score="${rank.total}" data-ranking-tier="${esc(rank.tierName)}" data-ranking-detail="${esc(rank.details.map(d=>`${d.label}: ${d.earned}/${d.max}`).join(' • '))}"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot ${esc(s.status||'pending')}"></span>${highlightBadge(s.id)}<span class="badge">Core DB</span></div><div class="meta">${esc(s.category||'Sem categoria')} · ${esc(cityFromAddress(s.address)||'Cidade não identificada')} ${stateFromAddress(s.address)?'· '+esc(stateFromAddress(s.address)):''}</div><div class="meta">Qualidade: <b>${level==='good'?'Boa':level==='attention'?'Atenção':'Crítica'}</b>${account?.email?' · '+esc(account.email):''}</div>${issues.length?`<div class="quality-line">${issues.slice(0,4).map(i=>`<span class="badge warn">${esc(i)}</span>`).join('')}</div>`:''}</div><div class="actions-wrap"><button class="btn sm" data-open-store="${s.id}">Detalhes</button>${s.status!=='active'?`<button class="btn sm dark" data-status="active" data-store="${s.id}">Aprovar</button>`:''}${s.status!=='suspended'?`<button class="btn sm" data-status="suspended" data-store="${s.id}">Suspender</button>`:''}</div></div></div>`}).join('')||'<div class="empty-state">Nenhuma loja corresponde aos filtros.</div>';bindStoreActions()}
-function bindStoreActions(){document.querySelectorAll('[data-open-store]').forEach(b=>b.onclick=()=>openStore(b.dataset.openStore));document.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>openStatusModal(b.dataset.store,b.dataset.status))}
+function renderStores(){const list=filteredStores();$('adminStores').innerHTML=list.map(s=>{const issues=storeQuality(s),account=getAccount(s.owner_id),level=qualityLevel(s),rank=rankingByStore.get(s.id)||{total:0,tierName:'Normal',details:[]};return `<div class="item store-admin-item" data-ranking-score="${rank.total}" data-ranking-tier="${esc(rank.tierName)}" data-ranking-detail="${esc(rank.details.map(d=>`${d.label}: ${d.earned}/${d.max}`).join(' • '))}"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot ${esc(s.status||'pending')}"></span>${highlightBadge(s.id)}<span class="badge">Core DB</span></div><div class="meta">${esc(s.category||'Sem categoria')} · ${esc(cityFromAddress(s.address)||'Cidade não identificada')} ${stateFromAddress(s.address)?'· '+esc(stateFromAddress(s.address)):''}</div><div class="meta">Qualidade: <b>${level==='good'?'Boa':level==='attention'?'Atenção':'Crítica'}</b>${account?.email?' · '+esc(account.email):''}</div>${issues.length?`<div class="quality-line">${issues.slice(0,4).map(i=>`<span class="badge warn">${esc(i)}</span>`).join('')}</div>`:''}</div><div class="actions-wrap"><button class="btn sm" data-open-store="${s.id}">Detalhes</button><button class="btn sm" data-change-category="${s.id}">Alterar categoria</button>${s.status!=='active'?`<button class="btn sm dark" data-status="active" data-store="${s.id}">Aprovar</button>`:''}${s.status!=='suspended'?`<button class="btn sm" data-status="suspended" data-store="${s.id}">Suspender</button>`:''}</div></div></div>`}).join('')||'<div class="empty-state">Nenhuma loja corresponde aos filtros.</div>';bindStoreActions()}
+function bindStoreActions(){document.querySelectorAll('[data-open-store]').forEach(b=>b.onclick=()=>openStore(b.dataset.openStore));document.querySelectorAll('[data-change-category]').forEach(b=>b.onclick=()=>openCategoryEditor(b.dataset.changeCategory));document.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>openStatusModal(b.dataset.store,b.dataset.status))}
+const CATEGORY_EDGE='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/admin-pending-stores';
+const CATEGORY_CORE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
+let classificationTaxonomy=null;
+let categoryEditorBusy=false;
+async function loadClassificationTaxonomy(){
+ const [categories,groups]=await Promise.all([
+  sb.from('local_ai_taxonomy_categories').select('id,name').eq('active',true).order('sort_order'),
+  sb.from('local_ai_taxonomy_groups').select('category_id,name').eq('active',true).order('sort_order')
+ ]);
+ if(categories.error||groups.error)throw Error('Não foi possível carregar as categorias cadastradas na GURU.');
+ classificationTaxonomy={
+  categories:categories.data||[],
+  groups:groups.data||[]
+ };
+ return classificationTaxonomy;
+}
+async function openCategoryEditor(id){
+ const store=stores.find(s=>s.id===id);
+ if(!store){toast('Loja não encontrada.');return}
+ if(categoryEditorBusy)return;
+ let tax;
+ try{tax=await loadClassificationTaxonomy()}catch(error){toast(error.message);return}
+ let modal=document.getElementById('categoryEditorModal');
+ if(!modal){
+  modal=document.createElement('div');
+  modal.id='categoryEditorModal';modal.className='modal-lite hidden';
+  modal.innerHTML='<div class="modal-lite-card" role="dialog" aria-modal="true" aria-labelledby="categoryEditorTitle" style="width:min(530px,calc(100vw - 28px));max-height:90dvh;overflow:auto"><h3 id="categoryEditorTitle">Alterar categoria</h3><p class="meta" id="categoryEditorStore"></p><div class="field"><label for="categoryEditorCategory">Categoria principal</label><select id="categoryEditorCategory"></select></div><div class="field"><label for="categoryEditorGroup">Grupo / tipo de estabelecimento</label><select id="categoryEditorGroup"></select></div><div class="field"><label for="categoryEditorSpecialties">Especialidades (separe por vírgula)</label><textarea id="categoryEditorSpecialties" rows="3" maxlength="2000" placeholder="Ex.: Lanchonete, Salgados"></textarea></div><p class="meta">A mudança altera a classificação usada nas buscas, sem desativar a loja ou excluir produtos.</p><div class="actions-wrap" style="justify-content:flex-end;margin-top:15px;display:flex;gap:8px"><button class="btn sm" id="categoryEditorCancel" type="button">Cancelar</button><button class="btn sm dark" id="categoryEditorSave" type="button">Salvar categoria</button></div></div>';
+  document.body.appendChild(modal);
+ }
+ const close=()=>{if(!categoryEditorBusy)modal.classList.add('hidden')};
+ const catInput=modal.querySelector('#categoryEditorCategory');
+ const groupInput=modal.querySelector('#categoryEditorGroup');
+ const specialtyInput=modal.querySelector('#categoryEditorSpecialties');
+ modal.querySelector('#categoryEditorStore').textContent=store.name+' · '+(store.status==='active'?'Ativa':store.status||'');
+ catInput.replaceChildren();
+ for(const category of tax.categories){
+  const option=document.createElement('option');option.value=category.name;option.textContent=category.name;catInput.append(option);
+ }
+ const startingCategory=tax.categories.some(row=>row.name===store.category)?store.category:tax.categories[0]?.name||'';
+ if(!startingCategory){toast('Nenhuma categoria ativa cadastrada.');return}
+ catInput.value=startingCategory;
+ const refreshGroups=preserve=>{
+  const cat=tax.categories.find(row=>row.name===catInput.value);
+  const available=tax.groups.filter(row=>row.category_id===cat?.id);
+  const previous=preserve?(groupInput.value||store.group||''):'';
+  groupInput.replaceChildren();
+  const none=document.createElement('option');none.value='';none.textContent='Sem grupo específico';groupInput.append(none);
+  for(const group of available){
+   const option=document.createElement('option');option.value=group.name;option.textContent=group.name;groupInput.append(option);
+  }
+  groupInput.value=available.some(row=>row.name===previous)?previous:'';
+  // Não manter especialidades antigas de outra categoria por acidente.
+  if(!preserve)specialtyInput.value=groupInput.value||'';
+ };
+ specialtyInput.value=(Array.isArray(store.specialties)?store.specialties:[]).join(', ');
+ refreshGroups(true);
+ catInput.onchange=()=>refreshGroups(false);
+ groupInput.onchange=()=>{
+  if(!specialtyInput.value.trim()&&groupInput.value)specialtyInput.value=groupInput.value;
+ };
+ modal.querySelector('#categoryEditorCancel').onclick=close;
+ modal.onclick=event=>{if(event.target===modal)close()};
+ modal.querySelector('#categoryEditorSave').onclick=async()=>{
+  if(categoryEditorBusy)return;
+  const category=catInput.value,group=groupInput.value||null;
+  const specialties=[...new Set(specialtyInput.value.split(/[,;\n]+/).map(s=>s.trim()).filter(Boolean))];
+  if(!category||specialties.length>20||specialties.some(s=>s.length>120)){
+   toast('Verifique a categoria e o máximo de 20 especialidades (até 120 caracteres cada).');return;
+  }
+  if(!window.confirm('Salvar a categoria e o grupo de '+store.name+'?'))return;
+  categoryEditorBusy=true;
+  const save=modal.querySelector('#categoryEditorSave');save.disabled=true;save.textContent='Salvando...';
+  try{
+   const {data:{session:current}}=await sb.auth.getSession();
+   if(!current?.access_token)throw Error('Sessão administrativa expirada.');
+   const response=await fetch(CATEGORY_EDGE,{
+    method:'POST',
+    headers:{apikey:CATEGORY_CORE_KEY,Authorization:'Bearer '+current.access_token,'Content-Type':'application/json'},
+    body:JSON.stringify({action:'change_category',id:store.id,category,group,specialties})
+   });
+   const payload=await response.json().catch(()=>({}));
+   if(!response.ok||payload?.ok!==true)throw Error(payload.error||'Erro ao salvar a categoria.');
+   await logAction('store_category_changed','store',store.id,{
+    previous_category:store.category,previous_group:store.group,category,group,specialties
+   });
+   modal.classList.add('hidden');
+   await loadData();
+   toast('Categoria e especialidades atualizadas.');
+  }catch(error){toast(error.message||'Não foi possível salvar a categoria.')}
+  finally{categoryEditorBusy=false;save.disabled=false;save.textContent='Salvar categoria'}
+ };
+ modal.classList.remove('hidden');
+}
 function openStore(id){const s=stores.find(x=>x.id===id);if(!s)return;const ps=products.filter(p=>p.store_id===id),hs=hours.filter(h=>h.store_id===id),rs=reviews.filter(r=>r.store_id===id),qs=questions.filter(q=>q.store_id===id&&!q.answered),quality=storeQuality(s),account=getAccount(s.owner_id),h=getHighlight(id),rank=rankingByStore.get(id);$('drawerTitle').textContent=s.name||'Loja';$('drawerContent').innerHTML=`<div class="detail-grid"><div class="detail-block"><span>Status</span><b>${esc(s.status||'—')}</b></div><div class="detail-block"><span>Categoria</span><b>${esc(s.category||'—')}</b></div><div class="detail-block"><span>Destaque</span><b>${esc(h?.highlight_type||'normal')}</b></div><div class="detail-block"><span>Banco</span><b>Core DB</b></div></div><div class="drawer-section"><h3>Cadastro</h3><p>${esc(s.description||'Sem descrição')}</p><div class="meta">${esc(s.address||'Endereço não informado')}</div><div class="meta">Lojista: ${esc(account?.name||'—')} · ${esc(account?.email||'—')}</div></div><div class="drawer-section"><h3>Score de classificação na busca · ${rank?.total??0}/100</h3><div class="score-detail-note">A pontuação define a posição padrão entre lojas que atendem aos filtros.</div><div class="score-detail-track"><span style="width:${rank?.total??0}%"></span></div><div class="score-detail-list">${(rank?.details||[]).map(x=>`<div><span>${esc(x.label)}</span><b>+${x.earned}/${x.max}</b></div>`).join('')}</div></div><div class="drawer-section"><h3>Qualidade</h3>${quality.length?quality.map(x=>`<span class="badge warn">${esc(x)}</span>`).join(' '):'<span class="badge good">Cadastro completo</span>'}</div><div class="drawer-section"><h3>Produtos (${ps.length})</h3>${ps.slice(0,12).map(p=>`<div class="mini-row"><span>${esc(p.name)} · estoque ${p.stock??0}</span><b>${money(p.promo_price||p.price)}</b></div>`).join('')||'<div class="meta">Nenhum produto.</div>'}</div><div class="drawer-section"><h3>Horários</h3>${hs.map(h=>`<div class="mini-row"><span>Dia ${h.weekday}</span><span>${h.closed?'Fechado':`${String(h.opens_at||'').slice(0,5)}–${String(h.closes_at||'').slice(0,5)}`}</span></div>`).join('')||'<div class="meta">Não informado.</div>'}</div><div class="drawer-section"><h3>Avaliações (${rs.length})</h3>${rs.slice(0,5).map(r=>`<div class="mini-review"><b>★ ${Number(r.rating).toFixed(1)}</b><span>${esc(r.comment||'Sem comentário')}</span></div>`).join('')||'<div class="meta">Sem avaliações.</div>'}</div><div class="drawer-section"><h3>Perguntas pendentes (${qs.length})</h3>${qs.slice(0,5).map(q=>`<div class="meta">${esc(q.question)}</div>`).join('')||'<div class="meta">Nenhuma.</div>'}</div>`;$('storeDrawer').classList.remove('hidden')}
 document.querySelectorAll('[data-close-drawer]').forEach(b=>b.onclick=()=>$('storeDrawer').classList.add('hidden'));
 function openStatusModal(id,status){const s=stores.find(x=>x.id===id);if(!s)return;pendingStatus={id,status};$('statusModalTitle').textContent=status==='active'?'Aprovar loja':'Suspender loja';$('statusModalHint').textContent=`${s.name}: registre uma observação para o histórico.`;$('statusReason').value='';$('statusModal').classList.remove('hidden')}

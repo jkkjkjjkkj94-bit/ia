@@ -115,3 +115,13 @@ html[data-theme="dark"] .guru-theme-switch-thumb{background:#202125;transform:tr
 @media(max-width:900px){.guru-theme-toggle .guru-theme-label,.guru-theme-toggle .guru-theme-switch{display:none!important}.guru-theme-toggle{justify-content:center!important;padding:4px!important}}
 @media(max-width:680px){.guru-theme-toggle{display:none!important}}
 @media(prefers-reduced-motion:reduce){.guru-theme-toggle,.guru-theme-switch,.guru-theme-switch-thumb{transition:none!important}}
+
+/* Assistente de necessidades no tema escuro */
+html[data-theme="dark"] .guru-need-card{background:#1b1d20;border-color:#34363b}
+html[data-theme="dark"] .guru-need-heading,html[data-theme="dark"] .guru-need-question,
+html[data-theme="dark"] .guru-need-proof-title{color:#f1f2f3}
+html[data-theme="dark"] .guru-need-eyebrow,html[data-theme="dark"] .guru-need-description,
+html[data-theme="dark"] .guru-need-proof-status,html[data-theme="dark"] .guru-need-proof-products,
+html[data-theme="dark"] .guru-need-proof-muted{color:#aeb1b8}
+html[data-theme="dark"] .guru-need-item{background:#292c31;border-color:#383b41;color:#e9e9eb}
+html[data-theme="dark"] .guru-need-verification{border-color:#34363b}

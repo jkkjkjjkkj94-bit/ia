@@ -431,3 +431,24 @@
  .guru-compare-card-metric{display:flex;align-items:center;justify-content:space-between}
  .guru-compare-card-data{align-items:flex-end;text-align:right}
 }
+
+/* GURU — planejamento de compras por necessidade */
+.guru-need-message{width:100%;min-width:0}
+.guru-need-card{border:1px solid #e9e9e9;background:#fff;border-radius:16px;padding:18px;max-width:780px}
+.guru-need-eyebrow{font-size:10px;letter-spacing:.1em;font-weight:750;color:#858585;margin-bottom:9px}
+.guru-need-heading{font-size:clamp(16px,2vw,20px);font-weight:680;letter-spacing:-.025em;color:#191919;margin:0 0 8px;line-height:1.4}
+.guru-need-description{font-size:12px;color:#6f6f6f;line-height:1.6;margin:0 0 13px}
+.guru-need-question{font-weight:650;font-size:12px;color:#292929;margin:10px 0}
+.guru-need-options,.guru-need-item-list{display:flex;gap:8px;flex-wrap:wrap}
+.guru-need-choice{padding:9px 12px;font-size:11.5px}
+.guru-need-item{display:inline-flex;align-items:center;background:#f7f7f8;color:#343434;border:1px solid #ececec;border-radius:9px;font-size:11px;line-height:1.4;padding:8px 10px}
+.guru-need-verification{display:grid;gap:5px;margin:10px 0 1px;border-top:1px solid #ededed;padding:10px 0 1px}
+.guru-need-proof-title{font-size:10px;font-weight:700;color:#383838}
+.guru-need-proof-status,.guru-need-proof-products,.guru-need-proof-muted{font-size:10.5px;line-height:1.5;color:#6e6e6e}
+.guru-need-proof-status{font-weight:600;color:#505050}
+@media(max-width:650px){
+ .guru-need-card{padding:15px 14px;border-radius:14px}
+ .guru-need-item-list{gap:6px}
+ .guru-need-item{font-size:10.5px;padding:7px 9px}
+ .guru-need-options .guru-need-choice{flex:1 1 auto;text-align:center}
+}

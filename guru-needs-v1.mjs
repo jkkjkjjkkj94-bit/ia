@@ -21,7 +21,7 @@ const needs={
   question:'O que você procura para a comemoração?',
   choices:['Comidas e bebidas','Decoração','Bolo e doces','Itens descartáveis'],
   items:['Bebidas e alimentos','Doces e sobremesas','Descartáveis','Decoração'],
-  targets:[{category:'Mercado',words:['mercado','supermercado','mercearia','bebidas','doces']},{category:'Comida',words:['padaria','doceria','bolo','confeitaria']},{category:'Varejo',words:['festa','decoracao','variedades']}]
+  targets:[{category:'Mercado',words:['mercado','supermercado','mercearia','bebidas','doces']},{category:'Comida',words:['padaria','doceria','bolo','confeitaria']},{category:'Varejo',words:['festa','decoracao','artigos para festas']}]
  },
  jardim:{
   title:'Cuidar do jardim',
@@ -42,7 +42,7 @@ const needs={
   question:'Que tipo de limpeza você precisa fazer?',
   choices:['Limpeza geral','Lavanderia','Cozinha','Banheiro'],
   items:['Produtos de limpeza','Panos e esponjas','Luvas','Utensílios de limpeza'],
-  targets:[{category:'Mercado',words:['mercado','supermercado','mercearia','limpeza']},{category:'Varejo',words:['limpeza','variedades']}]
+  targets:[{category:'Mercado',words:['mercado','supermercado','mercearia','limpeza']},{category:'Varejo',words:['limpeza','produtos de limpeza']}]
  }
 };
 // Novos cenários de necessidade, sem adicionar produtos falsos ao catálogo.

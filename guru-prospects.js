@@ -8,6 +8,12 @@ const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className
 let leads=[],session=null,loading=false,credentialText='';
 const SUPABASE_URL='https://innziuzgtpfsiywqmies.supabase.co';
 const SUPABASE_KEY='sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1';
+function provisionalEmail(){
+ // example.com é um domínio reservado, usado somente como login técnico provisório.
+ const id=crypto.randomUUID().replaceAll('-','');
+ return 'guru-'+id+'@example.com';
+}
+function isProvisionalEmail(value){return /^guru-[0-9a-f]{32}@example\.com$/i.test(String(value||''))}
 function temporaryPassword(){
  const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*-_';
  const values=new Uint32Array(24);crypto.getRandomValues(values);
@@ -20,7 +26,7 @@ function temporaryPassword(){
  return result.join('');
 }
 function showCredentials(email,password){
- credentialText='Painel da GURU: '+location.origin+'/ia/lojista.html\nE-mail: '+email+'\nSenha provisória: '+password+'\nAltere a senha no primeiro acesso.';
+ credentialText='Painel da GURU: '+location.origin+'/ia/lojista.html\nLogin provisório: '+email+'\nSenha provisória: '+password+'\nO administrador poderá definir um e-mail real depois. Altere a senha no primeiro acesso.';
  $('createdEmail').textContent=email;
  $('createdPassword').textContent=password;
  $('credentialsDialog').classList.remove('hidden');
@@ -85,28 +91,26 @@ function displayLead(p){
  const sourceUrl=validUrl(p.source_url);
  if(sourceUrl){const a=el('a','btn','Consultar fonte');a.href=sourceUrl;a.target='_blank';a.rel='noopener noreferrer';card.append(a)}
  const accountBox=el('div','account-fields hidden');
- const emailWrap=el('label');emailWrap.append(el('span','','E-mail do responsável autorizado'));
- const emailInput=el('input');emailInput.type='email';emailInput.placeholder='responsavel@empresa.com.br';emailInput.autocomplete='off';emailWrap.append(emailInput);
  const nameWrap=el('label');nameWrap.append(el('span','','Nome de exibição do lojista'));
  const displayInput=el('input');displayInput.value=p.name;displayInput.maxLength=140;nameWrap.append(displayInput);
  const authorizedWrap=el('label');const authorizedInput=el('input');authorizedInput.type='checkbox';
- authorizedInput.style.width='auto';authorizedWrap.append(authorizedInput,el('span','','Confirmei o e-mail com o responsável e tenho autorização para criar o acesso.'));
- const accountHelp=el('p','muted','O endereço e os produtos da loja são cadastrados depois, pelo próprio lojista. A senha será mostrada uma única vez.');
+ authorizedInput.style.width='auto';authorizedWrap.append(authorizedInput,el('span','','Tenho autorização do responsável para criar a conta de acesso.'));
+ const accountHelp=el('p','muted','A GURU gera login e senha provisórios automaticamente, sem exigir e-mail. O administrador pode definir o e-mail real posteriormente. A senha aparecerá uma única vez.');
  const createAccount=el('button','primary','Confirmar criação da conta');createAccount.type='button';
  const cancelAccount=el('button','','Cancelar');cancelAccount.type='button';
  const accountActions=el('div','actions');accountActions.append(createAccount,cancelAccount);
- accountBox.append(emailWrap,nameWrap,authorizedWrap,accountHelp,accountActions);
+ accountBox.append(nameWrap,authorizedWrap,accountHelp,accountActions);
  const startAccount=el('button','primary',p.merchant_user_id?'Conta criada':'Criar conta de lojista');
  startAccount.type='button';startAccount.disabled=Boolean(p.merchant_user_id);
- startAccount.onclick=()=>{accountBox.classList.remove('hidden');emailInput.focus()};
- cancelAccount.onclick=()=>{accountBox.classList.add('hidden');emailInput.value='';authorizedInput.checked=false};
+ startAccount.onclick=()=>{accountBox.classList.remove('hidden');displayInput.focus()};
+ cancelAccount.onclick=()=>{accountBox.classList.add('hidden');authorizedInput.checked=false};
  createAccount.onclick=async()=>{
   if(p.merchant_user_id){msg('Este comércio já possui uma conta de lojista vinculada.');return}
-  const email=emailInput.value.trim().toLowerCase(),display_name=displayInput.value.trim();
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){msg('Informe um e-mail válido e confirmado pelo responsável.');return}
+  const display_name=displayInput.value.trim();
   if(display_name.length<2){msg('Informe um nome válido para o lojista.');return}
   if(!authorizedInput.checked){msg('Confirme a autorização do responsável antes de criar o acesso.');return}
-  if(!window.confirm('Criar uma conta de lojista para '+p.name+' no e-mail '+email+'?'))return;
+  if(!window.confirm('Criar uma conta provisória para '+p.name+' sem e-mail definitivo?'))return;
+  const email=provisionalEmail();
   const password=temporaryPassword();
   createAccount.disabled=true;startAccount.disabled=true;
   let accountCreated=false;
@@ -142,8 +146,42 @@ function displayLead(p){
   }
  };
  if(p.merchant_user_id){
-  const info=el('p','muted','Conta vinculada: '+(p.merchant_email||'lojista cadastrado')+'. A senha não é armazenada na GURU.');
+  const provisional=isProvisionalEmail(p.merchant_email);
+  const info=el('p','muted',(provisional?'Login provisório: ':'E-mail definitivo: ')+(p.merchant_email||'lojista cadastrado')+'. A senha não é armazenada na GURU.');
   card.append(info);
+  const updateBox=el('div','account-fields hidden');
+  const updateLabel=el('label');updateLabel.append(el('span','','E-mail definitivo do responsável'));
+  const updateInput=el('input');updateInput.type='email';updateInput.placeholder='responsavel@empresa.com.br';updateInput.autocomplete='off';updateLabel.append(updateInput);
+  const consentLabel=el('label'),consent=el('input');consent.type='checkbox';consent.style.width='auto';
+  consentLabel.append(consent,el('span','','Confirmei que o e-mail pertence ao responsável autorizado.'));
+  const updateButton=el('button','primary','Salvar e-mail definitivo'),closeButton=el('button','','Cancelar');updateButton.type='button';closeButton.type='button';
+  const actions=el('div','actions');actions.append(updateButton,closeButton);
+  updateBox.append(updateLabel,consentLabel,actions);card.append(updateBox);
+  const openUpdate=el('button','','Definir ou corrigir e-mail');
+  openUpdate.type='button'; // Nenhuma senha é lida ou armazenada.
+  openUpdate.onclick=()=>{updateBox.classList.remove('hidden');updateInput.focus()};
+  closeButton.onclick=()=>{updateBox.classList.add('hidden');updateInput.value='';consent.checked=false};
+  updateButton.onclick=async()=>{
+   const newEmail=updateInput.value.trim().toLowerCase();
+   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)||newEmail.endsWith('@example.com')){msg('Informe um e-mail real válido.');return}
+   if(!consent.checked){msg('Confirme a autorização para usar esse e-mail.');return}
+   if(!window.confirm('Definir '+newEmail+' como login do lojista de '+p.name+'?'))return;
+   updateButton.disabled=true;
+   try{
+    const {data:{session:current},error:sessionError}=await sb.auth.getSession();
+    if(sessionError||!current?.access_token)throw Error('Sessão expirada.');
+    const res=await fetch(SUPABASE_URL+'/functions/v1/guru-update-merchant-email',{
+     method:'POST',headers:{'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:'Bearer '+current.access_token},
+     body:JSON.stringify({prospect_id:p.id,email:newEmail})
+    });
+    const data=await res.json();
+    if(!res.ok||data.error||!data.ok)throw Error(data.error||'Não foi possível atualizar o e-mail.');
+    await load();
+    msg(data.warning||'E-mail definitivo registrado. O lojista agora deve usar esse e-mail para entrar na GURU.');
+   }catch(e){msg('Erro ao atualizar e-mail: '+e.message)}
+   finally{updateButton.disabled=false}
+  };
+  card.append(openUpdate);
  }
  const bar=el('div','actions');
  const edit=el('button','','Editar');

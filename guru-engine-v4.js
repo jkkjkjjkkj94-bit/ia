@@ -1035,17 +1035,13 @@ function initShell(){
  const updateChatLayout=()=>{
   const hasConversation=[...msgs.children].some(node=>node.classList?.contains('guru-city-choice')||node.classList?.contains('user')||node.classList?.contains('hashtag-result-msg'));
   body.classList.toggle('chat-started',hasConversation);
-  if(!hasConversation)setWelcome(welcomeIndex);
+  // Não alterar a frase quando a conversa for aberta ou reiniciada.
  };
  if(msgs){
   new MutationObserver(updateChatLayout).observe(msgs,{childList:true});
   updateChatLayout();
  }
  setWelcome(welcomeIndex);
- window.setInterval(()=>{
-  if(document.hidden||body.classList.contains('chat-started'))return;
-  setWelcome(welcomeIndex+1);
- },5500);
  side?.querySelector('.sidebar-collapse')?.addEventListener('click',()=>body.classList.toggle('sidebar-collapsed'));
  side?.addEventListener('click',e=>{const b=e.target.closest('[data-shell-action]');if(!b)return;if(b.dataset.shellAction==='new')resetConversation();if(b.dataset.shellAction==='location'){userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};askForCity()}});
  document.getElementById('resetBtn')?.addEventListener('click',resetConversation);

@@ -953,6 +953,32 @@ function resetConversation(){
  document.body.classList.remove('chat-started');
  input.value='';setSuggestions();renderContext();input.focus();
 }
+function initMobileKeyboardLayout(){
+ const viewport=window.visualViewport;
+ if(!viewport)return;
+ let frame=0;
+ const sync=()=>{
+  cancelAnimationFrame(frame);
+  frame=requestAnimationFrame(()=>{
+   const smallScreen=window.matchMedia('(max-width: 680px)').matches;
+   const focused=smallScreen&&document.activeElement===input;
+   // VisualViewport mostra a área realmente visível quando o teclado virtual aparece.
+   // Em navegadores que já redimensionam o layout, o inset resultará em zero.
+   const covered=Math.max(0,window.innerHeight-(viewport.height+viewport.offsetTop));
+   const inset=focused&&covered>80?Math.round(covered):0;
+   document.documentElement.style.setProperty('--guru-keyboard-inset',inset+'px');
+   document.body.classList.toggle('guru-keyboard-open',Boolean(inset));
+   if(focused)msgs.scrollTop=msgs.scrollHeight;
+  });
+ };
+ viewport.addEventListener('resize',sync,{passive:true});
+ viewport.addEventListener('scroll',sync,{passive:true});
+ window.addEventListener('resize',sync,{passive:true});
+ window.addEventListener('orientationchange',sync,{passive:true});
+ input.addEventListener('focus',sync);
+ input.addEventListener('blur',sync);
+ sync();
+}
 function initShell(){
  const body=document.body,side=document.querySelector('.app-sidebar');
  const hero=document.querySelector('.hero h1');
@@ -976,7 +1002,7 @@ if(form&&input&&msgs){
  input.addEventListener('input',updateSuggestions);
  input.addEventListener('keydown',e=>{if(e.key==='Escape')setSuggestions();if(e.key==='ArrowDown'&&visibleSuggestions.length){e.preventDefault();suggestions?.querySelector('button')?.focus()}});
  input.addEventListener('blur',()=>setTimeout(()=>{if(!suggestions?.contains(document.activeElement))setSuggestions()},100));
- restore();initShell();renderContext();
+ restore();initShell();initMobileKeyboardLayout();renderContext();
  loadData().catch(err=>console.warn('[GURU v4] Carregamento inicial não concluído:',err));
  window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state,{products:db?.products||[]}),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state,learningStats};
 }else console.error('[GURU v4] Formulário ausente.');

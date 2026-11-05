@@ -9,6 +9,7 @@ import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=1';
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
 import {semanticNeedAlternatives} from './guru-semantic-v12.mjs?v=1';
+import {followupRefinement} from './guru-followup-v13.mjs?v=1';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=24';
 
@@ -828,7 +829,8 @@ async function run(text){
   const verified=approvedAnswerFor(text,db.approvedAnswers||[]);
   if(verified){add(verified.answer);return}
  }
- const follow=contextualIntent(text,state);
+ const refinement=followupRefinement(text,state);
+ const follow=refinement?null:contextualIntent(text,state);
  if(follow){
   const current=state.lastResults||[];
   if(follow.kind==='compare'){renderComparison(follow.indices,text);return}
@@ -865,8 +867,8 @@ async function run(text){
  // anterior nem herdar filtros antigos.
  const rawPlan=interpret(text,taxonomy,aliases,{...state,selectedStore:null},{products:db?.products||[]});
  const bareTaxonomy=isBareCategoryOrGroupQuery(text,rawPlan);
- const intentState=newSpecialty||bareTaxonomy?{...state,selectedStore:null}:state;
- const plan=bareTaxonomy?rawPlan:interpret(text,taxonomy,aliases,intentState,{products:db?.products||[]});
+ const intentState=newSpecialty||bareTaxonomy||refinement?{...state,selectedStore:null}:state;
+ const plan=bareTaxonomy?rawPlan:interpret(refinement?.query||text,taxonomy,aliases,intentState,{products:db?.products||[]});
  if(plan.kind==='search'&&newSpecialty&&!bareTaxonomy)plan.specialtyTerm=specialtyMention;
  if(plan.kind==='blocked'){add('“Loja” e “comércio” são tratados como varejo e não entram na categoria Comida. Pesquise por restaurante, pizzaria ou pelo tipo de comida.');return}
  if(plan.kind==='clarify'){

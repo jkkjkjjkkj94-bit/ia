@@ -9,6 +9,7 @@ const clean=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g
 const authEndpoint='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/guru-captured-stores';
 const coreKey='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
 let leads=[],merchants=[],session=null,bulkRunning=false,loading=false;
+let accountBatchRunning=false,generatedAccesses=[];
 const selected=new Set();
 const cachedOwners=new Map();
 async function verify(){
@@ -30,6 +31,121 @@ async function core(action,payload={}){
  if(!response.ok||data.error||data.ok===false)throw Error(data.error||'Operação não confirmada no Supabase principal.');
  return data;
 }
+
+const aiEndpoint='https://innziuzgtpfsiywqmies.supabase.co/functions/v1/admin-create-merchant';
+const aiPublishable='sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1';
+function generateProvisionalPassword(){
+ const upper='ABCDEFGHJKLMNPQRSTUVWXYZ',lower='abcdefghijkmnopqrstuvwxyz',numbers='23456789',symbols='!@#$%&*-_';
+ const all=upper+lower+numbers+symbols;
+ const values=new Uint32Array(24);crypto.getRandomValues(values);
+ const result=Array.from(values,v=>all[v%all.length]);
+ result[0]=upper[values[0]%upper.length];
+ result[1]=lower[values[1]%lower.length];
+ result[2]=numbers[values[2]%numbers.length];
+ result[3]=symbols[values[3]%symbols.length];
+ return result.join('');
+}
+function accountLogin(p){
+ return 'guru-'+String(p.id||'').replaceAll('-','').toLowerCase()+'@example.com';
+}
+function renderAccessResults(results){
+ generatedAccesses=results.filter(x=>x.password);
+ const list=$('generatedMerchantList');list.replaceChildren();
+ for(const item of results){
+  const card=el('div','panel');card.append(el('strong','',item.name));
+  if(item.email)card.append(el('p','muted','Login: '+item.email));
+  if(item.password)card.append(el('div','credential-value',item.password));
+  card.append(el('p','muted',item.error?'Erro: '+item.error:item.warning||'Conta vinculada à loja.'));
+  list.append(card);
+ }
+ const made=results.filter(x=>x.password).length,linked=results.filter(x=>x.linked).length,failed=results.filter(x=>x.error).length;
+ $('generatedMerchantSummary').textContent='Criadas: '+made+' · Vinculadas: '+linked+' · Pendências: '+failed+
+ '. Copie os acessos antes de fechar. Os dados não ficarão disponíveis para consulta posterior.';
+ $('generatedMerchantCredentials').classList.remove('hidden');
+}
+function clearAccessResults(){
+ $('generatedMerchantCredentials').classList.add('hidden');
+ $('generatedMerchantList').replaceChildren();
+ generatedAccesses=[];
+}
+$('closeGeneratedMerchantCredentials').onclick=clearAccessResults;
+$('copyGeneratedMerchantCredentials').onclick=async()=>{
+ if(!generatedAccesses.length){msg('Nenhuma senha nova foi gerada neste lote.');return}
+ const txt=generatedAccesses.map(item=>[
+  item.name,'Painel: https://jkkjkjjkkj94-bit.github.io/ia/lojista.html',
+  'Login provisório: '+item.email,'Senha provisória: '+item.password,
+  item.error?'ATENÇÃO: '+item.error:''
+ ].filter(Boolean).join('\n')).join('\n\n---\n\n');
+ try{await navigator.clipboard.writeText(txt);msg('Acessos copiados. Entregue cada senha somente ao responsável autorizado.')}
+ catch{msg('Não foi possível copiar automaticamente. Copie os acessos exibidos antes de fechar.')}
+};
+function refreshAccountButton(){
+ const count=leads.filter(p=>p.existing_store_id&&!p.merchant_user_id).length;
+ $('missingAccountCount').textContent=count+' loja(s) ainda sem conta cadastrada na captação';
+ $('createAllMerchantAccounts').disabled=!count||accountBatchRunning||bulkRunning;
+}
+async function registerMerchantAccountForStore(p){
+ if(!p.existing_store_id)throw Error('Crie a loja antes de criar a conta.');
+ // Releia o vínculo para recuperar operações parciais sem duplicar usuários.
+ const {data:current,error:readError}=await sb.from('guru_commerce_prospects')
+  .select('id,name,existing_store_id,merchant_user_id,merchant_email').eq('id',p.id).single();
+ if(readError||!current)throw Error('Não foi possível conferir a captação.');
+ let userId=current.merchant_user_id,login=current.merchant_email,password=null,warning='';
+ if(!userId){
+  login=accountLogin(p);
+  const {data:existingAccount,error:lookupError}=await sb.from('local_ai_accounts')
+   .select('user_id,email').eq('email',login).maybeSingle();
+  if(lookupError)throw Error('Não foi possível verificar contas preexistentes.');
+  if(existingAccount?.user_id){
+   // Uma interrupção após a criação não pode gerar um segundo usuário.
+   userId=existingAccount.user_id;warning='Conta provisória recuperada de uma tentativa anterior; senha antiga não está disponível. Redefina-a pelo fluxo de recuperação do administrador.';
+  }else{
+   password=generateProvisionalPassword();
+   const {data:{session:active},error:sessionError}=await sb.auth.getSession();
+   if(sessionError||!active?.access_token)throw Error('Sessão administrativa expirada.');
+   const res=await fetch(aiEndpoint,{method:'POST',headers:{
+    'Content-Type':'application/json',apikey:aiPublishable,
+    Authorization:'Bearer '+active.access_token
+   },body:JSON.stringify({display_name:current.name,email:login,password})});
+   const payload=await res.json().catch(()=>({}));
+   if(!res.ok||payload.error||!payload.ok||!payload.user_id)
+    throw Error(payload.error||'A conta não foi confirmada no servidor.');
+   userId=payload.user_id;
+   if(payload.warning)warning=payload.warning;
+  }
+  const {data:linked,error:linkError}=await sb.from('guru_commerce_prospects')
+   .update({merchant_user_id:userId,merchant_email:login,merchant_created_at:new Date().toISOString(),updated_at:new Date().toISOString(),status:'account_created'})
+   .eq('id',p.id).is('merchant_user_id',null).select('id').maybeSingle();
+  if(linkError||!linked){
+   return {name:current.name,email:login,password,linked:false,error:'Conta criada, mas não vinculada à captação: '+(linkError?.message||'atualização concorrente')};
+  }
+ }
+ try{
+  await core('assign_owner',{store_id:current.existing_store_id,owner_id:userId});
+  return {name:current.name,email:login,password,linked:true,warning};
+ }catch(e){
+  return {name:current.name,email:login,password,linked:false,error:'Conta criada, mas vínculo com a loja pendente: '+e.message};
+ }
+}
+$('createAllMerchantAccounts').onclick=async()=>{
+ if(accountBatchRunning||bulkRunning)return;
+ const targets=leads.filter(p=>p.existing_store_id&&!p.merchant_user_id);
+ if(!targets.length){msg('Nenhuma loja sem conta disponível.');return}
+ if(!window.confirm('Criar e vincular '+targets.length+' contas de lojista?\n\nSerá criada uma conta provisória individual para cada loja. Os acessos serão exibidos UMA VEZ e nenhuma loja será ativada. Confirme que você está autorizado a administrar esses acessos.'))return;
+ accountBatchRunning=true;refreshAccountButton();
+ const results=[];
+ try{
+  for(let i=0;i<targets.length;i++){
+   const p=targets[i];
+   msg('Criando e vinculando conta '+(i+1)+' de '+targets.length+' · '+p.name);
+   try{results.push(await registerMerchantAccountForStore(p))}
+   catch(e){results.push({name:p.name,error:e.message})}
+  }
+  renderAccessResults(results);
+  try{await load();await loadMerchants()}catch(e){msg('A operação terminou, mas não foi possível recarregar: '+e.message)}
+  msg('Criação de contas concluída. Verifique pendências e copie as senhas exibidas.');
+ }finally{accountBatchRunning=false;refreshAccountButton()}
+};
 async function load(){
  const {data,error}=await sb.from('guru_commerce_prospects').select('*').order('created_at',{ascending:false}).limit(1000);
  if(error)throw error;
@@ -48,6 +164,7 @@ async function load(){
  $('nInterested').textContent=leads.filter(x=>x.status==='interested').length;
  $('nApproval').textContent=leads.filter(x=>x.status==='awaiting_approval').length;
  render();
+ refreshAccountButton();
 }
 async function loadMerchants(){
  const data=await core('list_merchants');
@@ -64,6 +181,7 @@ function visible(){
 function selectionCount(){
  $('selectionCount').textContent=selected.size+' selecionado(s) (máximo 20)';
  $('createBulk').disabled=!selected.size||bulkRunning;
+ refreshAccountButton();
 }
 function field(label,value,max=250,multiline=false){
  const wrap=el('label');wrap.append(el('span','',label));

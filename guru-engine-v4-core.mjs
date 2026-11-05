@@ -468,7 +468,14 @@ export function searchStores(data={},state={},position=null,options={}){
   if((f.excludedPayments||[]).some(method=>acceptsPayment(method)))continue;
   if(f.maxDeliveryFee!=null&&(!store.delivery||store.delivery_fee==null||Number(store.delivery_fee)>f.maxDeliveryFee))continue;
   if(f.maxDeliveryMinutes!=null&&(!store.delivery||store.avg_delivery_minutes==null||Number(store.avg_delivery_minutes)>f.maxDeliveryMinutes))continue;
-  const where=state.location||{};if((where.city&&!norm(store.address).includes(norm(where.city)))||(where.uf&&!has(norm(store.address),where.uf))||(where.neighborhood&&!norm(store.address).includes(norm(where.neighborhood))))continue;
+  const where=state.location||{};
+  // Municipio deve corresponder ao campo final do endereco, e nao ao nome de uma rua.
+  const address=String(store.address||'');
+  const cityUF=address.match(/^(.*?)\s+-\s+([A-Z]{2})\s*$/i);
+  const registeredCity=cityUF?norm(cityUF[1].split(/,|\s+-\s+/).pop()):'';
+  if(where.city&&registeredCity!==norm(where.city))continue;
+  if(where.uf&&(!cityUF||norm(cityUF[2])!==norm(where.uf)))continue;
+  if(where.neighborhood&&!norm(address).includes(norm(where.neighborhood)))continue;
   if(!scheduleMatches(store,hours,f,now))continue;
   const km=distanceKm(position,store);if(f.maxDistance!=null&&(km==null||km>f.maxDistance))continue;
   const rv=rating.get(store.id),avg=rv?rv.sum/rv.count:0;

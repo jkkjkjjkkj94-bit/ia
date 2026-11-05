@@ -31,7 +31,7 @@ export function followupRefinement(raw,state={}){
  const n=normalizeQuery(raw);
  if(!n||n.length>110)return null;
  // Uma consulta livre ou um pedido de seleção não pode ser reescrito como filtro.
- const chunks=n.split(/\s+e\s+(?=(?:com|sem|abert|funcionando|ate)\b)/);
+ const chunks=n.split(/\s+e\s+(?=(?:com|sem|abert\w*|funcionando|ate)\b)/);
  if(chunks.length>3)return null;
  const parts=chunks.map(piece);
  if(parts.some(x=>!x))return null;

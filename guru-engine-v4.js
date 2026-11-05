@@ -8,6 +8,7 @@ import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './g
 import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=1';
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
+import {semanticNeedAlternatives} from './guru-semantic-v12.mjs?v=1';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=24';
 
@@ -916,7 +917,7 @@ async function run(text){
   if(found.length){rows=found;finalState=fresh}
  }
  if(!rows.length){
-  for(const alt of [...guidedSearchAlternatives(text,db,taxonomy,aliases),...catalogAwareAlternatives(text,db,taxonomy,aliases),...sharedAlternatives(text,db.sharedAliases,db)]){
+  for(const alt of [...guidedSearchAlternatives(text,db,taxonomy,aliases),...catalogAwareAlternatives(text,db,taxonomy,aliases),...sharedAlternatives(text,db.sharedAliases,db),...semanticNeedAlternatives(text,db)]){
    const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});
    if(alternatePlan.kind!=='search')continue;
    const alternateState=preserveMandatoryFilters(draft,nextState(state,alternatePlan));
@@ -947,7 +948,7 @@ async function run(text){
   save();return;
  }
  if(recovery){
-  const hint=recovery.mode==='correction'?'Identifiquei uma possível correção de escrita.':recovery.mode==='concept'?'Entendi a necessidade descrita e procurei uma categoria cadastrada.':'Encontrei uma expressão relacionada no catálogo.';
+  const hint=recovery.mode==='correction'?'Identifiquei uma possível correção de escrita.':recovery.mode==='concept'||recovery.mode==='semantic-need'?'Entendi a necessidade descrita e procurei uma categoria cadastrada.':'Encontrei uma expressão relacionada no catálogo.';
   add(hint+' Pesquisei por “'+recovery.query+'”.');
  }
  const natural=await hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE));

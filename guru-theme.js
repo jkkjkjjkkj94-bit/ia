@@ -6,7 +6,7 @@ const theme=()=>root.dataset.theme==='dark'?'dark':'light';
 function refreshButtons(){
  const dark=theme()==='dark';
  buttons.forEach(button=>{
-  const label=dark?'Tema: Escuro':'Tema: Claro';
+  const label=dark?'Tema escuro':'Tema claro';
   button.setAttribute('aria-label',dark?'Ativar tema claro':'Ativar tema escuro');
   button.setAttribute('aria-pressed',String(dark));
   button.setAttribute('title',dark?'Mudar para tema claro':'Mudar para tema escuro');

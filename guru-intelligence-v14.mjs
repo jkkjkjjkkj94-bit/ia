@@ -104,8 +104,9 @@ export function explainMatch(row){
 }
 export function catalogStatus(data={}){
  const stores=(data.stores||[]).filter(s=>s.active===true&&s.status==='active');
- const products=(data.products||[]).filter(p=>p.active!==false&&p.show_in_ai!==false&&eligibleProduct(p));
- return {stores:stores.length,products:products.length,withCatalog:new Set(products.map(p=>p.store_id)).size};
+ const products=(data.products||[]).filter(p=>p.active!==false&&p.show_in_ai!==false);
+ const availableProducts=products.filter(p=>eligibleProduct(p));
+ return {stores:stores.length,products:products.length,availableProducts:availableProducts.length,withCatalog:new Set(products.map(p=>p.store_id)).size};
 }
 export function clarifyShoppingQuery(raw,data={}){
  const n=clean(raw);

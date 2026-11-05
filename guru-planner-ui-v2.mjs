@@ -1,4 +1,4 @@
-import {createShoppingPlan,normalizeBudget,shoppingPlanTotals,updateShoppingItem,addShoppingItem,removeShoppingItem,planAsText} from './guru-planner-v2.mjs?v=1';
+import {createShoppingPlan,normalizeBudget,shoppingPlanTotals,updateShoppingItem,addShoppingItem,removeShoppingItem,planAsText} from './guru-planner-v2.mjs?v=2';
 import {describeNeed} from './guru-needs-v1.mjs?v=1';
 const el=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node};
 const money=value=>value.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});

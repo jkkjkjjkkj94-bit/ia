@@ -10,6 +10,8 @@
 // Headless Chrome pode reportar document.hidden=true mesmo no teste ativo.
 // Simula uma aba visível para validar a animação sem alterar o código de produção.
 Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});
+// A busca por cidade é obrigatória; prepare a cidade do catálogo de teste.
+sessionStorage.setItem('guru_city_v1','Sorocaba');
 const stores=[
  {id:'sushi',name:'Sushi Teste',category:'Comida',group:'Japonesa',groups:['Japonesa'],active:true,status:'active',address:'Rua A, Centro, Sorocaba - SP',delivery:true,delivery_fee:5,verified:false,payment_methods:['Pix']},
  {id:'pizza',name:'Pizza Teste',category:'Comida',group:'Pizzaria',groups:['Pizzaria'],active:true,status:'active',address:'Rua B, Centro, Sorocaba - SP',delivery:true,delivery_fee:6,verified:true,payment_methods:['Pix']},

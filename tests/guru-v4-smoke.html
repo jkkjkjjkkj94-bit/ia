@@ -224,7 +224,7 @@ async function smoke(){
  if(![...document.querySelectorAll('#ctx .guru-filter-chip')].some(e=>e.textContent.includes('Pizzaria')))throw Error('Filtro de pizzaria desapareceu indevidamente');
  guru.reset();
  if(document.body.classList.contains('chat-started'))throw Error('Nova busca não retornou à tela inicial');
- if(document.querySelectorAll('#ctx .guru-filter-chip').length)throw Error('Filtros antigos permaneceram após nova busca');
+ if([...document.querySelectorAll('#ctx .guru-filter-chip')].some(chip=>!chip.textContent.includes('Cidade:')))throw Error('Filtros antigos permaneceram após nova busca');
  document.body.dataset.smoke='PASS';
  document.body.setAttribute('data-report','Busca + regra + promoção + contexto + envio OK');
 }

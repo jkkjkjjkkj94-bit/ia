@@ -6,6 +6,7 @@ const normal=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u
 const msg=s=>{$('message').textContent=s};
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
 let leads=[],session=null,loading=false,credentialText='';
+const selectedProspects=new Set();let bulkRunning=false,bulkCredentialText='';
 const SUPABASE_URL='https://innziuzgtpfsiywqmies.supabase.co';
 const SUPABASE_KEY='sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1';
 function provisionalEmail(){
@@ -54,6 +55,74 @@ async function verify(){
  if(pe||profile?.role!=='admin')return false;
  session=current;return true;
 }
+
+function passwordValid(password){
+ return password.length>=16 && password.length<=128 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password) && /[!@#$%&*_-]/.test(password);
+}
+async function createCapturedAccount(p,chosenPassword){
+ const {data:{session:active},error:authError}=await sb.auth.getSession();
+ if(authError||!active?.access_token)throw Error('Sessão expirada. Entre novamente.');
+ const email=provisionalEmail(),password=chosenPassword||temporaryPassword();
+ if(!passwordValid(password))throw Error('A senha deve ter pelo menos 16 caracteres, com maiúsculas, minúsculas, números e símbolo.');
+ const response=await fetch(SUPABASE_URL+'/functions/v1/admin-create-merchant',{
+  method:'POST',headers:{'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:'Bearer '+active.access_token},
+  body:JSON.stringify({display_name:p.name,email,password})
+ });
+ const result=await response.json();
+ if(!response.ok||result.error||!result.ok||!result.user_id)throw Error(result.error||'Conta não confirmada pelo servidor.');
+ // A conta foi criada no Auth. Não repetir automaticamente em caso de falha posterior.
+ let linked=false,warning='';
+ try{
+  const {data,error}=await sb.from('guru_commerce_prospects').update({
+   merchant_user_id:result.user_id,merchant_email:email,merchant_created_at:new Date().toISOString(),
+   status:'account_created',updated_at:new Date().toISOString()
+  }).eq('id',p.id).is('merchant_user_id',null).select('id').maybeSingle();
+  if(error)throw error;
+  if(!data)throw Error('Comércio foi alterado durante a operação.');
+  linked=true;
+ }catch(err){warning='Conta criada, mas vínculo incompleto: '+err.message+'. Não crie novamente antes de verificar o painel de lojistas.'}
+ return {name:p.name,email,password,linked,warning};
+}
+function bulkText(records){
+ return records.filter(x=>x.email&&x.password).map(x=>[
+  x.name,'Painel: '+location.origin+'/ia/lojista.html',
+  'Login provisório: '+x.email,'Senha provisória: '+x.password,
+  x.warning?'ATENÇÃO: '+x.warning:''
+ ].filter(Boolean).join('\n')).join('\n\n---\n\n');
+}
+function showBulkResults(results){
+ const list=$('bulkResults');list.replaceChildren();
+ for(const item of results){
+  const card=el('div','panel');
+  card.append(el('strong','',item.name));
+  if(item.email){
+   card.append(el('p','muted','Login provisório: '+item.email));
+   card.append(el('div','credential-value',item.password));
+   if(item.warning)card.append(el('p','muted',item.warning));
+  }else card.append(el('p','muted','Falha: '+item.error));
+  list.append(card);
+ }
+ bulkCredentialText=bulkText(results);
+ $('bulkSummary').textContent=results.filter(x=>x.linked).length+' contas vinculadas; '+
+ results.filter(x=>!x.email).length+' falhas; '+results.filter(x=>x.email&&!x.linked).length+
+ ' contas criadas com vínculo pendente. Copie os dados de acesso agora.';
+ $('bulkDialog').classList.remove('hidden');
+}
+$('copyBulk').onclick=async()=>{
+ if(!bulkCredentialText)return;
+ try{await navigator.clipboard.writeText(bulkCredentialText);msg('Credenciais copiadas. Entregue cada acesso somente ao respectivo responsável.')}
+ catch{msg('Não foi possível copiar automaticamente. Copie as credenciais exibidas antes de fechar.')}
+};
+$('closeBulk').onclick=()=>{
+ $('bulkDialog').classList.add('hidden');
+ $('bulkResults').replaceChildren();bulkCredentialText='';
+};
+function updateSelection(){
+ const available=new Set(leads.filter(p=>!p.merchant_user_id).map(p=>p.id));
+ for(const id of [...selectedProspects])if(!available.has(id))selectedProspects.delete(id);
+ $('selectionCount').textContent=selectedProspects.size+' selecionado(s) (máximo 20)';
+ $('createBulk').disabled=!selectedProspects.size||bulkRunning;
+}
 function validUrl(value){try{const url=new URL(value);return url.protocol==='https:'?url.href:null}catch{return null}}
 const searchable=p=>[p.name,p.city,p.category,p.address,p.notes].join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 function stats(){
@@ -66,6 +135,7 @@ async function load(){
  const {data,error}=await sb.from('guru_commerce_prospects').select('*').order('created_at',{ascending:false}).limit(1000);
  if(error)throw error;
  leads=data||[];
+ updateSelection();
  const current=$('categoryFilter').value,options=[...new Set(leads.map(p=>p.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
  $('categoryFilter').replaceChildren();
  const defaultOption=el('option','','Todas as categorias');defaultOption.value='';$('categoryFilter').append(defaultOption);
@@ -83,6 +153,19 @@ function field(label,value,max=250,multi=false){
 }
 function displayLead(p){
  const card=el('article','lead');
+ if(!p.merchant_user_id){
+  const selector=el('label','select-lead'),check=el('input');
+  check.type='checkbox';check.checked=selectedProspects.has(p.id);
+  check.onchange=()=>{
+   if(check.checked&&selectedProspects.size>=20){
+    check.checked=false;msg('Selecione no máximo 20 comércios por lote.');return;
+   }
+   if(check.checked)selectedProspects.add(p.id);else selectedProspects.delete(p.id);
+   updateSelection();
+  };
+  selector.append(check,el('span','','Selecionar para criação em lote'));card.append(selector);
+ }
+
  card.append(el('span','pill'+(p.status==='approved'?' ok':''),statuses[p.status]||p.status));
  card.append(el('h3','',p.name));
  card.append(el('p','',p.category+' · '+p.city+' / '+p.uf));
@@ -93,13 +176,20 @@ function displayLead(p){
  const accountBox=el('div','account-fields hidden');
  const nameWrap=el('label');nameWrap.append(el('span','','Nome de exibição do lojista'));
  const displayInput=el('input');displayInput.value=p.name;displayInput.maxLength=140;nameWrap.append(displayInput);
+ const passwordWrap=el('label');passwordWrap.append(el('span','','Senha provisória (opcional)'));
+ const customPassword=el('input');customPassword.type='password';customPassword.autocomplete='new-password';customPassword.placeholder='Deixe vazio para gerar automaticamente';customPassword.maxLength=128;passwordWrap.append(customPassword);
+ const passwordButtons=el('div','actions'),generatePassword=el('button','','Gerar outra senha'),togglePassword=el('button','','Mostrar/ocultar');
+ generatePassword.type='button';togglePassword.type='button';
+ generatePassword.onclick=()=>{customPassword.value=temporaryPassword();customPassword.type='text'};
+ togglePassword.onclick=()=>{customPassword.type=customPassword.type==='password'?'text':'password'};
+ passwordButtons.append(generatePassword,togglePassword);
  const authorizedWrap=el('label');const authorizedInput=el('input');authorizedInput.type='checkbox';
  authorizedInput.style.width='auto';authorizedWrap.append(authorizedInput,el('span','','Tenho autorização do responsável para criar a conta de acesso.'));
  const accountHelp=el('p','muted','A GURU gera login e senha provisórios automaticamente, sem exigir e-mail. O administrador pode definir o e-mail real posteriormente. A senha aparecerá uma única vez.');
  const createAccount=el('button','primary','Confirmar criação da conta');createAccount.type='button';
  const cancelAccount=el('button','','Cancelar');cancelAccount.type='button';
  const accountActions=el('div','actions');accountActions.append(createAccount,cancelAccount);
- accountBox.append(nameWrap,authorizedWrap,accountHelp,accountActions);
+ accountBox.append(nameWrap,passwordWrap,passwordButtons,authorizedWrap,accountHelp,accountActions);
  const startAccount=el('button','primary',p.merchant_user_id?'Conta criada':'Criar conta de lojista');
  startAccount.type='button';startAccount.disabled=Boolean(p.merchant_user_id);
  startAccount.onclick=()=>{accountBox.classList.remove('hidden');displayInput.focus()};
@@ -111,7 +201,9 @@ function displayLead(p){
   if(!authorizedInput.checked){msg('Confirme a autorização do responsável antes de criar o acesso.');return}
   if(!window.confirm('Criar uma conta provisória para '+p.name+' sem e-mail definitivo?'))return;
   const email=provisionalEmail();
-  const password=temporaryPassword();
+  const password=customPassword.value||temporaryPassword();
+  if(!passwordValid(password)){msg('A senha provisória deve ter ao menos 16 caracteres, incluindo maiúsculas, minúsculas, número e símbolo.');return}
+
   createAccount.disabled=true;startAccount.disabled=true;
   let accountCreated=false;
   try{
@@ -229,18 +321,48 @@ function displayLead(p){
  };
  return card;
 }
-function render(){
+function visibleLeads(){
  const query=$('query').value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
  const city=$('cityFilter').value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
  const category=$('categoryFilter').value,status=$('statusFilter').value;
- const items=leads.filter(p=>(!query||searchable(p).includes(query))&&
+ return leads.filter(p=>(!query||searchable(p).includes(query))&&
   (!city||p.city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(city))&&
   (!category||p.category===category)&&(!status||p.status===status));
+}
+function render(){
+ const items=visibleLeads();
  $('foundLabel').textContent=items.length+' comércio(s)';
  $('leads').replaceChildren();
  if(!items.length)$('leads').append(el('div','panel','Nenhum comércio encontrado para esses filtros.'));
  for(const lead of items)$('leads').append(displayLead(lead));
 }
+
+$('selectVisible').onclick=()=>{
+ const available=visibleLeads().filter(p=>!p.merchant_user_id);
+ let count=0;
+ for(const p of available){if(selectedProspects.size>=20)break;if(!selectedProspects.has(p.id)){selectedProspects.add(p.id);count++}}
+ render();updateSelection();msg(count+' comércio(s) selecionado(s).');
+};
+$('clearSelected').onclick=()=>{selectedProspects.clear();render();updateSelection()};
+$('createBulk').onclick=async()=>{
+ if(bulkRunning||!selectedProspects.size)return;
+ const targets=leads.filter(p=>selectedProspects.has(p.id)&&!p.merchant_user_id).slice(0,20);
+ if(!targets.length){updateSelection();return}
+ if(!window.confirm('Criar '+targets.length+' contas provisórias de lojista?\n\nConfirme que você tem autorização dos responsáveis. Cada comércio receberá um login e senha individuais.'))return;
+ bulkRunning=true;updateSelection();
+ const results=[];
+ // Executar sequencialmente: erros isolados e sem tentativas repetidas de criação.
+ for(let index=0;index<targets.length;index++){
+  const p=targets[index];
+  msg('Criando conta '+(index+1)+' de '+targets.length+': '+p.name);
+  try{results.push(await createCapturedAccount(p))}
+  catch(err){results.push({name:p.name,error:err.message})}
+ }
+ showBulkResults(results);
+ try{await load()}catch(err){msg('Contas processadas; não foi possível atualizar a lista: '+err.message)}
+ selectedProspects.clear();bulkRunning=false;render();updateSelection();
+ msg('Lote concluído. Copie as credenciais antes de fechar a janela.');
+};
 $('createForm').onsubmit=async event=>{
  event.preventDefault();if(loading)return;
  const name=$('newName').value.trim(),city=$('newCity').value.trim(),uf=$('newUf').value.trim().toUpperCase(),

@@ -888,8 +888,22 @@ async function run(text){
  const routed=routeConversation(text);
  if(routed.kind==='social'){add(routed.answer);return}
  text=routed.query;
+ const normalizedRequest=norm(text);
+ if(/^(quero |gostaria de |preciso )?(planejar uma compra|planejar compra|planejamento de compra|ajuda para planejar compras)$/.test(normalizedRequest)){
+  const m=add('O que você gostaria de planejar? Escolha uma necessidade para começar.'),choices=el('div','guru-need-options');
+  const suggestions=[
+   ['Pintura','Quero pintar minha casa'],['Reforma','Preciso reformar meu quarto'],
+   ['Festa','Quero organizar uma festa'],['Jardinagem','Quero cuidar do jardim'],
+   ['Cuidados com pets','Preciso cuidar do meu pet'],['Limpeza','Preciso fazer uma faxina na minha casa']
+  ];
+  suggestions.forEach(([label,query])=>{const button=el('button','guru-next-button guru-need-choice',label);button.type='button';button.onclick=()=>submitText(query);choices.append(button)});
+  m.append(choices);return;
+ }
+ if(state.shoppingPlan&&/^(mostrar minha lista|minha lista|meu planejamento|continuar planejamento|ver planejamento|abrir planejamento)$/.test(normalizedRequest)){
+  renderNeedPlan(state.shoppingNeed||state.shoppingPlan.need);return;
+ }
  const pendingNeed=state.shoppingNeed;
- const chosenNeed=pendingNeed?choiceForNeed(pendingNeed,text):null;
+ const chosenNeed=pendingNeed?.stage==='choice'?choiceForNeed(pendingNeed,text):null;
  if(chosenNeed){
   if(!userCity){askForCity(text);return}
   const need={...pendingNeed,variant:chosenNeed,stage:'budget'};

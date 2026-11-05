@@ -638,30 +638,80 @@ function renderNextQuestions(host,rows,offset=0){
  panel.appendChild(buttons);host.appendChild(panel);
 }
 function renderComparison(indices,question){
- const rows=indices.map(index=>(state.lastResults||[])[index]).filter(Boolean);
- if(rows.length<2){add('Preciso de pelo menos duas opções da lista para comparar.');return}
+ const all=state.lastResults||[];
+ const offset=Math.max(0,(Number(state.resultOffset)||RESULT_PAGE_SIZE)-RESULT_PAGE_SIZE);
+ // Ordinais como "primeira" e "segunda" devem se referir ao trio exibido.
+ const rows=[...new Set(indices)].map(index=>all[offset+index]).filter(Boolean);
+ if(rows.length<2){add('Preciso de pelo menos duas opções deste grupo para comparar.');return}
  const items=compareStores(rows,db||{});
- const m=add(comparisonSummary(items,question));
- const wrap=el('div','guru-compare-wrap'),table=el('div','guru-compare-grid');
- const values=[
-  ['Pontuação GURU',x=>x.score==null?'Não disponível':x.score+' pontos'],
-  ['Entrega',x=>x.delivery?'Disponível':'Não cadastrada'],
-  ['Taxa de entrega',x=>x.deliveryFee==null?'Não informada':money(x.deliveryFee)],
-  ['Menor preço de produto',x=>x.price==null?'Não informado':money(x.price)],
-  ['Distância',x=>x.distance==null?'Não informada':x.distance.toFixed(1).replace('.',',')+' km'],
-  ['Avaliações',x=>x.rating==null?'Sem avaliações':x.rating.toFixed(1)+'/5 ('+x.ratingCount+')']
+ const m=add('',false);m.classList.add('guru-comparison-message');
+ const wrapper=el('section','guru-compare-experience');
+ wrapper.appendChild(el('div','guru-compare-kicker','COMPARAÇÃO DE ESTABELECIMENTOS'));
+ wrapper.appendChild(el('h3','guru-compare-title','Qual opção combina mais com você?'));
+ wrapper.appendChild(el('p','guru-compare-intro','Compare os dados cadastrados das lojas lado a lado. Informações ausentes não são tratadas como vantagens ou desvantagens.'));
+ const table=el('div','guru-compare-panel');
+ table.style.setProperty('--guru-compare-columns',String(items.length));
+ const labels=el('div','guru-compare-heading');
+ labels.appendChild(el('div','guru-compare-corner','Critérios'));
+ items.forEach((item,i)=>{
+  const head=el('div','guru-compare-store-heading');
+  head.appendChild(el('span','guru-compare-number','OPÇÃO '+(i+1)));
+  head.appendChild(el('strong','guru-compare-store-name',item.name));
+  const loc=item.location?getCityFromAddress(item.location):'';
+  if(loc)head.appendChild(el('span','guru-compare-store-location',loc));
+  table.dataset.options=String(items.length);
+  labels.appendChild(head);
+ });
+ table.appendChild(labels);
+ const number=value=>typeof value==='number'&&Number.isFinite(value);
+ const metricRows=[
+  {label:'Pontuação GURU',hint:'Relevância interna, não avaliação de clientes',format:x=>number(x.score)?Math.round(x.score)+' pontos':'Não informada',measure:x=>number(x.score)?x.score:null,direction:'max'},
+  {label:'Entrega',hint:'Serviço informado no cadastro',format:x=>x.delivery?'Disponível':'Não cadastrada',measure:x=>x.delivery?1:null,direction:'max'},
+  {label:'Taxa de entrega',hint:'Não inclui o valor dos produtos',format:x=>x.delivery&&number(x.deliveryFee)?money(x.deliveryFee):'Não informada',measure:x=>x.delivery&&number(x.deliveryFee)?x.deliveryFee:null,direction:'min'},
+  {label:'Menor preço cadastrado',hint:'Produtos podem ser diferentes entre lojas',format:x=>number(x.price)?money(x.price):'Sem preço cadastrado',measure:x=>number(x.price)?x.price:null,direction:null},
+  {label:'Distância aproximada',hint:'Em linha reta; depende da localização',format:x=>number(x.distance)?x.distance.toLocaleString('pt-BR',{maximumFractionDigits:1,minimumFractionDigits:1})+' km':'Não disponível',measure:x=>number(x.distance)?x.distance:null,direction:'min'},
+  {label:'Avaliações',hint:'Média das avaliações registradas',format:x=>number(x.rating)?x.rating.toLocaleString('pt-BR',{maximumFractionDigits:1,minimumFractionDigits:1})+'/5 · '+x.ratingCount+' avaliações':'Sem avaliações',measure:x=>number(x.rating)?x.rating:null,direction:'max'},
+  {label:'Produtos cadastrados',hint:'Quantidade de produtos disponíveis no catálogo',format:x=>x.productCount===0?'Nenhum cadastrado':x.productCount+' '+(x.productCount===1?'produto':'produtos'),measure:x=>null,direction:null}
  ];
- const header=el('div','guru-compare-row');
- header.appendChild(el('b','guru-compare-label','Informação'));
- items.forEach(x=>header.appendChild(el('b','guru-compare-value',x.name)));
- table.appendChild(header);
- for(const [label,format] of values){
-  const tr=el('div','guru-compare-row');
-  tr.appendChild(el('span','guru-compare-label',label));
-  items.forEach(x=>tr.appendChild(el('span','guru-compare-value',format(x))));
+ let differences=0;
+ for(const metric of metricRows){
+  const tr=el('div','guru-compare-metric-row');
+  const key=el('div','guru-compare-metric-key');
+  key.appendChild(el('strong','',metric.label));
+  key.appendChild(el('span','',metric.hint));
+  tr.appendChild(key);
+  const values=items.map(metric.measure);
+  const valid=values.filter(number);
+  const unique=new Set(valid);
+  // Só realça uma diferença se todas as lojas têm dados comparáveis.
+  const hasComparable=metric.direction&&valid.length===items.length&&unique.size>1;
+  const best=hasComparable?(metric.direction==='min'?Math.min(...valid):Math.max(...valid)):null;
+  if(hasComparable)differences++;
+  items.forEach((item,i)=>{
+   const cell=el('div','guru-compare-metric-value');
+   const value=el('span','',metric.format(item));
+   cell.appendChild(value);
+   if(hasComparable&&values[i]===best){
+    cell.classList.add('guru-compare-advantage');
+    cell.appendChild(el('span','guru-compare-advantage-label',metric.label==='Pontuação GURU'?'Maior pontuação':metric.label==='Distância aproximada'?'Mais próxima':metric.label==='Taxa de entrega'?'Menor taxa':'Maior avaliação'));
+   }
+   tr.appendChild(cell);
+  });
   table.appendChild(tr);
  }
- wrap.appendChild(table);m.appendChild(wrap);
+ wrapper.appendChild(table);
+ const note=el('p','guru-compare-disclaimer',
+  differences?'Destaques indicam apenas diferenças em critérios com dados disponíveis para todas as opções.':'Ainda faltam dados comparáveis para destacar diferenças entre estas lojas.');
+ wrapper.appendChild(note);
+ const actions=el('div','guru-compare-actions');
+ items.forEach((item,index)=>{
+  const button=el('button','guru-next-button guru-compare-open','Ver '+item.name);
+  button.type='button';
+  button.onclick=()=>chooseStore(rows[index]);
+  actions.appendChild(button);
+ });
+ wrapper.appendChild(actions);
+ m.appendChild(wrapper);
 }
 function citySearchState(source=state){
  return {...source,location:{...(source.location||{}),city:userCity,uf:null,neighborhood:null}};

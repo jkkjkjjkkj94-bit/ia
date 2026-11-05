@@ -969,6 +969,17 @@ async function run(text){
  const bareTaxonomy=isBareCategoryOrGroupQuery(text,rawPlan);
  const intentState=newSpecialty||bareTaxonomy||refinement?{...state,selectedStore:null}:state;
  const plan=bareTaxonomy?rawPlan:interpret(refinement?.query||text,taxonomy,aliases,intentState,{products:db?.products||[]});
+ if(plan.kind==='search'&&!state.selectedStore&&!(state.lastResults||[]).length){
+  const question=clarifyShoppingQuery(text,db);
+  if(question){
+   const message=add(question.question),choices=el('div','guru-next-buttons');
+   for(const suggestion of question.options){
+    const b=el('button','guru-next-button',suggestion);
+    b.type='button';b.onclick=()=>submitText(suggestion);choices.appendChild(b);
+   }
+   message.appendChild(choices);return;
+  }
+ }
  if(plan.kind==='search'&&newSpecialty&&!bareTaxonomy)plan.specialtyTerm=specialtyMention;
  if(plan.kind==='blocked'){add('“Loja” e “comércio” são tratados como varejo e não entram na categoria Comida. Pesquise por restaurante, pizzaria ou pelo tipo de comida.');return}
  if(plan.kind==='clarify'){
@@ -1034,8 +1045,11 @@ async function run(text){
  rows=contextualRank(rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort),text,state.filters?.sort).slice(0,60);
  lastSearchText=text;
  state.lastResults=rows;state.resultOffset=0;
- recordSearch(text,plan,rows);
+ recordSearch(text,plan,rows,'search',rows.length?'':diagnosisForNoResults(text,db,plan).reason);
  if(!rows.length){
+  if(diagnosisForNoResults(text,db,plan).reason==='catalogo_sem_produtos'){
+   add('O catálogo ainda não tem produtos cadastrados. Posso buscar lojas relacionadas, mas não consigo confirmar preços e estoque dos itens.');
+  }
   const guidance=noResultGuidance(text,db,taxonomy,aliases);
   const m=add(explainEmptySearch(db,state,position),false),candidates=guidance.suggestions||[];
   if(candidates.length)m.appendChild(el('div','guru-next-label','Outras pesquisas que você pode tentar:'));

@@ -82,6 +82,10 @@ async function smoke(){
  if(document.querySelector('.guru-typing'))throw Error('Indicador não foi removido ao finalizar');
  if(document.querySelector('.guru-typewriter-caret'))throw Error('Cursor não desapareceu ao terminar');
  if(getComputedStyle(grid).display==='none')throw Error('Cards não foram exibidos após a escrita');
+ // Depois de verificar a escrita gradual, simule a preferência de movimento reduzido.
+ // Assim os demais testes funcionais não gastam todo o tempo virtual do Chrome.
+ const nativeMatchMedia=window.matchMedia.bind(window);
+ window.matchMedia=query=>query==='(prefers-reduced-motion: reduce)'?{matches:true,media:query}:nativeMatchMedia(query);
  if(!document.querySelector('.store-result-card h3')?.textContent?.includes('Sushi Teste'))throw Error('busca japonesa falhou');
  if(![...document.querySelectorAll('.store-result-card .store-chip')].some(el=>el.textContent==='Verificada'))throw Error('Destaque verificada não aparece quando flag COREDB é falsa');
  guru.reset();

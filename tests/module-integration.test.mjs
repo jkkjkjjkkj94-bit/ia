@@ -31,7 +31,7 @@ test('a IA pública executa apenas o GURU V4',()=>{
 
 test('Admin tem interface única e autenticação isolada',()=>{
  const html=source('admin.html'),runtime=source('admin-post-login-loader.js');
- assert.match(html,/admin-post-login-loader\.js\?v=12/);
+ assert.match(html,/admin-post-login-loader\.js\?v=19/);
  assert.match(source('admin-post-login-loader.js'),/profile\?\.role!=='admin'/);
  assert.match(runtime,/admin-ui\.js\?v=\d+/);
  assert.doesNotMatch(runtime,/admin-sync\.js|admin-ui-v3\.js|admin-menu-fix\.js|admin-ui-actions-v1\.js/);
@@ -139,7 +139,7 @@ test('admin carrega somente um módulo consolidado de lojistas',()=>{
  assert.match(merchant,/window\.GuruMerchantDetails=/);
  assert.match(merchant,/data-merchant-details/);
  assert.match(merchant,/merchant-detailed-list/);
- assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=12/);
+ assert.match(source('admin.html'),/admin-post-login-loader\.js\?v=19/);
 });
 
 

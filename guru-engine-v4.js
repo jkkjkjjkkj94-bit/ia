@@ -16,6 +16,10 @@ const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'
 const form=document.getElementById('chatForm'),input=document.getElementById('q'),msgs=document.getElementById('msgs'),ctx=document.getElementById('ctx'),toast=document.getElementById('toast');
 let state=emptyState(),db=null,loadPromise=null,lastLoad=0,position=null,searchBusy=false;
 let locationAttempted=false;
+let userCity='';
+let pendingCityQuery='';
+const userCityKey='guru_city_v1';
+try{userCity=String(sessionStorage.getItem(userCityKey)||'').trim().slice(0,90)}catch{}
 let replyBuffer=null;
 let lastSearchText='';
 const minTypingMs=850;
@@ -190,7 +194,9 @@ async function refreshFilteredResults(){
  if(searchBusy)return;
  try{
   await loadData();
-  const rows=prioritizeNearby(searchStores(db,state,position,{limit:60})).slice(0,6);
+  if(!userCity){askForCity();return}
+  state.location=citySearchState().location;
+  const rows=searchStores(db,citySearchState(),position,{limit:6});
   state.lastResults=rows;save();
   if(rows.length)displayResults(rows);
   else add(explainEmptySearch(db,state,position));
@@ -204,7 +210,7 @@ function renderContext(){
  if(state.selectedStore)chip('Loja: '+state.selectedStore.name,()=>{state.selectedStore=null;state.selectedProduct=null});
  if(state.category)chip('Categoria: '+state.category,()=>{state.category=null;state.group=null;state.nameTerms=[]});
  if(state.group)chip('Grupo: '+state.group,()=>{state.group=null});
- if(state.location?.city)chip('Cidade: '+state.location.city,()=>{state.location={...state.location,city:null}});
+ if(userCity)chip('Cidade: '+userCity,()=>{userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};state.location={...(state.location||{}),city:null};state.selectedStore=null;state.lastResults=[];askForCity()});
  const f=state.filters||{};
  if(f.openNow)chip('Abertas agora',()=>{delete f.openNow});
  if(f.day!=null)chip(dayNames[f.day],()=>{delete f.day});
@@ -235,7 +241,7 @@ function renderContext(){
  clear.type='button';clear.addEventListener('click',()=>{
   state.filters={};state.category=null;state.group=null;state.productTerm=null;state.semanticTerms=[];state.featureTerms=[];state.nameTerms=[];
   state.excludedGroups=[];state.excludedCategories=[];state.excludedTerms=[];state.location={};state.query='lojas';
-  renderContext();save();if(db)refreshFilteredResults();
+  state.location={...(state.location||{}),city:userCity};renderContext();save();if(db)refreshFilteredResults();
  });
  ctx.appendChild(clear);
 }
@@ -249,7 +255,7 @@ function restore(){
  try{
   const x=JSON.parse(sessionStorage.getItem(memoryKey)||'null');
   if(!x||Date.now()-x.updatedAt>ttl)return;
-  const s=x.state||{};const keys=['category','group','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters','location'];
+  const s=x.state||{};const keys=['category','group','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters'];
   for(const k of keys)if(s[k]!=null)state[k]=s[k];
   state._selectedId=s.selectedStore||null;state._lastIds=s.lastResults||[];state._productId=s.selectedProduct||null;
   renderContext();
@@ -261,12 +267,13 @@ function rehydrate(){
  const currentStore=id=>id?(db.stores||[]).find(s=>s.id===id&&s.active===true&&s.status==='active')||null:null;
  const selectedId=state._selectedId||state.selectedStore?.id;
  state.selectedStore=currentStore(selectedId);
+ if(state.selectedStore&&(!userCity||!norm(state.selectedStore.address).includes(norm(userCity))))state.selectedStore=null;
  const productId=state._productId||state.selectedProduct?.id;
  state.selectedProduct=state.selectedStore&&productId?(db.products||[]).find(p=>p.id===productId&&p.store_id===state.selectedStore.id&&eligibleProduct(p))||null:null;
  const ids=Array.isArray(state._lastIds)?state._lastIds:(state.lastResults||[]).map(r=>r.store?.id).filter(Boolean);
  if(ids.length){
   // Reaplica todos os filtros para impedir seleção de loja desativada ou sem requisito obrigatório.
-  const valid=new Map(searchStores(db,state,position,{limit:db.stores.length}).map(row=>[row.store.id,row]));
+  const valid=new Map((userCity?searchStores(db,citySearchState(),position,{limit:db.stores.length}):[]).map(row=>[row.store.id,row]));
   state.lastResults=ids.map(id=>valid.get(id)).filter(Boolean);
  }else state.lastResults=[];
  delete state._lastIds;delete state._selectedId;delete state._productId;
@@ -353,6 +360,61 @@ function applyLocation(raw,target=state){
  for(const city of [...new Set(db.stores.map(s=>getCityFromAddress(s.address)).filter(Boolean))].sort((a,b)=>b.length-a.length)){
   if(n.includes('em '+norm(city))||n.includes('na cidade de '+norm(city))||n.includes('de '+norm(city))){target.location={city,uf:null,neighborhood:null};return}
  }
+}
+function setUserCity(city){
+ const value=String(city||'').trim().replace(/\s+/g,' ').slice(0,90);
+ if(value.length<2)return false;
+ userCity=value;
+ try{sessionStorage.setItem(userCityKey,value)}catch{}
+ state.location={...(state.location||{}),city:value,uf:null,neighborhood:null};
+ state.selectedStore=null;state.selectedProduct=null;state.lastResults=[];
+ renderContext();save();return true;
+}
+async function findUserCity(coords){
+ const params=new URLSearchParams({format:'jsonv2',lat:String(coords.lat.toFixed(3)),lon:String(coords.lng.toFixed(3)),zoom:'10',addressdetails:'1','accept-language':'pt-BR'});
+ const response=await fetch('https://nominatim.openstreetmap.org/reverse?'+params,{headers:{Accept:'application/json'}});
+ if(!response.ok)throw Error('Não consegui identificar a cidade automaticamente.');
+ const addr=(await response.json()).address||{};
+ const city=addr.city||addr.town||addr.municipality||addr.village;
+ if(!city||String(city).trim().length<2)throw Error('Cidade não identificada. Digite manualmente.');
+ return String(city).trim();
+}
+async function runPendingCityQuery(){
+ const query=pendingCityQuery;pendingCityQuery='';
+ if(query)await run(query);
+ else await refreshFilteredResults();
+}
+function askForCity(query=''){
+ if(query)pendingCityQuery=query;
+ const m=add('',false);m.classList.add('guru-city-choice');
+ m.appendChild(el('div','guru-city-choice-title','Qual é sua cidade?'));
+ m.appendChild(el('div','guru-city-distance-note','A GURU pesquisará apenas lojas dessa cidade. Digite o município ou autorize a localização.'));
+ const controls=el('div','guru-city-choice-controls');
+ const inputCity=el('input','');inputCity.type='text';inputCity.placeholder='Ex.: Salto de Pirapora';
+ inputCity.maxLength=90;inputCity.autocomplete='address-level2';inputCity.setAttribute('aria-label','Cidade onde você está');
+ const saveButton=el('button','guru-next-button','Definir cidade');saveButton.type='button';
+ async function chooseManual(){
+  if(!setUserCity(inputCity.value)){notice('Informe o nome da sua cidade.');return}
+  controls.remove();m.appendChild(el('div','guru-city-distance-note','Cidade selecionada: '+userCity+'.'));
+  await runPendingCityQuery();
+ }
+ saveButton.onclick=chooseManual;
+ inputCity.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();void chooseManual()}});
+ const gps=el('button','guru-next-button','Usar minha localização');gps.type='button';
+ gps.onclick=async()=>{
+  gps.disabled=true;
+  try{
+   const coords=await locate(true);
+   if(!coords)return;
+   const city=await findUserCity(coords);
+   if(!setUserCity(city))throw Error('Cidade não encontrada.');
+   controls.remove();m.appendChild(el('div','guru-city-distance-note','Cidade detectada: '+userCity+' (OpenStreetMap).'));
+   await runPendingCityQuery();
+  }catch(error){notice(error.message||'Informe a cidade manualmente.')}
+  finally{gps.disabled=false}
+ };
+ controls.append(inputCity,saveButton,gps);m.appendChild(controls);
+ return m;
 }
 function isLocationSearch(raw,plan){
  const n=norm(raw);
@@ -575,36 +637,22 @@ function renderComparison(indices,question){
  }
  wrap.appendChild(table);m.appendChild(wrap);
 }
-function prioritizeNearby(rows){
- if(!position||!Array.isArray(rows))return rows;
- return [...rows].sort((a,b)=>{
-  const ak=a.distance==null?Infinity:a.distance,bk=b.distance==null?Infinity:b.distance;
-  return ak-bk||(b.rankScore||0)-(a.rankScore||0)||(b.score||0)-(a.score||0);
- });
-}
-function kmLabel(distance){
- return Number(distance).toLocaleString('pt-BR',{maximumFractionDigits:1,minimumFractionDigits:1})+' km';
+function citySearchState(source=state){
+ return {...source,location:{...(source.location||{}),city:userCity,uf:null,neighborhood:null}};
 }
 function displayResults(rows){
- const ordered=prioritizeNearby(rows);
  const m=add('',false);m.classList.add('hashtag-result-msg');
- m.appendChild(el('div','hashtag-intro',ordered.length===1?'Encontrei 1 opção cadastrada:':'Encontrei '+ordered.length+' opções cadastradas:'));
- const near=position?ordered.filter(r=>r.distance!=null):[];
- if(near.length){
-  m.appendChild(el('div','guru-nearest-headline','📍 Loja mais próxima com localização cadastrada: '+near[0].store.name+' · '+kmLabel(near[0].distance)+' em linha reta.'));
-  m.appendChild(el('div','guru-nearest-detail','Distância aproximada em linha reta, não tempo ou trajeto de carro. Lojas sem coordenadas ficam depois das que têm distância conhecida.'));
-  const lacking=(db?.stores||[]).filter(s=>s.active===true&&s.status==='active'&&distanceKm(position,s)==null).length;
-  if(lacking)m.appendChild(el('div','guru-nearest-detail',lacking+' loja(s) ativa(s) ainda sem coordenadas não podem ser comparadas por distância.'));
- }else if(position){
-  m.appendChild(el('div','guru-nearest-detail','As lojas encontradas ainda não possuem coordenadas confirmadas; não é possível afirmar qual é a mais próxima ou informar quilômetros.'));
+ m.appendChild(el('div','hashtag-intro',rows.length===1?'Encontrei 1 opção em '+userCity+':':'Encontrei '+rows.length+' opções em '+userCity+':'));
+ if(position){
+  m.appendChild(el('div','guru-city-distance-note','Distâncias aproximadas em linha reta. A classificação continua sendo por relevância, não por proximidade.'));
  }else{
-  const button=el('button','guru-next-button','📍 Usar minha localização para ver a loja mais próxima');
+  const button=el('button','guru-next-button','Mostrar distância em km');
   button.type='button';
-  button.onclick=async()=>{const location=await locate(true);if(location){await refreshFilteredResults()}};
+  button.onclick=async()=>{if(await locate(true))await refreshFilteredResults()};
   m.appendChild(button);
  }
- const grid=el('div','store-results-grid');ordered.forEach((r,i)=>grid.appendChild(makeCard(r,i)));m.appendChild(grid);
- renderNextQuestions(m,ordered);return m;
+ const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,i)));m.appendChild(grid);
+ renderNextQuestions(m,rows);return m;
 }
 function productListFor(store,query=''){
  const list=(db.products||[]).filter(p=>p.store_id===store.id&&eligibleProduct(p));
@@ -669,7 +717,7 @@ async function run(text){
  await loadData();
  // Respostas gerais aprovadas são usadas apenas em correspondência exata de pergunta.
  // Nunca substituem filtros, disponibilidade ou dados estruturados de uma loja selecionada.
- if(!state.selectedStore&&!(state.lastResults||[]).length){
+ if(userCity&&!state.selectedStore&&!(state.lastResults||[]).length){
   const verified=approvedAnswerFor(text,db.approvedAnswers||[]);
   if(verified){add(verified.answer);return}
  }
@@ -711,6 +759,7 @@ async function run(text){
   return;
  }
  if(plan.kind==='select'){
+  if(!userCity){askForCity(text);return}
   const index=plan.index<0?state.lastResults.length-1:plan.index,row=state.lastResults[index];
   if(!row){add('Essa opção não existe na lista atual.');return}
   recordSelection(row.store?.id);
@@ -719,7 +768,7 @@ async function run(text){
   if(plan.ask){replyAboutStore(text,plan.ask,plan.filters);renderContext();save()}else chooseStore(row);
   return;
  }
- if(plan.kind==='ask'){replyAboutStore(text,plan.ask,plan.filters);renderContext();save();return}
+ if(plan.kind==='ask'){if(!userCity){askForCity(text);return}replyAboutStore(text,plan.ask,plan.filters);renderContext();save();return}
  if(plan.kind!=='search')return;
  if(isLocationSearch(text,plan)&&!position){
   await locate(false);
@@ -727,10 +776,11 @@ async function run(text){
  }
  // A busca comum pode usar localização, com consentimento do navegador;
  // não repetir pedidos se a pessoa recusar, nem bloquear pesquisas sem localização.
- if(!position&&!locationAttempted)await locate(false);
+ // A busca não solicita GPS automaticamente. Cidade manual também funciona.
+ if(!userCity){askForCity(text);return}
  // Valide dados obrigatórios antes de trocar o contexto. Uma falha não deve apagar a loja selecionada.
  const draft=nextState(state,plan);
- applyLocation(text,draft);
+ draft.location={...(draft.location||{}),city:userCity,uf:null,neighborhood:null};
  if(db.unavailable.hours&&(draft.filters.openNow||draft.filters.day!=null||(Array.isArray(draft.filters.days)&&draft.filters.days.length)||draft.filters.start!=null||draft.filters.end!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
  if(db.unavailable.reviews&&(draft.filters.minRating!=null||draft.filters.sort==='rating')){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
  // Busca híbrida: resultados literais primeiro; sinônimos e erros de escrita
@@ -741,14 +791,14 @@ async function run(text){
    const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});
    if(alternatePlan.kind!=='search')continue;
    const alternateState=preserveMandatoryFilters(draft,nextState(state,alternatePlan));
-   applyLocation(text,alternateState);
+   alternateState.location={...(alternateState.location||{}),city:userCity,uf:null,neighborhood:null};
    const found=searchStores(db,alternateState,position,{limit:60});
    if(found.length){rows=found;finalState=alternateState;recovery=alt;break}
   }
  }
  state=finalState;
  renderContext();save();
- rows=prioritizeNearby(rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort)).slice(0,6);
+ rows=rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort).slice(0,6);
  lastSearchText=text;
  state.lastResults=rows;
  recordSearch(text,plan,rows);
@@ -810,9 +860,9 @@ function initShell(){
  if(hero)hero.textContent='O que você quer encontrar?';
  if(msgs)new MutationObserver(()=>body.classList.toggle('chat-started',!!msgs.querySelector('.msg.user'))).observe(msgs,{childList:true});
  side?.querySelector('.sidebar-collapse')?.addEventListener('click',()=>body.classList.toggle('sidebar-collapsed'));
- side?.addEventListener('click',e=>{const b=e.target.closest('[data-shell-action]');if(!b)return;if(b.dataset.shellAction==='new')resetConversation();if(b.dataset.shellAction==='location')locate()});
+ side?.addEventListener('click',e=>{const b=e.target.closest('[data-shell-action]');if(!b)return;if(b.dataset.shellAction==='new')resetConversation();if(b.dataset.shellAction==='location'){userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};askForCity()}});
  document.getElementById('resetBtn')?.addEventListener('click',resetConversation);
- document.getElementById('locBtn')?.addEventListener('click',()=>locate());
+ document.getElementById('locBtn')?.addEventListener('click',()=>{userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};askForCity()});
  document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>submitText(b.dataset.q||'')));
 }
 if(form&&input&&msgs){

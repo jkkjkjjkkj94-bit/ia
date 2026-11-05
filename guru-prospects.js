@@ -10,6 +10,7 @@ const authEndpoint='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/guru-c
 const coreKey='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
 let leads=[],merchants=[],session=null,bulkRunning=false,loading=false;
 let accountBatchRunning=false,generatedAccesses=[];
+let unassignedStoreIds=null;
 const selected=new Set();
 const cachedOwners=new Map();
 async function verify(){
@@ -80,8 +81,8 @@ $('copyGeneratedMerchantCredentials').onclick=async()=>{
  catch{msg('Não foi possível copiar automaticamente. Copie os acessos exibidos antes de fechar.')}
 };
 function refreshAccountButton(){
- const count=leads.filter(p=>p.existing_store_id&&!p.merchant_user_id).length;
- $('missingAccountCount').textContent=count+' loja(s) ainda sem conta cadastrada na captação';
+ const count=unassignedStoreIds?leads.filter(p=>p.existing_store_id&&unassignedStoreIds.has(p.existing_store_id)).length:0;
+ $('missingAccountCount').textContent=count+' loja(s) sem responsável vinculado no banco principal';
  $('createAllMerchantAccounts').disabled=!count||accountBatchRunning||bulkRunning;
 }
 async function registerMerchantAccountForStore(p){
@@ -129,7 +130,7 @@ async function registerMerchantAccountForStore(p){
 }
 $('createAllMerchantAccounts').onclick=async()=>{
  if(accountBatchRunning||bulkRunning)return;
- const targets=leads.filter(p=>p.existing_store_id&&!p.merchant_user_id);
+ const targets=leads.filter(p=>p.existing_store_id&&unassignedStoreIds?.has(p.existing_store_id));
  if(!targets.length){msg('Nenhuma loja sem conta disponível.');return}
  if(!window.confirm('Criar e vincular '+targets.length+' contas de lojista?\n\nSerá criada uma conta provisória individual para cada loja. Os acessos serão exibidos UMA VEZ e nenhuma loja será ativada. Confirme que você está autorizado a administrar esses acessos.'))return;
  accountBatchRunning=true;refreshAccountButton();
@@ -150,6 +151,13 @@ async function load(){
  const {data,error}=await sb.from('guru_commerce_prospects').select('*').order('created_at',{ascending:false}).limit(1000);
  if(error)throw error;
  leads=data||[];
+ try{
+  const listing=await core('list_unassigned_stores');
+  unassignedStoreIds=new Set((listing.stores||[]).map(s=>s.id));
+ }catch(err){
+  unassignedStoreIds=null;
+  msg('Falha ao consultar lojas sem responsável: '+err.message);
+ }
  const available=new Set(leads.filter(x=>!x.existing_store_id).map(x=>x.id));
  for(const id of [...selected])if(!available.has(id))selected.delete(id);
  const previous=$('categoryFilter').value;

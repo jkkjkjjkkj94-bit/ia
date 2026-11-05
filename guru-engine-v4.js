@@ -880,6 +880,37 @@ function isBareCategoryOrGroupQuery(text,plan){
 function isNewSpecialtyRequest(text,specialty){
  return Boolean(specialty)&&/\b(?:busca|buscar|busque|encontra|encontrar|encontre|procuro|procurar|procure|pesquisa|pesquisar|pesquise|recomenda|recomendar|recomende|indica|indicar|indique|especialidade|especializada|especializado|quero|preciso)\b/.test(norm(text));
 }
+// Busca de recuperação para categorias específicas sem resultados exatos.
+// Não inventa produtos/estoque e mantém cidade e filtros solicitados.
+function relatedPaintStoreFallback(data,draft,query){
+ if(norm(draft.group)!=='tintas' || !/\b(?:tinta|tintas)\b/.test(norm(query)))return null;
+ if(draft.productTerm || draft.specialtyTerm || (draft.nameTerms||[]).length)return null;
+ const broad={
+  ...draft,
+  category:null,
+  group:null,
+  nameTerms:[],
+  semanticTerms:[],
+  featureTerms:[],
+  // Os filtros explícitos (entrega, aberto, pagamentos e localização) continuam.
+ };
+ const found=searchStores(data,broad,position,{limit:120});
+ const relevant=found.filter(({store})=>{
+  const n=norm([store.name,store.group,(store.groups||[]).join(' '),(store.specialties||[]).join(' '),store.description].join(' '));
+  const hasPaintSignal=/\b(?:tinta|tintas|pintura|pinturas|colorimetria|tintometrica)\b/.test(n);
+  const productSignal=(data.products||[]).some(p=>p.store_id===store.id&&eligibleProduct(p)&&/\b(?:tinta|tintas|pintura|pinturas)\b/.test(norm([p.name,p.description,p.category].join(' '))));
+  const constructionStore=norm(store.category)==='construcao'&&/\b(?:material|materiais|construcao|ferragens|acabamento|acabamentos)\b/.test(n);
+  return hasPaintSignal||productSignal||constructionStore;
+ });
+ if(!relevant.length)return null;
+ const explicit=relevant.filter(({store})=>{
+  const n=norm([store.name,store.group,(store.groups||[]).join(' '),(store.specialties||[]).join(' '),store.description].join(' '));
+  return /\b(?:tinta|tintas|pintura|pinturas|tintometrica)\b/.test(n)||
+   (data.products||[]).some(p=>p.store_id===store.id&&eligibleProduct(p)&&/\b(?:tinta|tintas|pintura|pinturas)\b/.test(norm([p.name,p.description,p.category].join(' '))));
+ });
+ return {rows:(explicit.length?explicit:relevant).slice(0,60),specific:explicit.length>0};
+}
+
 async function run(text){
  if(isMoreResultsRequest(text)){
   if(!(state.lastResults||[]).length){add('Ainda não tenho resultados para continuar. Faça uma pesquisa primeiro.');return}
@@ -1040,6 +1071,17 @@ async function run(text){
    if(found.length){rows=found;finalState=alternateState;recovery=alt;break}
   }
  }
+ // Se "Tintas" não tiver lojas diretas, tentar estabelecimentos realmente relacionados
+ // antes de encerrar a conversa. O grupo original não é anunciado como correspondência.
+ let paintFallback=null;
+ if(!rows.length){
+  paintFallback=relatedPaintStoreFallback(db,draft,text);
+  if(paintFallback){
+   rows=paintFallback.rows;
+   finalState={...draft,category:null,group:null,nameTerms:[],semanticTerms:[],featureTerms:[]};
+   recovery=null;
+  }
+ }
  state=finalState;
  renderContext();save();
  rows=contextualRank(rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort),text,state.filters?.sort).slice(0,60);
@@ -1063,8 +1105,13 @@ async function run(text){
   }
   save();return;
  }
+ if(paintFallback){
+  add(paintFallback.specific
+   ? 'Não encontrei lojas classificadas especificamente como Tintas nesta busca. Encontrei estabelecimentos com referências a tintas ou pintura no cadastro. Confirme disponibilidade, preços e estoque diretamente com cada loja.'
+   : 'Não encontrei lojas classificadas como Tintas nesta busca. Estas lojas de materiais de construção são alternativas relacionadas, mas não há confirmação de que vendam tintas. Consulte cada loja antes de ir.');
+ }
  if(recovery){
-  const hint=recovery.mode==='correction'?'Identifiquei uma possível correção de escrita.':recovery.mode==='concept'||recovery.mode==='semantic-need'?'Entendi a necessidade descrita e procurei uma categoria cadastrada.':'Encontrei uma expressão relacionada no catálogo.';
+  const hint=recovery.mode='correction'?'Identifiquei uma possível correção de escrita.':recovery.mode==='concept'||recovery.mode==='semantic-need'?'Entendi a necessidade descrita e procurei uma categoria cadastrada.':'Encontrei uma expressão relacionada no catálogo.';
   add(hint+' Pesquisei por “'+recovery.query+'”.');
  }
  const natural=await hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE));

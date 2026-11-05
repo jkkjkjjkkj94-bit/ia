@@ -1,6 +1,7 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
 const ai=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const API='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/admin-pending-stores';
+const ADDRESS_API='https://innziuzgtpfsiywqmies.supabase.co/functions/v1/address-search';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.classList.add('on');clearTimeout(window.__pcToast);window.__pcToast=setTimeout(()=>e.classList.remove('on'),2800)};
@@ -39,11 +40,70 @@ async function loadPending(){
      if(!String(s.address||'').trim()||String(s.address).trim().length<5)missing.push('endereço');
      if(s.latitude==null||s.longitude==null)missing.push('coordenadas');
      const ready=missing.length===0;
-     return `<div class="item"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot pending"></span><span class="badge warn">Pendente</span></div><div class="meta">${esc(s.category||'Sem categoria')}</div><div class="meta">${esc(s.address||'Endereço não informado')}</div>${ready?'<div class="meta" style="color:#237245">Dados mínimos completos. Pronta para revisão.</div>':`<div class="meta" style="color:#975e11">Antes de aprovar: ${esc(missing.join(', '))}. <a href="guru-prospects.html">Abrir captação</a></div>`}</div><div class="actions-wrap"><button class="btn sm" type="button" data-plocation="${s.id}">Coordenadas</button><button class="btn sm dark" data-papprove="${s.id}" ${ready?'':'disabled title="Complete os dados obrigatórios antes de aprovar"'}>Aprovar</button><button class="btn sm" data-psuspend="${s.id}">Suspender</button></div></div><div data-plocation-form="${s.id}" hidden style="padding:12px;margin:10px 0;border:1px solid #e5e5e5;border-radius:10px"><div class="meta" style="margin-bottom:9px">Confirme as coordenadas exatas deste comércio. O endereço preenchido, sozinho, não fornece latitude e longitude.</div><div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Latitude<input data-lat="${s.id}" inputmode="decimal" type="number" min="-34" max="6" step="any" placeholder="Ex.: -23.6" value="${s.latitude==null?'':esc(s.latitude)}"></label><label class="field" style="flex:1;min-width:150px">Longitude<input data-lng="${s.id}" inputmode="decimal" type="number" min="-74" max="-32" step="any" placeholder="Ex.: -47.5" value="${s.longitude==null?'':esc(s.longitude)}"></label></div><div class="row" style="margin-top:10px;gap:9px;flex-wrap:wrap"><button class="btn sm dark" data-psavelocation="${s.id}">Salvar coordenadas</button><a class="btn sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([s.name,s.address].filter(Boolean).join(' '))}" target="_blank" rel="noopener noreferrer">Conferir no Google Maps</a></div></div></div>`;
+     return `<div class="item"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot pending"></span><span class="badge warn">Pendente</span></div><div class="meta">${esc(s.category||'Sem categoria')}</div><div class="meta">${esc(s.address||'Endereço não informado')}</div>${ready?'<div class="meta" style="color:#237245">Dados mínimos completos. Pronta para revisão.</div>':`<div class="meta" style="color:#975e11">Antes de aprovar: ${esc(missing.join(', '))}. <a href="guru-prospects.html">Abrir captação</a></div>`}</div><div class="actions-wrap"><button class="btn sm" type="button" data-plocation="${s.id}">Coordenadas</button><button class="btn sm dark" data-papprove="${s.id}" ${ready?'':'disabled title="Complete os dados obrigatórios antes de aprovar"'}>Aprovar</button><button class="btn sm" data-psuspend="${s.id}">Suspender</button></div></div><div data-plocation-form="${s.id}" hidden style="padding:12px;margin:10px 0;border:1px solid #e5e5e5;border-radius:10px"><div class="meta" style="margin-bottom:9px">Confirme as coordenadas exatas deste comércio. O endereço preenchido, sozinho, não fornece latitude e longitude.</div><div class="row" style="gap:10px;flex-wrap:wrap"><label class="field" style="flex:1;min-width:150px">Latitude<input data-lat="${s.id}" inputmode="decimal" type="number" min="-34" max="6" step="any" placeholder="Ex.: -23.6" value="${s.latitude==null?'':esc(s.latitude)}"></label><label class="field" style="flex:1;min-width:150px">Longitude<input data-lng="${s.id}" inputmode="decimal" type="number" min="-74" max="-32" step="any" placeholder="Ex.: -47.5" value="${s.longitude==null?'':esc(s.longitude)}"></label></div><div class="row" style="margin-top:10px;gap:9px;flex-wrap:wrap"><button class="btn sm" type="button" data-pautolocation="${s.id}">Buscar coordenadas automaticamente</button><button class="btn sm dark" data-psavelocation="${s.id}">Salvar coordenadas</button><a class="btn sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([s.name,s.address].filter(Boolean).join(' '))}" target="_blank" rel="noopener noreferrer">Conferir no Google Maps</a></div><div data-pautopreview="${s.id}" aria-live="polite" style="margin-top:10px"></div></div></div>`;
    }).join('');
    list.querySelectorAll('[data-plocation]').forEach(btn=>btn.onclick=()=>{
      const form=list.querySelector('[data-plocation-form="'+btn.dataset.plocation+'"]');
      if(form)form.hidden=!form.hidden;
+   });
+   list.querySelectorAll('[data-pautolocation]').forEach(btn=>btn.onclick=async()=>{
+     const id=btn.dataset.pautolocation;
+     const store=stores.find(s=>s.id===id);
+     const preview=list.querySelector('[data-pautopreview="'+id+'"]');
+     const latInput=list.querySelector('[data-lat="'+id+'"]');
+     const lngInput=list.querySelector('[data-lng="'+id+'"]');
+     if(!store||!preview||!latInput||!lngInput){toast('Não foi possível identificar esta loja.');return}
+     if(!store.address||store.address.trim().length<6){toast('Cadastre o endereço completo antes de buscar coordenadas.');return}
+     btn.disabled=true;preview.replaceChildren();
+     preview.appendChild(Object.assign(document.createElement('div'),{className:'meta',textContent:'Localizando o endereço cadastrado...'}));
+     try{
+       const u=new URL(ADDRESS_API);
+       u.searchParams.set('resolve','1');
+       u.searchParams.set('q',store.address);
+       const numberMatch=store.address.match(/,\s*(\d{1,6})(?:\b|[\s-])/);
+       if(numberMatch)u.searchParams.set('number',numberMatch[1]);
+       const response=await fetch(u.href,{headers:{Accept:'application/json'}});
+       if(!response.ok)throw new Error('Serviço de localização indisponível (HTTP '+response.status+').');
+       const payload=await response.json();
+       const found=payload?.resolved;
+       if(!found||!Number.isFinite(Number(found.lat))||!Number.isFinite(Number(found.lng))){
+         throw new Error('Nenhuma coordenada encontrada para esse endereço. Confira o endereço ou informe os números manualmente.');
+       }
+       const lat=Number(found.lat),lng=Number(found.lng);
+       if(lat < -34||lat > 6||lng < -74||lng > -32){
+         throw new Error('O resultado está fora do Brasil. Não foi utilizado.');
+       }
+       // Não gravar diretamente no banco: o administrador deve conferir e salvar.
+       latInput.value=String(lat);
+       lngInput.value=String(lng);
+       preview.replaceChildren();
+       const label=document.createElement('div');label.className='meta';
+       label.textContent='Resultado: '+(found.display_name||store.address)+' · Fonte: '+(found.source||'geocodificador')+
+         ' · Precisão: '+(found.accuracy==='exact'?'número identificado':found.accuracy==='street'?'aproximada (rua)':found.accuracy==='cep'?'aproximada (CEP)':'não determinada')+
+         '. Confira o marcador e salve apenas se corresponder à loja.';
+       preview.appendChild(label);
+       const frame=document.createElement('iframe');
+       frame.title='Prévia da localização encontrada para '+store.name;
+       frame.loading='lazy';
+       frame.referrerPolicy='no-referrer';
+       frame.style.cssText='width:100%;max-width:550px;height:235px;border:1px solid #ddd;border-radius:9px;margin-top:10px;display:block';
+       const delta=.004;
+       const bbox=[lng-delta,lat-delta,lng+delta,lat+delta].join(',');
+       frame.src='https://www.openstreetmap.org/export/embed.html?bbox='+encodeURIComponent(bbox)+'&layer=mapnik&marker='+encodeURIComponent(lat+','+lng);
+       preview.appendChild(frame);
+       const link=document.createElement('a');
+       link.className='btn sm';link.target='_blank';link.rel='noopener noreferrer';
+       link.href='https://www.openstreetmap.org/?mlat='+encodeURIComponent(lat)+'&mlon='+encodeURIComponent(lng)+'#map=18/'+encodeURIComponent(lat)+'/'+encodeURIComponent(lng);
+       link.textContent='Conferir marcador no mapa';
+       preview.appendChild(link);
+       toast('Coordenadas encontradas. Confira a localização e clique em Salvar coordenadas.');
+     }catch(err){
+       preview.replaceChildren();
+       const warning=document.createElement('div');warning.className='meta';warning.style.color='#a34e16';
+       warning.textContent=err.message||'Erro na busca de coordenadas.';
+       preview.appendChild(warning);
+       toast(warning.textContent);
+     }finally{btn.disabled=false}
    });
    list.querySelectorAll('[data-psavelocation]').forEach(btn=>btn.onclick=async()=>{
      const id=btn.dataset.psavelocation;

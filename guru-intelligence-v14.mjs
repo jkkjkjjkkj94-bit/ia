@@ -32,7 +32,12 @@ const expand={
  'remedio':['farmacia','drogaria'],
  'medicamento':['farmacia','drogaria'],
  'cabelo':['barbearia','salao','cabeleireiro'],
- 'unhas':['manicure','salao']
+ 'unhas':['manicure','salao'],
+ 'parede':['tinta','pintura','materiais de construcao'],
+ 'descascando':['tinta','pintura','materiais de construcao'],
+ 'barba':['barbearia','cabeleireiro'],
+ 'presentear':['presentes','floricultura'],
+ 'tintas':['tinta','pintura','materiais de construcao']
 };
 const STRICT=/\b(sem|nao|ate|menos de|mais de|exatamente|tamanho|estoque|abert|entrega|retirada|perto de|km|preco|maximo|minimo|reais|r\$)\b/;
 const LINEAR=/\b(onde|qual|quais|loja|lojas|comercio|estabelecimento)\b/;

@@ -63,3 +63,5 @@
 html[data-theme="dark"] .guru-exp-panel,html[data-theme="dark"] .guru-exp-toolbar button,
 html[data-theme="dark"] .guru-exp-filter-toggle{background:#242529;color:#eee;border-color:#46474a}
 html[data-theme="dark"] .guru-exp-compare-card{background:#242529;color:#eee}
+
+@media(max-width:680px){body .chat .guru-messages-region>.guru-exp-toolbar{position:relative;inset:auto;top:auto;left:auto;right:auto;bottom:auto;flex:0 0 auto;justify-content:flex-start;max-width:100%;padding:4px 0 6px;margin:0;z-index:1}body.chat-started .chat .guru-messages-region>.guru-exp-toolbar{top:auto}body .chat .guru-messages-region>.msgs{flex:1 1 0;min-height:0}}

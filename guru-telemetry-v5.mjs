@@ -39,3 +39,14 @@ export function recordSelection(storeId){
  if(!/^[0-9a-f-]{36}$/i.test(String(storeId||'')))return;
  void post('local_ai_search_events',{query:'selecao_de_resultado',event_type:'selection',store_id:storeId,matched:true});
 }
+
+// V11: registra falta de resposta para uma pergunta sobre loja, com rótulo anonimizado.
+export function recordUnansweredKnowledge(raw,category=''){
+ const label=safeSearchLabel(raw,'',category);
+ if(!label||label==='pesquisa'||label.length<3)return;
+ void post('local_ai_quality_events',{
+  query:label,normalized_query:label,category:category||null,
+  result_count:0,matched:false,confidence:0,event_type:'unanswered',
+  failure_reason:'resposta_nao_cadastrada',unknown_terms:[],filters:{}
+ });
+}

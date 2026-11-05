@@ -379,11 +379,20 @@ async function findUserCity(coords){
  return String(city).trim();
 }
 async function runPendingCityQuery(){
- const query=pendingCityQuery;pendingCityQuery='';
- if(query)await run(query);
- else await refreshFilteredResults();
+ const query=pendingCityQuery.trim();
+ pendingCityQuery='';
+ if(query){await run(query);return}
+ // Escolher a cidade não é uma busca; aguardar o pedido explícito do usuário.
+ state.lastResults=[];
+ state.query='';
+ renderContext();
+ save();
+ add('Cidade definida: '+userCity+'. O que você deseja encontrar?');
+ input.placeholder='O que você procura em '+userCity+'?';
+ input.focus();
 }
 function askForCity(query=''){
+ document.body.classList.add('chat-started');
  if(query)pendingCityQuery=query;
  const m=add('',false);m.classList.add('guru-city-choice');
  m.appendChild(el('div','guru-city-choice-title','Qual é sua cidade?'));
@@ -859,7 +868,14 @@ function initShell(){
  const body=document.body,side=document.querySelector('.app-sidebar');
  const hero=document.querySelector('.hero h1');
  if(hero)hero.textContent='O que você quer encontrar?';
- if(msgs)new MutationObserver(()=>body.classList.toggle('chat-started',!!msgs.querySelector('.msg.user'))).observe(msgs,{childList:true});
+ if(msgs){
+  const updateChatLayout=()=>{
+   const hasConversation=[...msgs.children].some(node=>node.classList?.contains('guru-city-choice')||node.classList?.contains('user')||node.classList?.contains('hashtag-result-msg'));
+   body.classList.toggle('chat-started',hasConversation);
+  };
+  new MutationObserver(updateChatLayout).observe(msgs,{childList:true});
+  updateChatLayout();
+}
  side?.querySelector('.sidebar-collapse')?.addEventListener('click',()=>body.classList.toggle('sidebar-collapsed'));
  side?.addEventListener('click',e=>{const b=e.target.closest('[data-shell-action]');if(!b)return;if(b.dataset.shellAction==='new')resetConversation();if(b.dataset.shellAction==='location'){userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};askForCity()}});
  document.getElementById('resetBtn')?.addEventListener('click',resetConversation);

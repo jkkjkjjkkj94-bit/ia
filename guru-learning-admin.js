@@ -123,5 +123,5 @@ $('refresh').onclick=()=>load().catch(e=>message(e.message));
 $('statusFilter').onchange=render;
 if(await verify()){
  $('workspace').hidden=false;
- await load().catch(e=>message('Erro ao carregar a fila: '+e.message));
+ await load().then(async()=>{if(!proposals.length)await analyze()}).catch(e=>message('Erro ao carregar a fila: '+e.message));
 }else $('unauthorized').style.display='block';

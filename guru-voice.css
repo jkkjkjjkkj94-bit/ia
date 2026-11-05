@@ -1,0 +1,14 @@
+/* GURU Voice: controles compactos no campo do chat. */
+#chatForm.send { display:flex; align-items:center; gap:6px; }
+#chatForm.send #q { min-width:0; flex:1 1 auto; }
+.guru-voice-btn { flex:0 0 38px; width:38px; height:38px; padding:8px; border:1px solid var(--line, #d5d7dc); background:transparent; color:inherit; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background .18s,border-color .18s; }
+.guru-voice-btn svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.guru-voice-btn:hover, .guru-voice-btn.is-enabled { background:rgba(128,128,128,.12); }
+.guru-voice-btn.is-listening { background:#dc26261a; color:#dc2626; border-color:#dc2626; animation:guru-pulse-voice 1.3s ease-in-out infinite; }
+.guru-voice-btn:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+.guru-voice-btn:disabled { opacity:.35; cursor:not-allowed; }
+.guru-voice-status { min-height:1.1em; margin:5px 6px 0; font-size:12px; color:var(--muted, #777); }
+.guru-voice-status:empty { display:none; }
+@keyframes guru-pulse-voice { 50% { box-shadow:0 0 0 5px #dc26261a; } }
+@media(max-width:480px){ .guru-voice-btn { flex-basis:34px; width:34px; height:34px; padding:7px; } #chatForm.send { gap:4px; } }
+@media(prefers-reduced-motion:reduce){ .guru-voice-btn.is-listening { animation:none; } }

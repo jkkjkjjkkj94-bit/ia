@@ -31,6 +31,21 @@ async function loadTracking(){
   status.value=item.status;
   const note=el('textarea');note.placeholder='Observação própria, sem copiar dados do Google Maps';note.value=item.notes||'';note.maxLength=1000;
   const row=el('div','row'),save=el('button','','Salvar acompanhamento'),remove=el('button','','Remover ID'),link=el('a','btn','Abrir no Google Maps');
+  const register=el('a','btn','Cadastrar loja na GURU');register.href='admin.html?view=merchants';
+  const details=el('button','','Ver ficha no Google Maps');details.type='button';
+  details.onclick=async()=>{
+   if(!placesClass){notice('Conecte sua chave do Google Maps antes de consultar a ficha pela API.');return}
+   details.disabled=true;
+   try{
+    const place=new placesClass({id:item.place_id});
+    await place.fetchFields({fields:['displayName','formattedAddress']});
+    label.textContent=place.displayName||'Comércio sem nome';
+    const existing=div.querySelector('.live-google-address');if(existing)existing.remove();
+    div.insertBefore(el('p','muted live-google-address',place.formattedAddress||'Endereço não disponível'),status);
+    notice('Ficha consultada no Google Maps. Confirme os dados com o responsável antes de cadastrar.');
+   }catch(e){notice('Não foi possível consultar a ficha: '+e.message)}
+   finally{details.disabled=false}
+  };
   link.href=mapsUrl(item.place_id);link.target='_blank';link.rel='noopener noreferrer';
   save.onclick=async()=>{
    save.disabled=true;
@@ -48,7 +63,7 @@ async function loadTracking(){
     if(error)throw error;notice('ID removido.');await loadTracking();
    }catch(e){notice(e.message)}finally{remove.disabled=false}
   };
-  row.append(link,save,remove);div.append(label,status,note,row);list.append(div);
+  row.append(link,details,register,save,remove);div.append(label,status,note,row);list.append(div);
  }
 }
 function loadGoogleScript(key){

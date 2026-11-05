@@ -275,7 +275,11 @@ export function nextState(current,plan){
  next.query=plan.raw;
  return next;
 }
-function storeGroups(store){return [store.group,...(Array.isArray(store.groups)?store.groups:[])].map(norm).filter(Boolean)}
+function storeGroups(store){
+ // Grupos e especialidades são caminhos de descoberta equivalentes;
+ // a especialidade pode ser mais específica que o grupo principal.
+ return [...new Set([store.group,...(Array.isArray(store.groups)?store.groups:[]),...(Array.isArray(store.specialties)?store.specialties:[])].map(norm).filter(Boolean))];
+}
 function productName(p){return norm([p.name,p.description,p.category,p.brand,p.color,(Array.isArray(p.sizes)?p.sizes:[]).join(' ')].join(' '))}
 export function activePromo(p,now=Date.now()){
  const price=p.price==null?NaN:Number(p.price),promo=p.promo_price==null?NaN:Number(p.promo_price);
@@ -454,7 +458,8 @@ export function searchStores(data={},state={},position=null,options={}){
  for(const store of stores){
   if(store.active!==true||store.status!=='active')continue;
   if(state.category&&norm(store.category)!==norm(state.category))continue;
-  const groups=storeGroups(store);if(state.group&&!groups.includes(norm(state.group)))continue;
+  const groups=storeGroups(store);
+  if(state.group&&!groups.includes(norm(state.group)))continue;
   if((state.excludedCategories||[]).includes(norm(store.category)))continue;
   if(groups.some(g=>(state.excludedGroups||[]).includes(g)))continue;
   if(f.delivery===true&&!store.delivery)continue;
@@ -499,7 +504,11 @@ export function searchStores(data={},state={},position=null,options={}){
   if(!state.category&&!state.group&&!state.productTerm&&semanticTerms.length&&!hits.length)continue;
   let score=0,reasons=[];
   if(state.category){score+=30;reasons.push('categoria '+state.category)}
-  if(state.group){score+=45;reasons.push('grupo '+state.group)}
+  if(state.group){
+   const exactSpecialty=(Array.isArray(store.specialties)?store.specialties:[]).some(s=>norm(s)===norm(state.group));
+   score+=exactSpecialty?55:45;
+   reasons.push((exactSpecialty?'especialidade ':'grupo ')+state.group);
+  }
   if(eligible.length&&mustHaveProduct){score+=35;reasons.push('produto disponível em estoque')}
   if(hits.length){score+=hits.length*9;reasons.push('correspondência com sua descrição')}
   if(f.delivery===true){score+=8;reasons.push('faz entrega')}

@@ -8,6 +8,7 @@ import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './g
 import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=1';
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
+import {approvedAnswerFor} from './guru-knowledge-v11.mjs?v=1';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
@@ -642,10 +643,8 @@ async function run(text){
  // Respostas gerais aprovadas são usadas apenas em correspondência exata de pergunta.
  // Nunca substituem filtros, disponibilidade ou dados estruturados de uma loja selecionada.
  if(!state.selectedStore){
-  const target=normalizeQuery(text);
-  const verified=(db.approvedAnswers||[]).find(entry=>entry.active===true&&
-   [entry.question,...(Array.isArray(entry.variations)?entry.variations:[])].some(q=>normalizeQuery(q)===target));
-  if(verified?.answer){add(String(verified.answer));return}
+  const verified=approvedAnswerFor(text,db.approvedAnswers||[]);
+  if(verified){add(verified.answer);return}
  }
  const follow=contextualIntent(text,state);
  if(follow){

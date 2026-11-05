@@ -1,4 +1,5 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
+import {createExperience} from './guru-experience-v21.mjs?v=1';
 import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,diagnosisForNoResults} from './guru-intelligence-v14.mjs?v=2';
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
@@ -19,6 +20,29 @@ const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_z
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
 const form=document.getElementById('chatForm'),input=document.getElementById('q'),msgs=document.getElementById('msgs'),ctx=document.getElementById('ctx'),toast=document.getElementById('toast');
 let state=emptyState(),db=null,loadPromise=null,lastLoad=0,position=null,searchBusy=false;
+let guruExperience=null;
+const guruSelectedCompare=new Set();
+function compareSelectedStores(){
+ const rows=(state.lastResults||[]).filter(r=>guruSelectedCompare.has(String(r.store?.id)));
+ if(rows.length<2){notice('Selecione pelo menos duas lojas nos resultados.');return}
+ const items=compareStores(rows.slice(0,4),db||{});
+ const host=add('',false);host.classList.add('guru-comparison-message');
+ const section=el('section','guru-exp-comparison');
+ section.appendChild(el('h3','','Comparação das lojas selecionadas'));
+ section.appendChild(el('p','','Dados cadastrados; valores e horários devem ser confirmados com cada loja.'));
+ const table=el('div','guru-exp-compare-grid');
+ items.forEach(item=>{
+  const card=el('article','guru-exp-compare-card');
+  card.appendChild(el('strong','',item.name||item.store?.name||'Estabelecimento'));
+  card.appendChild(el('span','','Pontuação: '+(Number.isFinite(item.score)?Math.round(item.score)+' pontos':'Não informada')));
+  card.appendChild(el('span','','Entrega: '+(item.delivery?'Cadastrada':'Não informada')));
+  card.appendChild(el('span','','Distância: '+(Number.isFinite(item.distance)?item.distance.toFixed(1).replace('.',',')+' km':'Não calculada')));
+  card.appendChild(el('span','','Taxa de entrega: '+(Number.isFinite(item.deliveryFee)?money(item.deliveryFee):'Não informada')));
+  table.appendChild(card);
+ });
+ section.appendChild(table);host.appendChild(section);
+}
+
 let locationAttempted=false;
 let userCity='';
 let pendingCityQuery='';
@@ -649,7 +673,17 @@ function makeCard(row,index){
  const products=el('button','store-action','Produtos');products.type='button';products.onclick=()=>{state.selectedStore=s;state.selectedProduct=null;replyAboutStore('quais produtos tem?','products');renderContext();save()};actions.appendChild(products);
  const phone=String(s.whatsapp||'').replace(/\D/g,'');
  if(phone.length>=10&&phone.length<=15){const a=el('a','store-action link','WhatsApp');a.href='https://wa.me/'+phone;a.target='_blank';a.rel='noopener noreferrer';actions.appendChild(a)}
- card.appendChild(actions);return card;
+ card.appendChild(actions);
+ guruExperience?.cardActions(s,card);
+ const selectCompare=el('label','guru-exp-select');
+ const compareBox=el('input');compareBox.type='checkbox';
+ compareBox.checked=guruSelectedCompare.has(String(s.id));
+ compareBox.addEventListener('change',()=>{
+  if(compareBox.checked)guruSelectedCompare.add(String(s.id));
+  else guruSelectedCompare.delete(String(s.id));
+ });
+ selectCompare.append(compareBox,document.createTextNode(' Comparar'));card.appendChild(selectCompare);
+ return card;
 }
 function renderNextQuestions(host,rows,offset=0){
  const questions=followupPrompts(rows,state);
@@ -1125,6 +1159,7 @@ async function submitText(raw){
  if(searchBusy){notice('Aguarde a conclusão da busca atual.');return}
  searchBusy=true;input.disabled=true;
  document.body.classList.add('chat-started');
+ guruExperience?.remember(t);
  add(t,true);
  const typing=showTypingIndicator();
  const start=performance.now();
@@ -1142,6 +1177,7 @@ async function submitText(raw){
  }
 }
 function resetConversation(){
+ guruSelectedCompare.clear();
  state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};
  msgs.replaceChildren(el('div','msg bot','Olá! Diga o que você procura.'));
  document.body.classList.remove('chat-started');
@@ -1228,5 +1264,6 @@ if(form&&input&&msgs){
   console.warn('[GURU v4] Carregamento inicial não concluído:',err);
   add('Não consegui carregar o catálogo agora. Você ainda pode escrever sua pergunta e tentar novamente.');
  });
- window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state,{products:db?.products||[]}),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state,learningStats};
+ window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state,{products:db?.products||[]}),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state,learningStats,compareSelected:compareSelectedStores};
+ guruExperience=createExperience({submitText,compareSelected:compareSelectedStores,getState:()=>state,notify:notice});
 }else console.error('[GURU v4] Formulário ausente.');

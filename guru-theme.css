@@ -1,0 +1,96 @@
+/* GURU — temas claro/escuro. Aplicado após os estilos existentes. */
+:root{color-scheme:light}
+html[data-theme="dark"]{
+ color-scheme:dark;
+ --bg:#111214;--panel:#1a1c1f;--line:#32353a;--text:#f2f2f3;--muted:#acafb6;
+ --guru-dark-bg:#111214;--guru-dark-surface:#1b1d20;--guru-dark-surface-hover:#26282c;
+ --guru-dark-outline:#34363b;--guru-dark-text:#f1f2f3;--guru-dark-muted:#a7aab0;
+}
+.guru-theme-toggle{display:flex!important;align-items:center;gap:10px;min-height:42px;width:100%;border:0;border-radius:12px;background:transparent;color:#242424;padding:0 12px;text-align:left;font-size:12px;font-weight:500;cursor:pointer}
+.guru-theme-toggle:hover{background:#f1f1f1}
+.guru-theme-toggle .side-icon{width:18px;height:18px;display:grid;place-items:center;flex:0 0 18px}
+.guru-theme-toggle svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.guru-theme-toggle:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.guru-mobile-theme-toggle{display:none;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid #e5e5e5;border-radius:50%;background:#fff;color:#222;cursor:pointer}
+.guru-mobile-theme-toggle svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.sidebar-collapsed .guru-theme-toggle{justify-content:center;padding:0}
+.sidebar-collapsed .guru-theme-toggle .guru-theme-label{display:none}
+@media(max-width:900px){.guru-theme-toggle{justify-content:center;padding:0}.guru-theme-toggle .guru-theme-label{display:none}}
+@media(max-width:680px){.guru-mobile-theme-toggle{display:flex}.guru-theme-toggle{display:none!important}}
+html[data-theme="dark"],html[data-theme="dark"] body,
+html[data-theme="dark"] .main,html[data-theme="dark"] .chat{background:var(--guru-dark-bg)!important;color:var(--guru-dark-text)}
+html[data-theme="dark"] .app-sidebar,html[data-theme="dark"] .top{background:#151619!important;border-color:var(--guru-dark-outline)!important;color:var(--guru-dark-text)}
+html[data-theme="dark"] .sidebar-brand,html[data-theme="dark"] .sidebar-bottom{border-color:var(--guru-dark-outline)}
+html[data-theme="dark"] .brand-identity,html[data-theme="dark"] .sidebar-collapse,
+html[data-theme="dark"] .sidebar-nav button,html[data-theme="dark"] .guru-theme-toggle,
+html[data-theme="dark"] .hero,html[data-theme="dark"] .hero h1{color:var(--guru-dark-text)}
+html[data-theme="dark"] .brand-logo{filter:invert(1)}
+html[data-theme="dark"] .sidebar-nav button.active,html[data-theme="dark"] .sidebar-nav button:hover,
+html[data-theme="dark"] .guru-theme-toggle:hover,html[data-theme="dark"] .sidebar-collapse:hover{background:var(--guru-dark-surface-hover)!important}
+html[data-theme="dark"] .sidebar-cta,html[data-theme="dark"] .guru-mobile-theme-toggle{background:var(--guru-dark-surface);border-color:var(--guru-dark-outline);color:var(--guru-dark-text)}
+html[data-theme="dark"] .sidebar-cta strong,html[data-theme="dark"] .sidebar-bottom strong{color:var(--guru-dark-text)}
+html[data-theme="dark"] .sidebar-cta p,html[data-theme="dark"] .sidebar-bottom p,
+html[data-theme="dark"] .hero p,html[data-theme="dark"] .app-footer-note{color:var(--guru-dark-muted)}
+html[data-theme="dark"] .sidebar-primary{background:#eceef0;color:#111}
+html[data-theme="dark"] .sidebar-primary:hover{background:#cfd2d6}
+html[data-theme="dark"] .quick button,html[data-theme="dark"] .btn,
+html[data-theme="dark"] .guru-filter-chip,html[data-theme="dark"] .guru-clear-filters,
+html[data-theme="dark"] .guru-next-button,html[data-theme="dark"] .chat-actions button,
+html[data-theme="dark"] .store-result-card.smart-card .store-action:not(.primary),
+html[data-theme="dark"] .selected-store-action,
+html[data-theme="dark"] .guru-compare-actions button,
+html[data-theme="dark"] .guru-compare-open{
+ background:var(--guru-dark-surface)!important;border-color:var(--guru-dark-outline)!important;color:var(--guru-dark-text)!important;
+}
+html[data-theme="dark"] .quick button:hover,html[data-theme="dark"] .btn:hover,
+html[data-theme="dark"] .guru-next-button:hover,html[data-theme="dark"] .guru-filter-chip:hover{background:var(--guru-dark-surface-hover)!important}
+html[data-theme="dark"] .msg.bot,html[data-theme="dark"] .msg.bot.hashtag-result-msg,
+html[data-theme="dark"] .msg.bot.selected-store-card{color:var(--guru-dark-text);background:transparent!important}
+html[data-theme="dark"] .msg.user{background:#292b30!important;color:#f6f6f6!important}
+html[data-theme="dark"] .ctx,html[data-theme="dark"] .hashtag-intro,
+html[data-theme="dark"] .guru-next-label,html[data-theme="dark"] .guru-city-distance-note,
+html[data-theme="dark"] .smart-location,html[data-theme="dark"] .store-address,
+html[data-theme="dark"] .store-result-card.smart-card .store-address{color:var(--guru-dark-muted)}
+html[data-theme="dark"] .send{background:var(--guru-dark-surface)!important;border-color:#44474b!important;box-shadow:none!important}
+html[data-theme="dark"] .send input,html[data-theme="dark"] .guru-city-choice-controls input{
+ background:transparent!important;color:var(--guru-dark-text)!important}
+html[data-theme="dark"] .send input::placeholder,html[data-theme="dark"] .guru-city-choice-controls input::placeholder{color:#8d9097}
+html[data-theme="dark"] .send button,html[data-theme="dark"] .store-action.primary,
+html[data-theme="dark"] .guru-compare-card-open{background:#ededee!important;color:#101114!important;border-color:#ededee!important}
+html[data-theme="dark"] .send button:hover,html[data-theme="dark"] .store-action.primary:hover,
+html[data-theme="dark"] .guru-compare-card-open:hover{background:#cdd0d4!important}
+html[data-theme="dark"] .guru-suggestions{background:var(--guru-dark-surface)!important;border-color:var(--guru-dark-outline)}
+html[data-theme="dark"] .guru-suggestion{background:transparent!important;color:var(--guru-dark-text)}
+html[data-theme="dark"] .guru-suggestion:hover{background:var(--guru-dark-surface-hover)!important}
+html[data-theme="dark"] .guru-suggestion-type{color:var(--guru-dark-muted)}
+html[data-theme="dark"] .store-result-card.smart-card,html[data-theme="dark"] .guru-compare-card,
+html[data-theme="dark"] .guru-compare-panel,html[data-theme="dark"] .selected-store-shell{
+ background:var(--guru-dark-surface)!important;border-color:var(--guru-dark-outline)!important;box-shadow:none!important;color:var(--guru-dark-text)}
+html[data-theme="dark"] .store-result-card.smart-card .store-card-top h3,
+html[data-theme="dark"] .store-result-card.smart-card h3,
+html[data-theme="dark"] .guru-compare-card-name,html[data-theme="dark"] .guru-compare-title,
+html[data-theme="dark"] .guru-compare-card-data strong{color:var(--guru-dark-text)}
+html[data-theme="dark"] .store-chip,html[data-theme="dark"] .smart-specialty,
+html[data-theme="dark"] .smart-specialties .smart-specialty,
+html[data-theme="dark"] .store-chip-distance,
+html[data-theme="dark"] .guru-score-line,html[data-theme="dark"] .guru-compare-best-tag{
+ background:#292c31!important;border-color:var(--guru-dark-outline)!important;color:#e5e7e9!important}
+html[data-theme="dark"] .smart-specialties,html[data-theme="dark"] .store-card-top,
+html[data-theme="dark"] .guru-next-questions,html[data-theme="dark"] .guru-compare-card-head,
+html[data-theme="dark"] .guru-compare-card-metric{border-color:var(--guru-dark-outline)!important}
+html[data-theme="dark"] .smart-specialties b,html[data-theme="dark"] .guru-compare-card-label,
+html[data-theme="dark"] .guru-compare-card-city,html[data-theme="dark"] .guru-compare-intro,
+html[data-theme="dark"] .guru-compare-disclaimer,html[data-theme="dark"] .guru-compare-kicker,
+html[data-theme="dark"] .guru-compare-number{color:var(--guru-dark-muted)}
+html[data-theme="dark"] .smart-why-btn{color:#c8cbd1}
+html[data-theme="dark"] .smart-why-panel,html[data-theme="dark"] .guru-compare-metric-row,
+html[data-theme="dark"] .guru-compare-heading{background:#222428!important;border-color:var(--guru-dark-outline)!important;color:var(--guru-dark-text)}
+html[data-theme="dark"] .smart-why-panel div,html[data-theme="dark"] .guru-compare-value,
+html[data-theme="dark"] .guru-compare-metric-value{color:var(--guru-dark-text)}
+html[data-theme="dark"] .guru-compare-card-best{background:#23262a}
+html[data-theme="dark"] .guru-data-alert{background:#332b1f;border-color:#55452a;color:#f4d8a5}
+html[data-theme="dark"] .guru-city-choice-controls input{border-color:var(--guru-dark-outline)!important}
+html[data-theme="dark"] .toast{background:#e5e5e5;color:#151515}
+html[data-theme="dark"] .selected-store-detail-row{border-color:var(--guru-dark-outline)}
+html[data-theme="dark"] .selected-store-detail-row b,
+html[data-theme="dark"] .selected-store-detail-row strong{color:var(--guru-dark-text)}

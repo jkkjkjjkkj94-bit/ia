@@ -18,7 +18,7 @@ async function post(table,body){
   return r.ok;
  }catch{return false}
 }
-export function recordSearch(raw,plan,rows=[],source='search'){
+export function recordSearch(raw,plan,rows=[],source='search',failureReason=''){
  const label=safeSearchLabel(raw,plan?.taxon?.group,plan?.taxon?.category);
  if(!label)return;
  const count=rows.length;
@@ -28,7 +28,7 @@ export function recordSearch(raw,plan,rows=[],source='search'){
   confidence:count?Math.min(1,Math.max(0,Number(rows[0]?.score||0)/100)):0,
   quality_score:count?Number(rows[0]?.rankScore||0):null,
   event_type:'search',
-  failure_reason:count?'':source==='search'?'sem_resultados':source,
+  failure_reason:count?'':String(failureReason|| (source==='search'?'sem_resultados':source)).slice(0,80),
   unknown_terms:count?[]:(plan?.semanticTerms||[]).filter(w=>w.length>2).slice(0,7),
   filters:plan?.filters||{}
  };

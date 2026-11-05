@@ -9,7 +9,7 @@ import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=1';
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=21';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=22';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};

@@ -384,3 +384,50 @@
  .guru-compare-intro{font-size:11px}
  .guru-compare-actions .guru-compare-open{flex:1 1 auto;text-align:center}
 }
+
+/* GURU Compare — cartões compactos, sem tabela e sem rolagem horizontal. */
+.msg.bot.guru-comparison-message{max-width:100%;min-width:0}
+.guru-compare-experience{max-width:100%;margin:4px 0 12px}
+.guru-compare-kicker{font-size:10px;font-weight:700;letter-spacing:.09em;color:#929292;margin-bottom:7px}
+.guru-compare-title{font-size:clamp(17px,1.8vw,21px);font-weight:650;line-height:1.3;letter-spacing:-.025em;margin:0 0 5px}
+.guru-compare-intro{font-size:11px;color:#888;margin:0 0 14px}
+.guru-compare-cards{display:grid;grid-template-columns:repeat(var(--guru-compare-count,2),minmax(0,1fr));gap:12px;align-items:stretch;max-width:100%}
+.guru-compare-card{background:#fff;border:1px solid #e9e9e9;border-radius:16px;padding:17px;min-width:0;display:flex;flex-direction:column;box-shadow:0 4px 16px rgba(0,0,0,.02)}
+.guru-compare-card-head{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding-bottom:14px;border-bottom:1px solid #eeeeee}
+.guru-compare-card .guru-compare-number{font-size:9px;letter-spacing:.1em;font-weight:650;color:#999}
+.guru-compare-card-name{font-size:clamp(14px,1.35vw,17px);font-weight:700;letter-spacing:-.025em;line-height:1.3;color:#161616;margin:0;overflow-wrap:anywhere}
+.guru-compare-card-city{font-size:10.5px;color:#888;overflow-wrap:anywhere}
+.guru-compare-card-metrics{padding:4px 0 8px;flex:1}
+.guru-compare-card-metric{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:11px 0;border-bottom:1px solid #f1f1f1}
+.guru-compare-card-metric:last-child{border-bottom:0}
+.guru-compare-card-label{font-size:10.5px;color:#7e7e7e;line-height:1.4;flex:1;min-width:0}
+.guru-compare-card-data{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0;flex:1;text-align:right;overflow-wrap:anywhere}
+.guru-compare-card-data strong{font-size:11.5px;line-height:1.4;color:#252525;font-weight:650}
+.guru-compare-card-best .guru-compare-card-data strong{color:#111}
+.guru-compare-best-tag{display:inline-block;background:#f1f1f1;border:1px solid #ebebeb;color:#555;border-radius:999px;font-size:9px;padding:3px 7px;font-weight:600}
+.guru-compare-card-open{width:100%;min-height:38px;border:1px solid #222;border-radius:9px;background:#171717;color:#fff;font:inherit;font-size:11px;font-weight:650;cursor:pointer;margin-top:10px}
+.guru-compare-card-open:hover{background:#333}
+.guru-compare-card-open:focus-visible{outline:2px solid #555;outline-offset:3px}
+.guru-compare-disclaimer{margin:12px 0 0;font-size:10.5px;line-height:1.55;color:#919191}
+@media(max-width:900px){
+ .guru-compare-card{padding:14px}
+ .guru-compare-cards{gap:9px}
+ .guru-compare-card-metric{gap:7px}
+ .guru-compare-card-data strong{font-size:11px}
+}
+@media(max-width:650px){
+ .guru-compare-cards{grid-template-columns:1fr;gap:10px}
+ .guru-compare-card{padding:14px 15px;border-radius:14px}
+ .guru-compare-card-head{padding-bottom:10px}
+ .guru-compare-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:0}
+ .guru-compare-card-metric{display:block;padding:10px 0;min-width:0}
+ .guru-compare-card-label{display:block;font-size:10px;margin-bottom:4px}
+ .guru-compare-card-data{align-items:flex-start;text-align:left}
+ .guru-compare-card-data strong{font-size:12px}
+ .guru-compare-card-open{margin-top:8px}
+}
+@media(max-width:360px){
+ .guru-compare-card-metrics{grid-template-columns:1fr}
+ .guru-compare-card-metric{display:flex;align-items:center;justify-content:space-between}
+ .guru-compare-card-data{align-items:flex-end;text-align:right}
+}

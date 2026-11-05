@@ -90,3 +90,6 @@ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:
  }
  .guru-keyboard-open .app-footer-note{display:none}
 }
+
+/* Nunca prender a conversa ao rodapé ao receber novas mensagens. */
+.chat .msgs{overflow-anchor:none;scroll-behavior:auto}

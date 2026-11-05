@@ -6,6 +6,13 @@ const clean=v=>normalizeQuery(v);
 const tokens=v=>[...new Set(clean(v).split(' ').filter(x=>x.length>=3&&!stop.has(x)))];
 const expand={
  'racao':['racao','alimentacao animal','pet','pet shop','agropecuaria'],
+ 'racoes':['racao','pet','pet shop','agropecuaria'],
+ 'celular':['celular','smartphone','telefonia'],
+ 'smartphone':['celular','telefonia'],
+ 'calcados':['sapatos','tenis','calcados'],
+ 'tenis':['calcados','loja de calcados'],
+ 'baloes':['artigos para festas','decoracao','baloes'],
+ 'brigadeiro':['doceria','confeitaria','doces'],
  'cachorro':['cachorro','cao','caes','pet','racao'],
  'gato':['gato','felino','pet','racao'],
  'fome':['comida','restaurante','pizzaria','lanchonete','mercado'],
@@ -58,7 +65,7 @@ function matching(row,query){
  const relevant=queryTokens.filter(t=>t.length>=3);
  let nameHits=0,categoryHits=0,specialtyHits=0,productHits=0;
  for(const term of relevant){
-  const hit=field=>field.split(' ').some(word=>word===term||word.startsWith(term)&&term.length>=5);
+  const hit=field=>field.split(' ').some(word=>word===term||(term.length>=5&&word.startsWith(term))||(word.length>=5&&term.startsWith(word))||(term.length>=5&&word.replace(/s$/,'')===term.replace(/s$/,'')));
   if(hit(name))nameHits++;
   else if(hit(productText))productHits++;
   else if(hit(category))categoryHits++;

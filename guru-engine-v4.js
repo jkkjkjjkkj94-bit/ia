@@ -61,7 +61,6 @@ const add=(text,user=false)=>{
  const m=el('div','msg '+(user?'user':'bot'),text);
  (replyBuffer&&!user?replyBuffer:msgs).appendChild(m);
  if(!replyBuffer){
-  msgs.scrollTop=msgs.scrollHeight;
   // Também anima respostas abertas diretamente pelos cards e pelo botão de reiniciar.
   if(!user)queueMicrotask(()=>{
    if(!m.isConnected)return;
@@ -81,7 +80,6 @@ function showTypingIndicator(){
  for(let i=0;i<3;i++)dots.appendChild(el('span','guru-typing-dot'));
  message.appendChild(dots);
  msgs.appendChild(message);
- msgs.scrollTop=msgs.scrollHeight;
  return message;
 }
 // Escreve somente o texto da resposta, sem recriar cards nem elementos interativos.
@@ -105,7 +103,6 @@ async function animateAssistantText(node,original){
    }
    if(!count)count=1;
    node.nodeValue=letters.slice(0,count).join('');
-   msgs.scrollTop=msgs.scrollHeight;
    if(count>=letters.length){node.nodeValue=original;resolve();return}
    setTimeout(tick,24);
   };
@@ -138,7 +135,6 @@ async function showAssistantReply(fragment){
    target.classList.remove('guru-typewriter-caret');
    if(grid)grid.style.display='';
    if(actions)actions.style.display='';
-   msgs.scrollTop=msgs.scrollHeight;
   }
  }
 }
@@ -943,7 +939,6 @@ async function submitText(raw){
   try{await showAssistantReply(completed)}
   finally{
    input.disabled=false;input.focus();searchBusy=false;
-   msgs.scrollTop=msgs.scrollHeight;
   }
  }
 }
@@ -968,7 +963,6 @@ function initMobileKeyboardLayout(){
    const inset=focused&&covered>80?Math.round(covered):0;
    document.documentElement.style.setProperty('--guru-keyboard-inset',inset+'px');
    document.body.classList.toggle('guru-keyboard-open',Boolean(inset));
-   if(focused)msgs.scrollTop=msgs.scrollHeight;
   });
  };
  viewport.addEventListener('resize',sync,{passive:true});

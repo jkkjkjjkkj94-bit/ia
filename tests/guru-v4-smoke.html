@@ -85,7 +85,8 @@ async function smoke(){
  // Depois de verificar a escrita gradual, simule a preferência de movimento reduzido.
  // Assim os demais testes funcionais não gastam todo o tempo virtual do Chrome.
  const nativeMatchMedia=window.matchMedia.bind(window);
- window.matchMedia=query=>query==='(prefers-reduced-motion: reduce)'?{matches:true,media:query}:nativeMatchMedia(query);
+ let smokeReducedMotion=true;
+ window.matchMedia=query=>query==='(prefers-reduced-motion: reduce)'?{matches:smokeReducedMotion,media:query}:nativeMatchMedia(query);
  if(!document.querySelector('.store-result-card h3')?.textContent?.includes('Sushi Teste'))throw Error('busca japonesa falhou');
  if(![...document.querySelectorAll('.store-result-card .store-chip')].some(el=>el.textContent==='Verificada'))throw Error('Destaque verificada não aparece quando flag COREDB é falsa');
  guru.reset();
@@ -166,11 +167,13 @@ async function smoke(){
  await guru.submitText('pizzaria com entrega em promoção até R$ 40');
  const cards=[...document.querySelectorAll('.store-result-card')];
  if(cards.at(-1)?.querySelector('h3')?.textContent!=='Pizza Teste')throw Error('filtro de promoção falhou');
+ smokeReducedMotion=false;
  const hoursRequest=guru.submitText('a primeira abre sábado?');
  let writingReply=null;
  for(let i=0;i<40&&!writingReply;i++){writingReply=document.querySelector('.guru-typewriter-caret');if(!writingReply)await sleep(40)}
  if(!writingReply||writingReply.classList.contains('hashtag-intro'))throw Error('Resposta textual não recebeu escrita gradual');
  await hoursRequest;
+ smokeReducedMotion=true;
  if(!document.getElementById('msgs').textContent.includes('sábado das 11:00 às 13:00 e das 17:00 às 23:00'))throw Error('Resposta de dois turnos falhou');
  if(guru.getState().filters.day!=null)throw Error('Pergunta de horário gravou sábado como filtro de busca');
  await guru.submitText('tem estacionamento?');

@@ -1,4 +1,5 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
+import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=1';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
@@ -256,7 +257,7 @@ function restore(){
  try{
   const x=JSON.parse(sessionStorage.getItem(memoryKey)||'null');
   if(!x||Date.now()-x.updatedAt>ttl)return;
-  const s=x.state||{};const keys=['category','group','specialtyTerm','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters','resultOffset'];
+  const s=x.state||{};const keys=['category','group','specialtyTerm','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters','resultOffset','shoppingNeed'];
   for(const k of keys)if(s[k]!=null)state[k]=s[k];
   state._selectedId=s.selectedStore||null;state._lastIds=s.lastResults||[];state._productId=s.selectedProduct||null;
   renderContext();
@@ -599,6 +600,20 @@ function makeCard(row,index){
  if(row.products.length&&state.productTerm){
   card.appendChild(el('div','smart-summary',row.products.slice(0,2).map(p=>p.name+' — '+money(priceOf(p))).join(' · ')));
  }
+ if(row.needScore>0&&state.shoppingNeed){
+  const proof=catalogVerification(s,db||{},state.shoppingNeed,eligibleProduct);
+  const audit=el('div','guru-need-verification');
+  audit.appendChild(el('span','guru-need-proof-title','Informações do cadastro'));
+  audit.appendChild(el('span','guru-need-proof-status','Loja ativa · Estoque específico não confirmado'));
+  if(proof.matchingNames.length){
+   audit.appendChild(el('span','guru-need-proof-products','Produtos anunciados no catálogo: '+proof.matchingNames.join(', ')+'. Confirme preços e disponibilidade com a loja.'));
+  }else if(proof.catalogCount){
+   audit.appendChild(el('span','guru-need-proof-muted','Há produtos cadastrados, mas os itens desta lista não foram confirmados.'));
+  }else{
+   audit.appendChild(el('span','guru-need-proof-muted','Sem catálogo de produtos disponível na GURU.'));
+  }
+  card.appendChild(audit);
+ }
  const score=el('div','guru-score-line', 'Pontuação GURU: '+Number(row.rankScore||0).toFixed(0)+' pontos');
  score.title='Classificação interna da GURU, diferente da avaliação dos clientes';
  card.appendChild(score);
@@ -736,6 +751,50 @@ function showNextResultPage(){
  save();displayResults(page,offset);
  return true;
 }
+function renderNeedQuestion(need){
+ const info=describeNeed(need);if(!info)return;
+ const host=add('',false);host.classList.add('guru-need-message');
+ const card=el('section','guru-need-card');
+ card.appendChild(el('div','guru-need-eyebrow','GURU · ASSISTENTE DE COMPRAS'));
+ card.appendChild(el('h3','guru-need-heading',info.title));
+ card.appendChild(el('p','guru-need-description','Posso montar uma lista inicial de materiais e procurar lojas cadastradas na sua cidade, sem presumir que têm tudo em estoque.'));
+ card.appendChild(el('p','guru-need-question',info.question));
+ const options=el('div','guru-need-options');
+ for(const choice of info.choices){
+  const button=el('button','guru-next-button guru-need-choice',choice);
+  button.type='button';button.onclick=()=>submitText(choice);options.appendChild(button);
+ }
+ card.appendChild(options);host.appendChild(card);
+}
+function renderNeedPlan(need){
+ const info=describeNeed(need);if(!info)return;
+ const host=add('',false);host.classList.add('guru-need-message');
+ const card=el('section','guru-need-card');
+ card.appendChild(el('div','guru-need-eyebrow','SUGESTÃO DE COMPRA'));
+ card.appendChild(el('h3','guru-need-heading',info.title+(need.variant?' · '+need.variant:'')));
+ card.appendChild(el('p','guru-need-description','Materiais para considerar, não uma confirmação de produtos disponíveis. Verifique itens, quantidades e especificações antes de comprar.'));
+ const list=el('div','guru-need-item-list');
+ info.items.forEach(item=>list.appendChild(el('span','guru-need-item',item)));
+ card.appendChild(list);host.appendChild(card);
+}
+function showNeedStores(need){
+ if(!userCity){askForCity();return}
+ const rows=findStoresForNeed(db,need,userCity,position,searchStores,emptyState,60);
+ state=emptyState();
+ state.location={city:userCity,uf:null,neighborhood:null};
+ state.shoppingNeed={...need};
+ state.query=describeNeed(need)?.title||'Busca por necessidade';
+ state.lastResults=rows;
+ state.resultOffset=0;
+ lastSearchText=state.query;
+ renderContext();save();
+ if(!rows.length){
+  add('Não encontrei lojas ativas relacionadas a essa necessidade em '+userCity+'. Não vou indicar lojas de outras cidades nem afirmar disponibilidade sem confirmação.');
+  return;
+ }
+ add('Encontrei estabelecimentos relacionados à sua necessidade em '+userCity+'. A correspondência vem da categoria e das especialidades; confirme produtos, preços e disponibilidade com cada loja.');
+ showNextResultPage();
+}
 function productListFor(store,query=''){
  const list=(db.products||[]).filter(p=>p.store_id===store.id&&eligibleProduct(p));
  const n=norm(query);
@@ -813,6 +872,29 @@ async function run(text){
  const routed=routeConversation(text);
  if(routed.kind==='social'){add(routed.answer);return}
  text=routed.query;
+ const pendingNeed=state.shoppingNeed;
+ const chosenNeed=pendingNeed?choiceForNeed(pendingNeed,text):null;
+ if(chosenNeed){
+  if(!userCity){askForCity(text);return}
+  await loadData();
+  const need={...pendingNeed,variant:chosenNeed};
+  renderNeedPlan(need);showNeedStores(need);
+  return;
+ }
+ if(pendingNeed&&isFindStoresForNeed(text)){
+  if(!userCity){askForCity(text);return}
+  await loadData();
+  renderNeedPlan(pendingNeed);showNeedStores(pendingNeed);
+  return;
+ }
+ const newlyDetectedNeed=detectNeed(text);
+ if(newlyDetectedNeed){
+  if(!userCity){askForCity(text);return}
+  state.shoppingNeed=newlyDetectedNeed;save();
+  renderNeedQuestion(newlyDetectedNeed);
+  return;
+ }
+ if(pendingNeed){state.shoppingNeed=null;save()}
  const broad=suggestBroadConversation(text);
  if(broad){
   const m=add(broad.text),panel=el('div','guru-next-buttons');

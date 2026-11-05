@@ -3,6 +3,8 @@ on:
   push:
     paths:
       - 'guru-ranking-v9.mjs'
+      - 'guru-context-v10.mjs'
+      - 'tests/guru-v10.test.mjs'
       - 'guru-engine-v4-core.mjs'
       - 'tests/guru-v9.test.mjs'
       - '.github/workflows/guru-v9-tests.yml'
@@ -17,4 +19,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/guru-v9.test.mjs
+      - run: node --test tests/guru-v9.test.mjs tests/guru-v10.test.mjs

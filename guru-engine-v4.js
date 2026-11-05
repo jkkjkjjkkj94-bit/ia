@@ -502,6 +502,10 @@ function chooseStore(row){
  identity.appendChild(el('h3','selected-store-title',s.name||'Estabelecimento'));
  const tags=el('div','selected-store-tags');
  for(const label of [s.category,s.group].filter(Boolean))tags.appendChild(el('span','selected-store-tag',label));
+ const selectedDistance=position&&Number.isFinite(row.distance)&&row.distance>=0;
+ const distanceChip=el('span','selected-store-tag store-chip-distance',selectedDistance?'A '+row.distance.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' km de você':!position?'Distância: ativar localização':'Distância não disponível');
+ distanceChip.title=selectedDistance?'Distância aproximada em linha reta.':!position?'Use a localização para consultar a distância.':'Loja sem coordenadas disponíveis.';
+ tags.appendChild(distanceChip);
  if(row.reviewCount>0){
   const score=el('span','selected-store-tag selected-store-tag-rating','★ '+Number(row.rating||0).toFixed(1)+' ('+row.reviewCount+')');
   tags.appendChild(score);
@@ -568,7 +572,14 @@ function makeCard(row,index){
  if(s.address){const city=getCityFromAddress(s.address);if(city)identity.appendChild(el('div','smart-location',city))}
  const tags=el('div','store-card-meta');
  for(const label of [s.category,s.group].filter(Boolean))tags.appendChild(el('span','store-chip',label));
- if(row.distance!=null)tags.appendChild(el('span','store-chip',row.distance.toFixed(1).replace('.',',')+' km'));
+ const validDistance=position&&Number.isFinite(row.distance)&&row.distance>=0;
+ const distanceText=validDistance
+  ?'A '+row.distance.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' km de você'
+  :!position?'Distância: ativar localização':'Distância não disponível';
+ const distanceBadge=el('span','store-chip store-chip-distance',distanceText);
+ distanceBadge.title=validDistance?'Distância aproximada em linha reta, não trajeto de carro.':!position?'Permita a localização no navegador para calcular a distância.':'Esta loja não possui coordenadas suficientes para calcular a distância.';
+ distanceBadge.setAttribute('aria-label',distanceBadge.title+' '+distanceText);
+ tags.appendChild(distanceBadge);
  if(row.reviewCount)tags.appendChild(el('span','store-chip','★ '+row.rating.toFixed(1)+' ('+row.reviewCount+')'));
  if(s.delivery)tags.appendChild(el('span','store-chip','Entrega'));
  if(s.pickup)tags.appendChild(el('span','store-chip','Retirada'));
@@ -656,7 +667,12 @@ function displayResults(rows){
  }else{
   const button=el('button','guru-next-button','Mostrar distância em km');
   button.type='button';
-  button.onclick=async()=>{if(await locate(true))await refreshFilteredResults()};
+  button.onclick=async()=>{if(await locate(true)){
+   const activeResults=(state.lastResults||[]).map(r=>({...r,distance:distanceKm(position,r.store)}));
+   state.lastResults=activeResults;save();
+   const fresh=displayResults(activeResults);
+   m.replaceWith(fresh);
+  }};
   m.appendChild(button);
  }
  const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,i)));m.appendChild(grid);

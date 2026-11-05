@@ -642,7 +642,7 @@ async function run(text){
  await loadData();
  // Respostas gerais aprovadas são usadas apenas em correspondência exata de pergunta.
  // Nunca substituem filtros, disponibilidade ou dados estruturados de uma loja selecionada.
- if(!state.selectedStore){
+ if(!state.selectedStore&&!(state.lastResults||[]).length){
   const verified=approvedAnswerFor(text,db.approvedAnswers||[]);
   if(verified){add(verified.answer);return}
  }

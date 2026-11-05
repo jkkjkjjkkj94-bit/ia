@@ -518,6 +518,7 @@ function makeCard(row,index){
  const why=el('button','smart-why-btn','Por que apareceu?');why.type='button';
  const panel=el('div','smart-why-panel');
  panel.appendChild(el('div','','Pontuação interna: '+Number(row.rankScore||0).toFixed(0)+' pontos. Avaliações de clientes são exibidas separadamente.'));
+ if(Number(row.contextScore)>0)panel.appendChild(el('div','','Relevância contextual: '+row.contextScore+' pontos.'));
  row.reason.forEach(t=>panel.appendChild(el('div','',t)));
  const qualityInfo=storeDataQuality(s,db||{});
  panel.appendChild(el('div','','Cadastro: '+qualityInfo.completed+' de '+qualityInfo.total+' informações essenciais preenchidas.'));

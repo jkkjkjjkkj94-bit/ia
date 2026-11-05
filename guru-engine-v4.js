@@ -1,5 +1,7 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
-import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=1';
+import {createShoppingPlan,normalizeBudget} from './guru-planner-v2.mjs?v=1';
+import {mountBudgetPrompt,mountShoppingPlanner} from './guru-planner-ui-v2.mjs?v=1';
+import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=1';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=1';
@@ -257,7 +259,7 @@ function restore(){
  try{
   const x=JSON.parse(sessionStorage.getItem(memoryKey)||'null');
   if(!x||Date.now()-x.updatedAt>ttl)return;
-  const s=x.state||{};const keys=['category','group','specialtyTerm','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters','resultOffset','shoppingNeed'];
+  const s=x.state||{};const keys=['category','group','specialtyTerm','query','semanticTerms','featureTerms','productTerm','excludedGroups','excludedCategories','excludedTerms','filters','resultOffset','shoppingNeed','shoppingPlan'];
   for(const k of keys)if(s[k]!=null)state[k]=s[k];
   state._selectedId=s.selectedStore||null;state._lastIds=s.lastResults||[];state._productId=s.selectedProduct||null;
   renderContext();
@@ -769,23 +771,34 @@ function renderNeedQuestion(need){
  }
  card.appendChild(options);host.appendChild(card);
 }
-function renderNeedPlan(need){
- const info=describeNeed(need);if(!info)return;
+function renderNeedBudgetQuestion(need){
  const host=add('',false);host.classList.add('guru-need-message');
- const card=el('section','guru-need-card');
- card.appendChild(el('div','guru-need-eyebrow','SUGESTÃO DE COMPRA'));
- card.appendChild(el('h3','guru-need-heading',info.title+(need.variant?' · '+need.variant:'')));
- card.appendChild(el('p','guru-need-description','Materiais para considerar, não uma confirmação de produtos disponíveis. Verifique itens, quantidades e especificações antes de comprar.'));
- const list=el('div','guru-need-item-list');
- info.items.forEach(item=>list.appendChild(el('span','guru-need-item',item)));
- card.appendChild(list);host.appendChild(card);
+ mountBudgetPrompt(host,need,budget=>{
+  const plan=createShoppingPlan(need,budget);
+  if(!plan){notice('Não consegui criar a lista.');return}
+  state.shoppingNeed={...need,stage:'ready'};state.shoppingPlan=plan;save();
+  renderNeedPlan(need);
+ });
+}
+function renderNeedPlan(need){
+ if(!state.shoppingPlan||state.shoppingPlan.need?.key!==need.key){
+  state.shoppingPlan=createShoppingPlan(need,null);save();
+ }
+ const host=add('',false);host.classList.add('guru-need-message');
+ mountShoppingPlanner(host,need,
+  ()=>state.shoppingPlan,
+  next=>{state.shoppingPlan=next;save()},
+  async()=>{try{await loadData();showNeedStores(need)}catch(error){notice(error.message||'Não foi possível consultar as lojas.')}},
+  notice);
 }
 function showNeedStores(need){
  if(!userCity){askForCity();return}
  const rows=findStoresForNeed(db,need,userCity,position,searchStores,emptyState,60);
+ const savedPlan=state.shoppingPlan;
  state=emptyState();
  state.location={city:userCity,uf:null,neighborhood:null};
- state.shoppingNeed={...need};
+ state.shoppingNeed={...need,stage:'ready'};
+ state.shoppingPlan=savedPlan;
  state.query=describeNeed(need)?.title||'Busca por necessidade';
  state.lastResults=rows;
  state.resultOffset=0;
@@ -879,21 +892,31 @@ async function run(text){
  const chosenNeed=pendingNeed?choiceForNeed(pendingNeed,text):null;
  if(chosenNeed){
   if(!userCity){askForCity(text);return}
-  await loadData();
-  const need={...pendingNeed,variant:chosenNeed};
-  renderNeedPlan(need);showNeedStores(need);
-  return;
+  const need={...pendingNeed,variant:chosenNeed,stage:'budget'};
+  state.shoppingNeed=need;save();renderNeedBudgetQuestion(need);return;
+ }
+ if(pendingNeed?.stage==='budget'){
+  const answer=norm(text);
+  const amountMatch=answer.match(/[0-9]+(?:[.,][0-9]{1,2})?/);
+  if(/^(sem orcamento|nao sei|nao defini)$/.test(answer)||amountMatch){
+   const amount=amountMatch?normalizeBudget(amountMatch[0]):null;
+   if(amount!==null||!amountMatch){
+    const plan=createShoppingPlan(pendingNeed,amount);
+    if(plan){state.shoppingPlan=plan;state.shoppingNeed={...pendingNeed,stage:'ready'};save();renderNeedPlan(pendingNeed);return}
+   }
+  }
  }
  if(pendingNeed&&isFindStoresForNeed(text)){
   if(!userCity){askForCity(text);return}
   await loadData();
-  renderNeedPlan(pendingNeed);showNeedStores(pendingNeed);
+  if(!state.shoppingPlan)renderNeedPlan(pendingNeed);
+  showNeedStores(pendingNeed);
   return;
  }
  const newlyDetectedNeed=detectNeed(text);
  if(newlyDetectedNeed){
   if(!userCity){askForCity(text);return}
-  state.shoppingNeed=newlyDetectedNeed;save();
+  state.shoppingNeed={...newlyDetectedNeed,stage:'choice'};state.shoppingPlan=null;save();
   renderNeedQuestion(newlyDetectedNeed);
   return;
  }

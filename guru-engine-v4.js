@@ -1,4 +1,5 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
+import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,diagnosisForNoResults} from './guru-intelligence-v14.mjs?v=1';
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
@@ -1016,7 +1017,7 @@ async function run(text){
   if(found.length){rows=found;finalState=fresh}
  }
  if(!rows.length){
-  for(const alt of [...guidedSearchAlternatives(text,db,taxonomy,aliases),...catalogAwareAlternatives(text,db,taxonomy,aliases),...sharedAlternatives(text,db.sharedAliases,db),...semanticNeedAlternatives(text,db)]){
+  for(const alt of [...guidedSearchAlternatives(text,db,taxonomy,aliases),...catalogAwareAlternatives(text,db,taxonomy,aliases),...sharedAlternatives(text,db.sharedAliases,db),...semanticNeedAlternatives(text,db),...semanticAlternatives(text,db)]){
    const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});
    if(alternatePlan.kind!=='search')continue;
    const alternateState=preserveMandatoryFilters(draft,nextState(state,alternatePlan));
@@ -1028,7 +1029,7 @@ async function run(text){
  }
  state=finalState;
  renderContext();save();
- rows=rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort).slice(0,60);
+ rows=contextualRank(rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort),text,state.filters?.sort).slice(0,60);
  lastSearchText=text;
  state.lastResults=rows;state.resultOffset=0;
  recordSearch(text,plan,rows);

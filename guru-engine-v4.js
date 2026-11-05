@@ -693,7 +693,7 @@ function renderComparison(indices,question){
    cell.appendChild(value);
    if(hasComparable&&values[i]===best){
     cell.classList.add('guru-compare-advantage');
-    cell.appendChild(el('span','guru-compare-advantage-label',metric.label==='Pontuação GURU'?'Maior pontuação':metric.label==='Distância aproximada'?'Mais próxima':metric.label==='Taxa de entrega'?'Menor taxa':'Maior avaliação'));
+    cell.appendChild(el('span','guru-compare-advantage-label',metric.label==='Pontuação GURU'?'Maior pontuação':metric.label==='Distância aproximada'?'Mais próxima':metric.label==='Taxa de entrega'?'Menor taxa':metric.label==='Entrega'?'Oferece entrega':'Maior avaliação'));
    }
    tr.appendChild(cell);
   });

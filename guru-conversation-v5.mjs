@@ -21,7 +21,7 @@ export function contextualIntent(raw,state={}){
  if(askComparison.test(n)&&(ordinals.length>=2||aboutPrevious.test(n)||/\b(compare|comparar|diferenca|qual e melhor|qual vale mais a pena)\b/.test(n))) {
   return {kind:'compare',indices:ordinals.length>=2?[...new Set(ordinals)].slice(0,3):[0,1]};
  }
- const prior=aboutPrevious.test(n)||/^e\s+(?:qual|com|a|tem)/.test(n)||/^(?:qual|quais|alguma|algum|tem|mostra|mostre|quero|me diga|me mostre|prefiro)\b/.test(n);
+ const prior=aboutPrevious.test(n)||/^e\s+(?:qual|quais|com|a|as|os|tem)/.test(n)||/^(?:qual|quais|alguma|algum|tem|mostra|mostre|quero|me diga|me mostre|prefiro)\b/.test(n);
  if(prior){
   if(deliveryRe.test(n)&&/\b(qual|quais|alguma|algum|tem|com|entrega)\b/.test(n)&&!/\b(preco|taxa|quanto|valor|horario)\b/.test(n))return{kind:'filterPrevious',attribute:/\b(sem|nao)\s+(?:faz|tem|oferece)?\s*(?:entrega|delivery)\b/.test(n)?'noDelivery':'delivery'};
   if(cheaper.test(n))return{kind:'sortPrevious',attribute:'price'};

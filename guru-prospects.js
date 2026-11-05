@@ -1,397 +1,255 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.95.0';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const $=id=>document.getElementById(id);
-const statuses={identified:'Identificado',contacted:'Contatado',interested:'Interessado',account_created:'Conta criada',awaiting_approval:'Aguardando aprovação',approved:'Validado para cadastro',declined:'Não interessado'};
-const normal=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'').trim();
-const msg=s=>{$('message').textContent=s};
-const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
-let leads=[],session=null,loading=false,credentialText='';
-const selectedProspects=new Set();let bulkRunning=false,bulkCredentialText='';
-const SUPABASE_URL='https://innziuzgtpfsiywqmies.supabase.co';
-const SUPABASE_KEY='sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1';
-function provisionalEmail(){
- // example.com é um domínio reservado, usado somente como login técnico provisório.
- const id=crypto.randomUUID().replaceAll('-','');
- return 'guru-'+id+'@example.com';
-}
-function isProvisionalEmail(value){return /^guru-[0-9a-f]{32}@example\.com$/i.test(String(value||''))}
-function temporaryPassword(){
- const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*-_';
- const values=new Uint32Array(24);crypto.getRandomValues(values);
- const result=Array.from(values,v=>alphabet[v%alphabet.length]);
- // Garante letras maiúsculas, minúsculas, número e caractere especial.
- result[0]='ABCDEFGHJKLMNPQRSTUVWXYZ'[values[0]%24];
- result[1]='abcdefghijkmnopqrstuvwxyz'[values[1]%25];
- result[2]='23456789'[values[2]%8];
- result[3]='!@#$%&*-_'[values[3]%9];
- return result.join('');
-}
-function showCredentials(email,password){
- credentialText='Painel da GURU: '+location.origin+'/ia/lojista.html\nLogin provisório: '+email+'\nSenha provisória: '+password+'\nO administrador poderá definir um e-mail real depois. Altere a senha no primeiro acesso.';
- $('createdEmail').textContent=email;
- $('createdPassword').textContent=password;
- $('credentialsDialog').classList.remove('hidden');
- $('copyCredentials').focus();
-}
-function closeCredentials(){
- $('credentialsDialog').classList.add('hidden');
- $('createdPassword').textContent='';
- $('createdEmail').textContent='';
- credentialText='';
-}
-$('closeCredentials').onclick=closeCredentials;
-$('copyCredentials').onclick=async()=>{
- if(!credentialText)return;
- try{
-  await navigator.clipboard.writeText(credentialText);
-  msg('Dados de acesso copiados. Entregue-os somente ao responsável autorizado.');
- }catch{msg('Não foi possível copiar automaticamente. Copie os dados exibidos antes de fechar.')}
-};
-
+const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=String(text);return e};
+const msg=value=>{$('message').textContent=String(value||'')};
+const statuses={identified:'Identificado',contacted:'Contatado',interested:'Interessado',store_created:'Loja criada',account_created:'Conta criada (legado)',awaiting_approval:'Aguardando aprovação',approved:'Validado para cadastro',declined:'Não interessado'};
+const validUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'?u.href:null}catch{return null}};
+const clean=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const authEndpoint='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/guru-captured-stores';
+const coreKey='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
+let leads=[],merchants=[],session=null,bulkRunning=false,loading=false;
+const selected=new Set();
+const cachedOwners=new Map();
 async function verify(){
- const {data:{session:current},error}=await sb.auth.getSession();
- if(error||!current?.user)return false;
- const {data:profile,error:pe}=await sb.from('local_ai_profiles').select('role').eq('user_id',current.user.id).maybeSingle();
+ const {data:{session:active},error}=await sb.auth.getSession();
+ if(error||!active?.user)return false;
+ const {data:profile,error:pe}=await sb.from('local_ai_profiles').select('role').eq('user_id',active.user.id).maybeSingle();
  if(pe||profile?.role!=='admin')return false;
- session=current;return true;
+ session=active;return true;
 }
-
-function passwordValid(password){
- return password.length>=16 && password.length<=128 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password) && /[!@#$%&*_-]/.test(password);
-}
-async function createCapturedAccount(p,chosenPassword){
- const {data:{session:active},error:authError}=await sb.auth.getSession();
- if(authError||!active?.access_token)throw Error('Sessão expirada. Entre novamente.');
- const email=provisionalEmail(),password=chosenPassword||temporaryPassword();
- if(!passwordValid(password))throw Error('A senha deve ter pelo menos 16 caracteres, com maiúsculas, minúsculas, números e símbolo.');
- const response=await fetch(SUPABASE_URL+'/functions/v1/admin-create-merchant',{
-  method:'POST',headers:{'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:'Bearer '+active.access_token},
-  body:JSON.stringify({display_name:p.name,email,password})
+async function core(action,payload={}){
+ const {data:{session:active},error:sessionError}=await sb.auth.getSession();
+ if(sessionError||!active?.access_token)throw Error('Sessão expirada. Entre novamente como administrador.');
+ const response=await fetch(authEndpoint,{
+  method:'POST',
+  headers:{'Content-Type':'application/json',apikey:coreKey,Authorization:'Bearer '+active.access_token},
+  body:JSON.stringify({action,...payload})
  });
- const result=await response.json();
- if(!response.ok||result.error||!result.ok||!result.user_id)throw Error(result.error||'Conta não confirmada pelo servidor.');
- // A conta foi criada no Auth. Não repetir automaticamente em caso de falha posterior.
- let linked=false,warning='';
- try{
-  const {data,error}=await sb.from('guru_commerce_prospects').update({
-   merchant_user_id:result.user_id,merchant_email:email,merchant_created_at:new Date().toISOString(),
-   status:'account_created',updated_at:new Date().toISOString()
-  }).eq('id',p.id).is('merchant_user_id',null).select('id').maybeSingle();
-  if(error)throw error;
-  if(!data)throw Error('Comércio foi alterado durante a operação.');
-  linked=true;
- }catch(err){warning='Conta criada, mas vínculo incompleto: '+err.message+'. Não crie novamente antes de verificar o painel de lojistas.'}
- return {name:p.name,email,password,linked,warning};
-}
-function bulkText(records){
- return records.filter(x=>x.email&&x.password).map(x=>[
-  x.name,'Painel: '+location.origin+'/ia/lojista.html',
-  'Login provisório: '+x.email,'Senha provisória: '+x.password,
-  x.warning?'ATENÇÃO: '+x.warning:''
- ].filter(Boolean).join('\n')).join('\n\n---\n\n');
-}
-function showBulkResults(results){
- const list=$('bulkResults');list.replaceChildren();
- for(const item of results){
-  const card=el('div','panel');
-  card.append(el('strong','',item.name));
-  if(item.email){
-   card.append(el('p','muted','Login provisório: '+item.email));
-   card.append(el('div','credential-value',item.password));
-   if(item.warning)card.append(el('p','muted',item.warning));
-  }else card.append(el('p','muted','Falha: '+item.error));
-  list.append(card);
- }
- bulkCredentialText=bulkText(results);
- $('bulkSummary').textContent=results.filter(x=>x.linked).length+' contas vinculadas; '+
- results.filter(x=>!x.email).length+' falhas; '+results.filter(x=>x.email&&!x.linked).length+
- ' contas criadas com vínculo pendente. Copie os dados de acesso agora.';
- $('bulkDialog').classList.remove('hidden');
-}
-$('copyBulk').onclick=async()=>{
- if(!bulkCredentialText)return;
- try{await navigator.clipboard.writeText(bulkCredentialText);msg('Credenciais copiadas. Entregue cada acesso somente ao respectivo responsável.')}
- catch{msg('Não foi possível copiar automaticamente. Copie as credenciais exibidas antes de fechar.')}
-};
-$('closeBulk').onclick=()=>{
- $('bulkDialog').classList.add('hidden');
- $('bulkResults').replaceChildren();bulkCredentialText='';
-};
-function updateSelection(){
- const available=new Set(leads.filter(p=>!p.merchant_user_id).map(p=>p.id));
- for(const id of [...selectedProspects])if(!available.has(id))selectedProspects.delete(id);
- $('selectionCount').textContent=selectedProspects.size+' selecionado(s) (máximo 20)';
- $('createBulk').disabled=!selectedProspects.size||bulkRunning;
-}
-function validUrl(value){try{const url=new URL(value);return url.protocol==='https:'?url.href:null}catch{return null}}
-const searchable=p=>[p.name,p.city,p.category,p.address,p.notes].join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-function stats(){
- $('nAll').textContent=leads.length;
- $('nContacted').textContent=leads.filter(p=>p.status==='contacted').length;
- $('nInterested').textContent=leads.filter(p=>p.status==='interested').length;
- $('nApproval').textContent=leads.filter(p=>p.status==='awaiting_approval').length;
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||data.error||data.ok===false)throw Error(data.error||'Operação não confirmada no Supabase principal.');
+ return data;
 }
 async function load(){
  const {data,error}=await sb.from('guru_commerce_prospects').select('*').order('created_at',{ascending:false}).limit(1000);
  if(error)throw error;
  leads=data||[];
- updateSelection();
- const current=$('categoryFilter').value,options=[...new Set(leads.map(p=>p.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
- $('categoryFilter').replaceChildren();
- const defaultOption=el('option','','Todas as categorias');defaultOption.value='';$('categoryFilter').append(defaultOption);
- for(const category of options){const opt=el('option','',category);opt.value=category;$('categoryFilter').append(opt)}
- $('categoryFilter').value=options.includes(current)?current:'';
- stats();render();
+ const available=new Set(leads.filter(x=>!x.existing_store_id).map(x=>x.id));
+ for(const id of [...selected])if(!available.has(id))selected.delete(id);
+ const previous=$('categoryFilter').value;
+ const cats=[...new Set(leads.map(x=>x.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+ const category=$('categoryFilter');
+ category.replaceChildren();
+ const defaultOption=el('option','','Todas as categorias');defaultOption.value='';category.append(defaultOption);
+ for(const name of cats){const option=el('option','',name);option.value=name;category.append(option)}
+ category.value=cats.includes(previous)?previous:'';
+ $('nAll').textContent=leads.length;
+ $('nContacted').textContent=leads.filter(x=>x.status==='contacted').length;
+ $('nInterested').textContent=leads.filter(x=>x.status==='interested').length;
+ $('nApproval').textContent=leads.filter(x=>x.status==='awaiting_approval').length;
+ render();
 }
-function field(label,value,max=250,multi=false){
- const wrap=el('label');
- wrap.append(el('span','',label));
- const input=el(multi?'textarea':'input');
- input.value=value||'';input.maxLength=max;
- wrap.append(input);
+async function loadMerchants(){
+ const data=await core('list_merchants');
+ merchants=data.merchants||[];
+ return merchants;
+}
+function visible(){
+ const query=clean($('query').value),city=clean($('cityFilter').value),category=$('categoryFilter').value,status=$('statusFilter').value;
+ return leads.filter(p=>!query||clean([p.name,p.city,p.category,p.address,p.notes].join(' ')).includes(query))
+ .filter(p=>!city||clean(p.city).includes(city))
+ .filter(p=>!category||p.category===category)
+ .filter(p=>!status||p.status===status);
+}
+function selectionCount(){
+ $('selectionCount').textContent=selected.size+' selecionado(s) (máximo 20)';
+ $('createBulk').disabled=!selected.size||bulkRunning;
+}
+function field(label,value,max=250,multiline=false){
+ const wrap=el('label');wrap.append(el('span','',label));
+ const input=el(multiline?'textarea':'input');
+ input.value=String(value||'');input.maxLength=max;wrap.append(input);
  return {wrap,input};
 }
-function displayLead(p){
- const card=el('article','lead');
- if(!p.merchant_user_id){
-  const selector=el('label','select-lead'),check=el('input');
-  check.type='checkbox';check.checked=selectedProspects.has(p.id);
-  check.onchange=()=>{
-   if(check.checked&&selectedProspects.size>=20){
-    check.checked=false;msg('Selecione no máximo 20 comércios por lote.');return;
-   }
-   if(check.checked)selectedProspects.add(p.id);else selectedProspects.delete(p.id);
-   updateSelection();
-  };
-  selector.append(check,el('span','','Selecionar para criação em lote'));card.append(selector);
+async function registerStores(items){
+ if(!items.length)return [];
+ const data=await core('create_stores',{prospect_ids:items.map(p=>p.id)});
+ const results=data.results||[];
+ for(const result of results){
+  if(!result.store_id)continue;
+  // A loja é criada no banco principal; o vínculo com a captação é idempotente.
+  const {data:updated,error}=await sb.from('guru_commerce_prospects')
+   .update({existing_store_id:result.store_id,status:'store_created',updated_at:new Date().toISOString()})
+   .eq('id',result.prospect_id).select('id').maybeSingle();
+  if(error||!updated)result.warning='Loja criada, mas vínculo administrativo não sincronizado. Repita a sincronização; não recrie a loja.';
  }
-
- card.append(el('span','pill'+(p.status==='approved'?' ok':''),statuses[p.status]||p.status));
- card.append(el('h3','',p.name));
- card.append(el('p','',p.category+' · '+p.city+' / '+p.uf));
+ return results;
+}
+function leadCard(p){
+ const card=el('article','lead');
+ if(!p.existing_store_id){
+  const label=el('label','select-lead'),check=el('input');
+  check.type='checkbox';check.checked=selected.has(p.id);
+  check.onchange=()=>{
+   if(check.checked&&selected.size>=20){check.checked=false;msg('Selecione até 20 lojas por operação.');return}
+   if(check.checked)selected.add(p.id);else selected.delete(p.id);
+   selectionCount();
+  };
+  label.append(check,el('span','','Selecionar loja'));card.append(label);
+ }
+ card.append(el('span','pill'+(p.existing_store_id?' ok':''),p.existing_store_id?'Loja pendente criada':statuses[p.status]||p.status));
+ card.append(el('h3','',p.name),el('p','',p.category+' · '+p.city+' / '+p.uf));
  if(p.address)card.append(el('p','',p.address));
  if(p.contact_phone)card.append(el('p','',p.contact_phone));
- const sourceUrl=validUrl(p.source_url);
- if(sourceUrl){const a=el('a','btn','Consultar fonte');a.href=sourceUrl;a.target='_blank';a.rel='noopener noreferrer';card.append(a)}
- const accountBox=el('div','account-fields hidden');
- const nameWrap=el('label');nameWrap.append(el('span','','Nome de exibição do lojista'));
- const displayInput=el('input');displayInput.value=p.name;displayInput.maxLength=140;nameWrap.append(displayInput);
- const passwordWrap=el('label');passwordWrap.append(el('span','','Senha provisória (opcional)'));
- const customPassword=el('input');customPassword.type='password';customPassword.autocomplete='new-password';customPassword.placeholder='Deixe vazio para gerar automaticamente';customPassword.maxLength=128;passwordWrap.append(customPassword);
- const passwordButtons=el('div','actions'),generatePassword=el('button','','Gerar outra senha'),togglePassword=el('button','','Mostrar/ocultar');
- generatePassword.type='button';togglePassword.type='button';
- generatePassword.onclick=()=>{customPassword.value=temporaryPassword();customPassword.type='text'};
- togglePassword.onclick=()=>{customPassword.type=customPassword.type==='password'?'text':'password'};
- passwordButtons.append(generatePassword,togglePassword);
- const authorizedWrap=el('label');const authorizedInput=el('input');authorizedInput.type='checkbox';
- authorizedInput.style.width='auto';authorizedWrap.append(authorizedInput,el('span','','Tenho autorização do responsável para criar a conta de acesso.'));
- const accountHelp=el('p','muted','A GURU gera login e senha provisórios automaticamente, sem exigir e-mail. O administrador pode definir o e-mail real posteriormente. A senha aparecerá uma única vez.');
- const createAccount=el('button','primary','Confirmar criação da conta');createAccount.type='button';
- const cancelAccount=el('button','','Cancelar');cancelAccount.type='button';
- const accountActions=el('div','actions');accountActions.append(createAccount,cancelAccount);
- accountBox.append(nameWrap,passwordWrap,passwordButtons,authorizedWrap,accountHelp,accountActions);
- const startAccount=el('button','primary',p.merchant_user_id?'Conta criada':'Criar conta de lojista');
- startAccount.type='button';startAccount.disabled=Boolean(p.merchant_user_id);
- startAccount.onclick=()=>{accountBox.classList.remove('hidden');displayInput.focus()};
- cancelAccount.onclick=()=>{accountBox.classList.add('hidden');authorizedInput.checked=false};
- createAccount.onclick=async()=>{
-  if(p.merchant_user_id){msg('Este comércio já possui uma conta de lojista vinculada.');return}
-  const display_name=displayInput.value.trim();
-  if(display_name.length<2){msg('Informe um nome válido para o lojista.');return}
-  if(!authorizedInput.checked){msg('Confirme a autorização do responsável antes de criar o acesso.');return}
-  if(!window.confirm('Criar uma conta provisória para '+p.name+' sem e-mail definitivo?'))return;
-  const email=provisionalEmail();
-  const password=customPassword.value||temporaryPassword();
-  if(!passwordValid(password)){msg('A senha provisória deve ter ao menos 16 caracteres, incluindo maiúsculas, minúsculas, número e símbolo.');return}
-
-  createAccount.disabled=true;startAccount.disabled=true;
-  let accountCreated=false;
-  try{
-   const {data:{session:latest},error:sessionErr}=await sb.auth.getSession();
-   if(sessionErr||!latest?.access_token)throw Error('Sessão expirada. Entre novamente no painel.');
-   const res=await fetch(SUPABASE_URL+'/functions/v1/admin-create-merchant',{
-    method:'POST',
-    headers:{'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:'Bearer '+latest.access_token},
-    body:JSON.stringify({display_name,email,password})
-   });
-   const result=await res.json();
-   if(!res.ok||result.error||!result.ok||!result.user_id)throw Error(result.error||'A criação da conta não foi confirmada.');
-   accountCreated=true;
-   // Mostrar a senha ANTES da atualização de vínculos para nunca perder a credencial criada.
-   showCredentials(email,password);
-   const {data:linked,error:linkError}=await sb.from('guru_commerce_prospects').update({
-    merchant_user_id:result.user_id,merchant_email:email,
-    merchant_created_at:new Date().toISOString(),status:'account_created',
-    updated_at:new Date().toISOString()
-   }).eq('id',p.id).is('merchant_user_id',null).select('id').maybeSingle();
-   if(linkError||!linked){
-    msg('Conta criada, mas não foi possível vincular à captação: '+(linkError?.message||'registro modificado')+'. Copie as credenciais e confira o painel de lojistas.');
-   }else{
-    await load();
-    msg('Conta criada e vinculada à captação. Copie a senha provisória exibida.');
-   }
-  }catch(e){
-   msg('Não foi possível criar o lojista: '+e.message);
-  }finally{
-   createAccount.disabled=false;
-   if(!accountCreated)startAccount.disabled=false;
-  }
- };
- if(p.merchant_user_id){
-  const provisional=isProvisionalEmail(p.merchant_email);
-  const info=el('p','muted',(provisional?'Login provisório: ':'E-mail definitivo: ')+(p.merchant_email||'lojista cadastrado')+'. A senha não é armazenada na GURU.');
-  card.append(info);
-  const updateBox=el('div','account-fields hidden');
-  const updateLabel=el('label');updateLabel.append(el('span','','E-mail definitivo do responsável'));
-  const updateInput=el('input');updateInput.type='email';updateInput.placeholder='responsavel@empresa.com.br';updateInput.autocomplete='off';updateLabel.append(updateInput);
-  const consentLabel=el('label'),consent=el('input');consent.type='checkbox';consent.style.width='auto';
-  consentLabel.append(consent,el('span','','Confirmei que o e-mail pertence ao responsável autorizado.'));
-  const updateButton=el('button','primary','Salvar e-mail definitivo'),closeButton=el('button','','Cancelar');updateButton.type='button';closeButton.type='button';
-  const actions=el('div','actions');actions.append(updateButton,closeButton);
-  updateBox.append(updateLabel,consentLabel,actions);card.append(updateBox);
-  const openUpdate=el('button','','Definir ou corrigir e-mail');
-  openUpdate.type='button'; // Nenhuma senha é lida ou armazenada.
-  openUpdate.onclick=()=>{updateBox.classList.remove('hidden');updateInput.focus()};
-  closeButton.onclick=()=>{updateBox.classList.add('hidden');updateInput.value='';consent.checked=false};
-  updateButton.onclick=async()=>{
-   const newEmail=updateInput.value.trim().toLowerCase();
-   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)||newEmail.endsWith('@example.com')){msg('Informe um e-mail real válido.');return}
-   if(!consent.checked){msg('Confirme a autorização para usar esse e-mail.');return}
-   if(!window.confirm('Definir '+newEmail+' como login do lojista de '+p.name+'?'))return;
-   updateButton.disabled=true;
-   try{
-    const {data:{session:current},error:sessionError}=await sb.auth.getSession();
-    if(sessionError||!current?.access_token)throw Error('Sessão expirada.');
-    const res=await fetch(SUPABASE_URL+'/functions/v1/guru-update-merchant-email',{
-     method:'POST',headers:{'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:'Bearer '+current.access_token},
-     body:JSON.stringify({prospect_id:p.id,email:newEmail})
-    });
-    const data=await res.json();
-    if(!res.ok||data.error||!data.ok)throw Error(data.error||'Não foi possível atualizar o e-mail.');
-    await load();
-    msg(data.warning||'E-mail definitivo registrado. O lojista agora deve usar esse e-mail para entrar na GURU.');
-   }catch(e){msg('Erro ao atualizar e-mail: '+e.message)}
-   finally{updateButton.disabled=false}
-  };
-  card.append(openUpdate);
+ const actions=el('div','actions');
+ const maps=el('a','btn','Pesquisar no Maps');
+ maps.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(p.name+' '+p.city+' '+p.uf);
+ maps.rel='noopener noreferrer';maps.target='_blank';actions.append(maps);
+ if(validUrl(p.source_url)){const source=el('a','btn','Consultar fonte');source.href=validUrl(p.source_url);source.target='_blank';source.rel='noopener noreferrer';actions.append(source)}
+ const edit=el('button','','Editar');edit.type='button';actions.append(edit);
+ const create=el('button','primary',p.existing_store_id?'Loja já criada':'Criar loja');
+ create.type='button';create.disabled=Boolean(p.existing_store_id)||bulkRunning;actions.append(create);
+ if(p.existing_store_id){
+  const link=el('a','btn','Ver no painel de lojas');link.href='admin.html?view=stores';actions.append(link);
  }
- const bar=el('div','actions');
- const edit=el('button','','Editar');
- const link=el('a','btn','Pesquisar no Maps');
- link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(p.name+' '+p.city+' '+p.uf);
- link.target='_blank';link.rel='noopener noreferrer';
- bar.append(edit,link,startAccount);card.append(bar,accountBox);
- const editor=el('div','inline-editor hidden');
- const name=field('Nome',p.name,140),category=field('Categoria',p.category,100),
- city=field('Cidade',p.city,100),uf=field('UF',p.uf,2),
- address=field('Endereço',p.address,250),phone=field('Telefone comercial',p.contact_phone,50),
- source=field('URL da fonte',p.source_url,500),notes=field('Observações',p.notes,1000,true);
- const statusWrap=el('label');statusWrap.append(el('span','','Status de captação'));
- const status=el('select');for(const [key,label] of Object.entries(statuses)){const opt=el('option','',label);opt.value=key;status.append(opt)}status.value=p.status;statusWrap.append(status);
- editor.append(name.wrap,category.wrap,city.wrap,uf.wrap,address.wrap,phone.wrap,source.wrap,statusWrap,notes.wrap);
+ card.append(actions);
+ if(p.existing_store_id){
+  card.append(el('p','muted','Cadastro pendente · '+p.existing_store_id+'. Sem ativação pública automática.')); 
+  const assignBox=el('div','account-fields hidden');
+  const title=el('strong','','Vincular a uma conta de lojista existente');
+  const selector=el('select');
+  const empty=el('option','','Selecione uma conta');empty.value='';selector.append(empty);
+  const confirm=el('button','primary','Vincular conta à loja');confirm.type='button';
+  const refresh=el('button','','Atualizar contas');refresh.type='button';
+  const fill=()=>{
+   selector.replaceChildren(empty.cloneNode(true));
+   for(const m of merchants){
+    const o=el('option','',(m.name||'Lojista')+(m.email?' · '+m.email:'')+(m.has_store?' · já tem loja':''));
+    o.value=m.id;o.disabled=Boolean(m.has_store);selector.append(o);
+   }
+  };
+  fill();
+  const accountBar=el('div','actions'),pick=el('button','','Selecionar conta');pick.type='button';
+  pick.onclick=async()=>{assignBox.classList.toggle('hidden');if(!assignBox.classList.contains('hidden')){try{await loadMerchants();fill()}catch(e){msg(e.message)}}};
+  refresh.onclick=async()=>{try{await loadMerchants();fill()}catch(e){msg(e.message)}};
+  confirm.onclick=async()=>{
+   const owner=selector.value;
+   if(!owner){msg('Selecione uma conta de lojista disponível.');return}
+   if(!window.confirm('Vincular '+p.name+' à conta selecionada? Essa ação altera o responsável da loja.'))return;
+   confirm.disabled=true;
+   try{
+    await core('assign_owner',{store_id:p.existing_store_id,owner_id:owner});
+    msg('Conta vinculada à loja '+p.name+'. O lojista poderá completar os dados no próprio painel.');
+    await loadMerchants();fill();assignBox.classList.add('hidden');
+   }catch(e){msg('Não foi possível vincular: '+e.message)}finally{confirm.disabled=false}
+  };
+  accountBar.append(refresh,confirm);assignBox.append(title,selector,accountBar);
+  actions.append(pick);card.append(assignBox);
+ }
+ create.onclick=async()=>{
+  if(p.existing_store_id||bulkRunning)return;
+  if(!window.confirm('Criar a loja '+p.name+' como PENDENTE, sem conta associada e sem publicar na GURU?'))return;
+  create.disabled=true;
+  try{
+   const results=await registerStores([p]),result=results[0];
+   if(!result?.store_id)throw Error(result?.error||'Nenhuma loja foi criada.');
+   await load();msg((result.existing?'Loja já existia. ':'Loja criada. ')+(result.warning||'Agora você pode vinculá-la a uma conta existente.'));
+  }catch(e){msg('Falha ao criar a loja: '+e.message)}finally{create.disabled=false}
+ };
+ const editBox=el('div','inline-editor hidden');
+ const name=field('Nome',p.name,140),category=field('Categoria',p.category,100),city=field('Cidade',p.city,100),uf=field('UF',p.uf,2),
+ address=field('Endereço',p.address,250),phone=field('Telefone',p.contact_phone,50),source=field('URL da fonte',p.source_url,500),notes=field('Observações',p.notes,1000,true);
+ const statusLabel=el('label');statusLabel.append(el('span','','Status de captação'));const status=el('select');
+ for(const [key,label] of Object.entries(statuses)){const opt=el('option','',label);opt.value=key;status.append(opt)}
+ status.value=p.status;statusLabel.append(status);
  notes.wrap.className='wide';
- const tools=el('div','actions wide'),save=el('button','primary','Salvar'),cancel=el('button','','Cancelar'),remove=el('button','warn','Excluir');
- tools.append(save,cancel,remove);editor.append(tools);card.append(editor);
- edit.onclick=()=>{editor.classList.toggle('hidden');edit.textContent=editor.classList.contains('hidden')?'Editar':'Fechar edição'};
- cancel.onclick=()=>{editor.classList.add('hidden');edit.textContent='Editar'};
+ editBox.append(name.wrap,category.wrap,city.wrap,uf.wrap,address.wrap,phone.wrap,source.wrap,statusLabel,notes.wrap);
+ const controls=el('div','actions wide'),save=el('button','primary','Salvar alterações'),cancel=el('button','','Cancelar'),remove=el('button','warn','Excluir da captação');
+ for(const btn of [save,cancel,remove])btn.type='button';
+ controls.append(save,cancel,remove);editBox.append(controls);card.append(editBox);
+ edit.onclick=()=>{editBox.classList.toggle('hidden')};
+ cancel.onclick=()=>editBox.classList.add('hidden');
  save.onclick=async()=>{
-  const values={name:name.input.value.trim(),category:category.input.value.trim(),city:city.input.value.trim(),
-   uf:uf.input.value.trim().toUpperCase(),address:address.input.value.trim()||null,
-   contact_phone:phone.input.value.trim()||null,source_url:source.input.value.trim()||null,
+  const payload={name:name.input.value.trim(),category:category.input.value.trim(),city:city.input.value.trim(),uf:uf.input.value.trim().toUpperCase(),
+   address:address.input.value.trim()||null,contact_phone:phone.input.value.trim()||null,source_url:source.input.value.trim()||null,
    notes:notes.input.value.trim()||null,status:status.value,updated_at:new Date().toISOString()};
-  if(values.name.length<2||!values.city||!values.category||!/^[A-Z]{2}$/.test(values.uf)){msg('Preencha nome, cidade, categoria e UF corretamente.');return}
-  if(values.source_url&&!validUrl(values.source_url)){msg('Use um link HTTPS válido para a fonte.');return}
-  if(!window.confirm('Salvar as alterações deste comércio?'))return;
+  if(payload.name.length<2||!payload.city||!payload.category||!/^[A-Z]{2}$/.test(payload.uf)){msg('Informe nome, categoria, cidade e UF válidos.');return}
+  if(payload.source_url&&!validUrl(payload.source_url)){msg('Informe uma URL HTTPS válida.');return}
+  if(!window.confirm('Salvar alterações na captação? As lojas já criadas não serão modificadas automaticamente.'))return;
   save.disabled=true;
   try{
-   const {data,error}=await sb.from('guru_commerce_prospects').update(values).eq('id',p.id).select('id').single();
-   if(error)throw error;if(!data?.id)throw Error('Registro não foi atualizado.');
-   await load();msg('Comércio atualizado. O cadastro público não foi alterado.');
-  }catch(e){msg(e.code==='23505'?'Já existe um comércio com esse nome na cidade.':e.message)}
-  finally{save.disabled=false}
+   const {data,error}=await sb.from('guru_commerce_prospects').update(payload).eq('id',p.id).select('id').maybeSingle();
+   if(error||!data)throw Error(error?.message||'Alteração não confirmada.');
+   await load();msg('Captação atualizada.');
+  }catch(e){msg(e.message)}finally{save.disabled=false}
  };
  remove.onclick=async()=>{
-  if(!window.confirm('Excluir este comércio da lista de captação? A ação não remove um cadastro público da GURU.'))return;
+  if(p.existing_store_id){msg('Esta captação possui loja vinculada. Gerencie a exclusão da loja antes de remover o registro.');return}
+  if(!window.confirm('Excluir este registro de captação?'))return;
   remove.disabled=true;
   try{
-   const {data,error}=await sb.from('guru_commerce_prospects').delete().eq('id',p.id).select('id').single();
-   if(error)throw error;if(!data?.id)throw Error('Exclusão não confirmada.');
-   await load();msg('Registro removido da captação.');
+   const {data,error}=await sb.from('guru_commerce_prospects').delete().eq('id',p.id).is('existing_store_id',null).select('id').maybeSingle();
+   if(error||!data)throw Error(error?.message||'Exclusão não permitida.');
+   await load();msg('Captação excluída.');
   }catch(e){msg(e.message)}finally{remove.disabled=false}
  };
  return card;
 }
-function visibleLeads(){
- const query=$('query').value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
- const city=$('cityFilter').value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
- const category=$('categoryFilter').value,status=$('statusFilter').value;
- return leads.filter(p=>(!query||searchable(p).includes(query))&&
-  (!city||p.city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(city))&&
-  (!category||p.category===category)&&(!status||p.status===status));
-}
 function render(){
- const items=visibleLeads();
+ const items=visible();
  $('foundLabel').textContent=items.length+' comércio(s)';
  $('leads').replaceChildren();
- if(!items.length)$('leads').append(el('div','panel','Nenhum comércio encontrado para esses filtros.'));
- for(const lead of items)$('leads').append(displayLead(lead));
+ if(!items.length)$('leads').append(el('div','panel','Nenhum comércio encontrado.'));
+ for(const item of items)$('leads').append(leadCard(item));
+ selectionCount();
 }
-
 $('selectVisible').onclick=()=>{
- const available=visibleLeads().filter(p=>!p.merchant_user_id);
- let count=0;
- for(const p of available){if(selectedProspects.size>=20)break;if(!selectedProspects.has(p.id)){selectedProspects.add(p.id);count++}}
- render();updateSelection();msg(count+' comércio(s) selecionado(s).');
-};
-$('clearSelected').onclick=()=>{selectedProspects.clear();render();updateSelection()};
-$('createBulk').onclick=async()=>{
- if(bulkRunning||!selectedProspects.size)return;
- const targets=leads.filter(p=>selectedProspects.has(p.id)&&!p.merchant_user_id).slice(0,20);
- if(!targets.length){updateSelection();return}
- if(!window.confirm('Criar '+targets.length+' contas provisórias de lojista?\n\nConfirme que você tem autorização dos responsáveis. Cada comércio receberá um login e senha individuais.'))return;
- bulkRunning=true;updateSelection();
- const results=[];
- // Executar sequencialmente: erros isolados e sem tentativas repetidas de criação.
- for(let index=0;index<targets.length;index++){
-  const p=targets[index];
-  msg('Criando conta '+(index+1)+' de '+targets.length+': '+p.name);
-  try{results.push(await createCapturedAccount(p))}
-  catch(err){results.push({name:p.name,error:err.message})}
+ for(const p of visible()){
+  if(selected.size>=20)break;
+  if(!p.existing_store_id)selected.add(p.id);
  }
- showBulkResults(results);
- try{await load()}catch(err){msg('Contas processadas; não foi possível atualizar a lista: '+err.message)}
- selectedProspects.clear();bulkRunning=false;render();updateSelection();
- msg('Lote concluído. Copie as credenciais antes de fechar a janela.');
+ render();
+};
+$('clearSelected').onclick=()=>{selected.clear();render()};
+$('createBulk').onclick=async()=>{
+ if(bulkRunning)return;
+ const targets=leads.filter(p=>selected.has(p.id)&&!p.existing_store_id).slice(0,20);
+ if(!targets.length)return;
+ if(!window.confirm('Criar '+targets.length+' LOJAS pendentes, sem criar contas ou senhas? Elas não serão publicadas.'))return;
+ bulkRunning=true;selectionCount();
+ try{
+  const results=await registerStores(targets);
+  const created=results.filter(x=>x.created).length,existing=results.filter(x=>x.existing).length;
+  const errors=results.filter(x=>x.error||x.warning);
+  await load();
+  selected.clear();render();
+  msg('Lote concluído: '+created+' lojas criadas, '+existing+' já existentes, '+errors.length+' com pendência. '+(errors.length?errors.map(x=>x.error||x.warning).slice(0,3).join('; '):'Agora é possível selecionar uma conta para cada loja.'));
+ }catch(e){msg('Falha ao criar o lote: '+e.message)}
+ finally{bulkRunning=false;selectionCount()}
 };
 $('createForm').onsubmit=async event=>{
  event.preventDefault();if(loading)return;
  const name=$('newName').value.trim(),city=$('newCity').value.trim(),uf=$('newUf').value.trim().toUpperCase(),
  category=$('newCategory').value.trim(),source_url=$('newSource').value.trim();
- if(!name||!city||!category||!/^[A-Z]{2}$/.test(uf)){msg('Preencha nome, categoria, cidade e UF.');return}
- if(source_url&&!validUrl(source_url)){msg('O link da fonte deve usar HTTPS.');return}
- if(leads.some(p=>normal(p.name)===normal(name)&&normal(p.city)===normal(city)&&p.uf===uf)){
-  msg('Já existe um comércio com esse nome na cidade. Revise o registro existente.');return;
- }
- loading=true;const button=$('createForm').querySelector('button[type=submit]');button.disabled=true;
+ if(name.length<2||!city||!category||!/^[A-Z]{2}$/.test(uf)){msg('Preencha nome, categoria, cidade e UF.');return}
+ if(source_url&&!validUrl(source_url)){msg('O link da fonte deve ser HTTPS.');return}
+ const norm=value=>clean(value).replace(/[^a-z0-9]/g,'');
+ if(leads.some(p=>norm(p.name)===norm(name)&&norm(p.city)===norm(city)&&p.uf===uf)){msg('Comércio já existente na captação.');return}
+ const btn=$('createForm').querySelector('[type="submit"]');loading=true;btn.disabled=true;
  try{
-  const {error}=await sb.from('guru_commerce_prospects').insert({
-   name,city,uf,category,address:$('newAddress').value.trim()||null,contact_phone:$('newPhone').value.trim()||null,
-   source_url:source_url||null,source_name:source_url?'Fonte informada pelo administrador':null,
-   notes:$('newNotes').value.trim()||null,created_by:session.user.id,status:'identified'
-  });
+  const {error}=await sb.from('guru_commerce_prospects').insert({name,city,uf,category,
+   address:$('newAddress').value.trim()||null,contact_phone:$('newPhone').value.trim()||null,
+   source_url:source_url||null,source_name:source_url?'Fonte administrativa':null,notes:$('newNotes').value.trim()||null,
+   created_by:session.user.id,status:'identified'});
   if(error)throw error;
   $('createForm').reset();$('newCity').value='Salto de Pirapora';$('newUf').value='SP';
-  await load();msg('Novo comércio adicionado à captação, ainda não publicado na GURU.');
- }catch(e){msg(e.code==='23505'?'Comércio duplicado: já está na lista.':e.message)}
- finally{loading=false;button.disabled=false}
+  await load();msg('Comércio incluído na captação. Agora você pode criar a loja pendente.');
+ }catch(e){msg(e.message)}finally{loading=false;btn.disabled=false}
 };
 for(const id of ['query','cityFilter','categoryFilter','statusFilter'])$(id).addEventListener('input',render);
-$('cityFilter').addEventListener('input',()=>{
- const place=$('cityFilter').value.trim()||'Salto de Pirapora';
- $('maps').href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('comércios '+place+' SP');
-});
-$('refresh').onclick=()=>load().then(()=>msg('Lista atualizada.')).catch(e=>msg('Erro ao atualizar: '+e.message));
+$('cityFilter').addEventListener('input',()=>{$('maps').href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('comércios '+$('cityFilter').value.trim()+' SP')});
+$('refresh').onclick=()=>load().then(()=>msg('Lista atualizada.')).catch(e=>msg(e.message));
 if(await verify()){
  $('work').classList.remove('hidden');
- try{await load()}catch(e){msg('Não foi possível carregar os registros: '+e.message)}
+ try{await load();await loadMerchants()}catch(e){msg('Erro ao carregar: '+e.message)}
 }else $('unauthed').style.display='block';

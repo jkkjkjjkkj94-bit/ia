@@ -982,8 +982,6 @@ function resetConversation(){
  msgs.replaceChildren(el('div','msg bot','Olá! Diga o que você procura.'));
  document.body.classList.remove('chat-started');
  input.value='';setSuggestions();renderContext();
- if(userCity){document.body.classList.add('chat-started');add('O que você deseja encontrar em '+userCity+'?')}
- else askForCity();
  input.focus({preventScroll:true});
 }
 function initMobileKeyboardLayout(){
@@ -1021,7 +1019,13 @@ function initShell(){
   ['Precisa encontrar um produto?','Descreva o que procura e veja as opções disponíveis.'],
   ['Quer comparar estabelecimentos?','Conheça as diferenças entre as opções cadastradas.']
  ];
+ const welcomeKey='guru_welcome_slide_v2';
  let welcomeIndex=0;
+ try{
+  const previous=Number(sessionStorage.getItem(welcomeKey));
+  welcomeIndex=Number.isInteger(previous)&&previous>=0?(previous+1)%welcomeSlides.length:0;
+  sessionStorage.setItem(welcomeKey,String(welcomeIndex));
+ }catch{}
  const setWelcome=index=>{
   if(!hero||body.classList.contains('chat-started'))return;
   welcomeIndex=index%welcomeSlides.length;
@@ -1031,13 +1035,13 @@ function initShell(){
  const updateChatLayout=()=>{
   const hasConversation=[...msgs.children].some(node=>node.classList?.contains('guru-city-choice')||node.classList?.contains('user')||node.classList?.contains('hashtag-result-msg'));
   body.classList.toggle('chat-started',hasConversation);
-  if(!hasConversation)setWelcome(0);
+  if(!hasConversation)setWelcome(welcomeIndex);
  };
  if(msgs){
   new MutationObserver(updateChatLayout).observe(msgs,{childList:true});
   updateChatLayout();
  }
- setWelcome(0);
+ setWelcome(welcomeIndex);
  window.setInterval(()=>{
   if(document.hidden||body.classList.contains('chat-started'))return;
   setWelcome(welcomeIndex+1);
@@ -1054,15 +1058,11 @@ if(form&&input&&msgs){
  input.addEventListener('keydown',e=>{if(e.key==='Escape')setSuggestions();if(e.key==='ArrowDown'&&visibleSuggestions.length){e.preventDefault();suggestions?.querySelector('button')?.focus()}});
  input.addEventListener('blur',()=>setTimeout(()=>{if(!suggestions?.contains(document.activeElement))setSuggestions()},100));
  restore();initShell();initMobileKeyboardLayout();renderContext();
- // Inicie a conversa de forma útil, sem deixar apenas o título estático.
- // A escolha da cidade não dispara uma busca de lojas.
- if(!userCity){
-  askForCity();
- }else{
+ // Mostre as frases variáveis na abertura; solicite a cidade somente quando
+ // a pessoa iniciar uma pesquisa ou tocar em "Usar localização".
+ if(userCity){
   state.location={...(state.location||{}),city:userCity};
   renderContext();
-  document.body.classList.add('chat-started');
-  add('Cidade selecionada: '+userCity+'. O que você deseja encontrar?');
  }
  loadData().catch(err=>{
   console.warn('[GURU v4] Carregamento inicial não concluído:',err);

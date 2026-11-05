@@ -94,3 +94,24 @@ html[data-theme="dark"] .toast{background:#e5e5e5;color:#151515}
 html[data-theme="dark"] .selected-store-detail-row{border-color:var(--guru-dark-outline)}
 html[data-theme="dark"] .selected-store-detail-row b,
 html[data-theme="dark"] .selected-store-detail-row strong{color:var(--guru-dark-text)}
+
+/* GURU theme control v2: one visible icon and a calm, compact switch. */
+.guru-theme-toggle{position:relative;gap:10px!important;padding:5px 10px!important;min-height:44px!important;border:1px solid transparent!important;border-radius:12px!important;font-size:12px!important;font-weight:550!important;transition:background-color .18s ease,border-color .18s ease!important}
+.guru-theme-toggle .guru-theme-symbol{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;border-radius:9px;background:#f1f1f2;color:#333;position:relative}
+.guru-theme-symbol svg{grid-area:1/1;width:17px!important;height:17px!important;stroke-width:1.8!important}
+.guru-theme-symbol svg[hidden]{display:none!important}
+.guru-theme-label{white-space:nowrap;flex:1;min-width:0}
+.guru-theme-switch{margin-left:auto;width:30px;height:18px;flex:0 0 30px;border-radius:99px;background:#dedee0;border:1px solid #d0d0d3;display:flex;align-items:center;padding:2px;transition:background-color .2s ease,border-color .2s ease}
+.guru-theme-switch-thumb{width:12px;height:12px;display:block;border-radius:50%;background:white;box-shadow:0 1px 3px #0002;transition:transform .2s ease}
+html[data-theme="dark"] .guru-theme-toggle .guru-theme-symbol{background:#303238;color:#f3f3f4}
+html[data-theme="dark"] .guru-theme-switch{background:#e8e9eb;border-color:#e8e9eb}
+html[data-theme="dark"] .guru-theme-switch-thumb{background:#202125;transform:translateX(12px)}
+.guru-theme-toggle:focus-visible,.guru-mobile-theme-toggle:focus-visible{outline:2px solid currentColor!important;outline-offset:3px}
+.guru-mobile-theme-toggle{padding:0!important}
+.guru-mobile-theme-toggle .guru-theme-symbol{width:100%;height:100%;display:grid;place-items:center}
+.guru-mobile-theme-toggle .guru-theme-symbol svg{width:18px!important;height:18px!important}
+.sidebar-collapsed .guru-theme-toggle .guru-theme-symbol{width:32px;height:32px;flex-basis:32px}
+.sidebar-collapsed .guru-theme-toggle .guru-theme-switch{display:none}
+@media(max-width:900px){.guru-theme-toggle .guru-theme-label,.guru-theme-toggle .guru-theme-switch{display:none!important}.guru-theme-toggle{justify-content:center!important;padding:4px!important}}
+@media(max-width:680px){.guru-theme-toggle{display:none!important}}
+@media(prefers-reduced-motion:reduce){.guru-theme-toggle,.guru-theme-switch,.guru-theme-switch-thumb{transition:none!important}}

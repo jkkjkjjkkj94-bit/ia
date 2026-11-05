@@ -56,7 +56,7 @@ async function loadData(){const results=await Promise.all([
 ]);
  const names=['stores','products','profiles','accounts','questions','events','qualityEvents','reviews','knowledge','hours','audit','sources','highlights','config'];
  results.forEach((r,i)=>{if(r.error)console.warn('[Admin]',names[i],r.error.message)});
- sourceHealth.core=!results[0].error&&!results[1].error;sourceHealth.ai=results.slice(2).every(r=>!r.error);
+ sourceHealth.core=!results[0].error&&!results[1].error;sourceHealth.ai=results.slice(2).filter((_,index)=>index!==4).every(r=>!r.error);
  stores=results[0].data||[];products=results[1].data||[];profiles=results[2].data||[];accounts=results[3].data||[];questions=results[4].data||[];events=results[5].data||[];qualityEvents=results[6].data||[];reviews=results[7].data||[];knowledge=results[8].data||[];hours=results[9].data||[];audit=results[10].data||[];dataSources=results[11].data||[];highlights=results[12].data||[];aiConfigs=results[13].data||[];rebuildStoreRankings();renderAll()}
 function renderAll(){renderOverview();renderStoreFilters();renderStores();renderMerchants();renderAI();renderSources();renderHighlights();renderCoverage();renderAIConfig();renderReviews();renderAudit();$('adminUser').textContent=profile?.display_name||session?.user?.email||''}
 function barRows(obj,limit=10){const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,limit),max=arr[0]?.[1]||1;return arr.map(([k,v])=>`<div class="bar-row"><div class="row"><span>${esc(k)}</span><b>${v}</b></div><div class="bar-track"><span style="width:${Math.max(6,v/max*100)}%"></span></div></div>`).join('')||'<div class="empty-state">Sem dados.</div>'}

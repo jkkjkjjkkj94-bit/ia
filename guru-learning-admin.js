@@ -1,4 +1,5 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.95.0';
+import {patternKey} from './guru-knowledge-v11.mjs?v=1';
 const sb=createClient('https://innziuzgtpfsiywqmies.supabase.co','sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1');
 const $=id=>document.getElementById(id);
 let currentUser=null,proposals=[];
@@ -87,7 +88,7 @@ async function analyze(){
   for(const event of data||[]){
    const label=safe(event.normalized_query||event.query);
    if(!label)continue;
-   const key=clusterKey(label);
+   const key=patternKey(label);
    if(!key||key.length<3)continue;
    const item=grouped.get(key)||{normalized_query:key,sample_question:label,suggested_category:event.category||null,occurrences:0,first_seen_at:event.created_at,last_seen_at:event.created_at};
    item.occurrences++;

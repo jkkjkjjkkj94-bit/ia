@@ -229,6 +229,22 @@ function leadCard(p){
  create.type='button';create.disabled=Boolean(p.existing_store_id)||bulkRunning;actions.append(create);
  if(p.existing_store_id){
   const link=el('a','btn','Ver no painel de lojas');link.href='admin.html?view=stores';actions.append(link);
+  if(p.merchant_user_id){
+   const retry=el('button','','Conferir / vincular conta');
+   retry.type='button';retry.disabled=bulkRunning||accountBatchRunning;
+   retry.onclick=async()=>{
+    if(!window.confirm('Conferir o vínculo desta loja com a conta de lojista já criada?'))return;
+    retry.disabled=true;
+    try{
+     const result=await registerMerchantAccountForStore(p);
+     if(result.error)throw Error(result.error);
+     msg('Conta vinculada à loja '+p.name+'.');
+     await load();
+    }catch(e){msg('Falha ao vincular: '+e.message)}
+    finally{retry.disabled=false}
+   };
+   actions.append(retry);
+  }
  }
  card.append(actions);
  if(p.existing_store_id){

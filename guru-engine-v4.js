@@ -1014,15 +1014,34 @@ function initMobileKeyboardLayout(){
 function initShell(){
  const body=document.body,side=document.querySelector('.app-sidebar');
  const hero=document.querySelector('.hero h1');
- if(hero)hero.textContent='O que você quer encontrar?';
+ const subtitle=document.querySelector('.hero p');
+ const welcomeSlides=[
+  ['O que você quer encontrar?','Encontre lojas, produtos e serviços conversando com a GURU.'],
+  ['Procurando uma loja?','Descubra estabelecimentos cadastrados na sua cidade.'],
+  ['Precisa encontrar um produto?','Descreva o que procura e veja as opções disponíveis.'],
+  ['Quer comparar estabelecimentos?','Conheça as diferenças entre as opções cadastradas.']
+ ];
+ let welcomeIndex=0;
+ const setWelcome=index=>{
+  if(!hero||body.classList.contains('chat-started'))return;
+  welcomeIndex=index%welcomeSlides.length;
+  hero.textContent=welcomeSlides[welcomeIndex][0];
+  if(subtitle)subtitle.textContent=welcomeSlides[welcomeIndex][1];
+ };
+ const updateChatLayout=()=>{
+  const hasConversation=[...msgs.children].some(node=>node.classList?.contains('guru-city-choice')||node.classList?.contains('user')||node.classList?.contains('hashtag-result-msg'));
+  body.classList.toggle('chat-started',hasConversation);
+  if(!hasConversation)setWelcome(0);
+ };
  if(msgs){
-  const updateChatLayout=()=>{
-   const hasConversation=[...msgs.children].some(node=>node.classList?.contains('guru-city-choice')||node.classList?.contains('user')||node.classList?.contains('hashtag-result-msg'));
-   body.classList.toggle('chat-started',hasConversation);
-  };
   new MutationObserver(updateChatLayout).observe(msgs,{childList:true});
   updateChatLayout();
-}
+ }
+ setWelcome(0);
+ window.setInterval(()=>{
+  if(document.hidden||body.classList.contains('chat-started'))return;
+  setWelcome(welcomeIndex+1);
+ },5500);
  side?.querySelector('.sidebar-collapse')?.addEventListener('click',()=>body.classList.toggle('sidebar-collapsed'));
  side?.addEventListener('click',e=>{const b=e.target.closest('[data-shell-action]');if(!b)return;if(b.dataset.shellAction==='new')resetConversation();if(b.dataset.shellAction==='location'){userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};askForCity()}});
  document.getElementById('resetBtn')?.addEventListener('click',resetConversation);

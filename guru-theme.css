@@ -125,3 +125,17 @@ html[data-theme="dark"] .guru-need-proof-status,html[data-theme="dark"] .guru-ne
 html[data-theme="dark"] .guru-need-proof-muted{color:#aeb1b8}
 html[data-theme="dark"] .guru-need-item{background:#292c31;border-color:#383b41;color:#e9e9eb}
 html[data-theme="dark"] .guru-need-verification{border-color:#34363b}
+
+/* Planejar 2.0 — escuro */
+html[data-theme="dark"] .guru-plan-summary-item,html[data-theme="dark"] .guru-plan-row{background:#212327;border-color:#383b40}
+html[data-theme="dark"] .guru-plan-main-number,html[data-theme="dark"] .guru-plan-row input{color:#f1f2f3}
+html[data-theme="dark"] .guru-plan-overline,html[data-theme="dark"] .guru-plan-progress,html[data-theme="dark"] .guru-plan-column-labels{color:#aeb1b8}
+html[data-theme="dark"] .guru-plan-row .guru-plan-name,html[data-theme="dark"] .guru-plan-row .guru-plan-quantity,
+html[data-theme="dark"] .guru-plan-row .guru-plan-price,html[data-theme="dark"] .guru-plan-field{background:#181a1d;border-color:#393d42;color:#ededee}
+html[data-theme="dark"] .guru-plan-row.guru-plan-done .guru-plan-name{color:#888}
+html[data-theme="dark"] .guru-plan-remove{color:#c5c5c5}
+html[data-theme="dark"] .guru-plan-remove:hover{background:#333}
+html[data-theme="dark"] .guru-plan-balance{background:#282b30;color:#e5e6e8}
+html[data-theme="dark"] .guru-plan-overbudget{color:#ffb6a9;background:#492c2b}
+html[data-theme="dark"] .guru-need-primary{background:#e9e9eb;color:#101114;border-color:#e9e9eb}
+html[data-theme="dark"] .guru-need-primary:hover{background:#ccd0d5}

@@ -103,7 +103,7 @@ function displayLead(p){
  createAccount.onclick=async()=>{
   if(p.merchant_user_id){msg('Este comércio já possui uma conta de lojista vinculada.');return}
   const email=emailInput.value.trim().toLowerCase(),display_name=displayInput.value.trim();
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){msg('Informe um e-mail válido e confirmado pelo responsável.');return}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){msg('Informe um e-mail válido e confirmado pelo responsável.');return}
   if(display_name.length<2){msg('Informe um nome válido para o lojista.');return}
   if(!authorizedInput.checked){msg('Confirme a autorização do responsável antes de criar o acesso.');return}
   if(!window.confirm('Criar uma conta de lojista para '+p.name+' no e-mail '+email+'?'))return;

@@ -1,6 +1,6 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
-import {createShoppingPlan,normalizeBudget} from './guru-planner-v2.mjs?v=1';
-import {mountBudgetPrompt,mountShoppingPlanner} from './guru-planner-ui-v2.mjs?v=1';
+import {createShoppingPlan,normalizeBudget} from './guru-planner-v2.mjs?v=2';
+import {mountBudgetPrompt,mountShoppingPlanner} from './guru-planner-ui-v2.mjs?v=2';
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=1';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';

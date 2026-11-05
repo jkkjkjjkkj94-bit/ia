@@ -35,7 +35,7 @@ export function createExperience({submitText,compareSelected,getState,notify}){
   favorite.dataset.guruFavorite=String(store.id);favorite.setAttribute('aria-pressed',String(isFavorite(store.id)));
   // Apenas contato: nenhuma alegação de disponibilidade de agenda.
   const contact=String(store.whatsapp||'').replace(/\D/g,'');
-  if(contact.length>=10&&contact.length<=15){
+  if(contact.length>=10&&contact.length<=15 && /(?:barbearia|cabelo|salao|salão|beleza|estetica|estética|oficina|mecanica|mecânica|clinica|clínica|servic|serviç|agendamento)/i.test([store.name,store.category,store.group,store.description,(store.specialties||[]).join(' ')].join(' '))){
     const link=make('a','store-action guru-exp-action','Consultar agendamento');
     link.href='https://wa.me/'+contact+'?text='+encodeURIComponent('Olá! Gostaria de consultar a disponibilidade de horários e valores para agendamento.');
     link.target='_blank';link.rel='noopener noreferrer';
@@ -100,8 +100,8 @@ export function createExperience({submitText,compareSelected,getState,notify}){
       if(panel){panel.hidden=!panel.hidden;if(!panel.hidden)renderPanel()}
     });
     addButton(toolbar,'Comparar selecionadas',()=>compareSelected());
-    const quick=document.querySelector('.quick');
-    quick?.parentNode?.insertBefore(toolbar,quick.nextSibling);
+    const region=document.querySelector('.guru-messages-region');
+    region?.insertBefore(toolbar,region.firstChild);
   }
   panel=make('div','guru-exp-panel');panel.hidden=true;panel.setAttribute('role','region');panel.setAttribute('aria-label','Favoritos e histórico');
   document.querySelector('.main')?.append(panel);

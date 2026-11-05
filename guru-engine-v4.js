@@ -669,9 +669,7 @@ function citySearchState(source=state){
 function displayResults(rows,offset=0){
  const m=add('',false);m.classList.add('hashtag-result-msg');
  const end=offset+rows.length,total=(state.lastResults||[]).length;
- const intro=offset===0
-  ?(rows.length===1?'Encontrei 1 opção em '+userCity+':':'Estas são as primeiras '+rows.length+' opções em '+userCity+':')
-  :'Mais '+rows.length+' '+(rows.length===1?'opção':'opções')+' em '+userCity+' ('+(offset+1)+'–'+end+' de '+total+'):';
+ const intro=offset===0?'Encontrei estas opções em '+userCity+':':'Outras opções em '+userCity+':';
  m.appendChild(el('div','hashtag-intro',intro));
  if(position){
   m.appendChild(el('div','guru-city-distance-note','Distâncias aproximadas em linha reta. A classificação continua sendo por relevância, não por proximidade.'));
@@ -687,7 +685,6 @@ function displayResults(rows,offset=0){
   m.appendChild(button);
  }
  const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,offset+i)));m.appendChild(grid);
- if(end<total)m.appendChild(el('div','guru-more-count guru-results-progress','Exibindo '+end+' de '+total+' opções'));
  renderNextQuestions(m,rows,offset);return m;
 }
 function showNextResultPage(){

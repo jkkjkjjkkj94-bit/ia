@@ -340,3 +340,47 @@
 @media(prefers-reduced-motion:reduce){
  .msg.bot.hashtag-result-msg .store-result-card.smart-card{transition:none}
 }
+
+/* Comparação de estabelecimentos GURU: editorial, legível e responsiva. */
+.msg.bot.guru-comparison-message{width:100%;max-width:100%;min-width:0}
+.guru-compare-experience{width:100%;min-width:0;margin:2px 0 12px}
+.guru-compare-kicker{font-size:10px;letter-spacing:.12em;font-weight:750;color:#777;margin-bottom:7px}
+.guru-compare-title{font-size:clamp(18px,2vw,23px);font-weight:700;line-height:1.25;letter-spacing:-.03em;color:#151515;margin:0 0 8px}
+.guru-compare-intro{font-size:12px;line-height:1.6;color:#777;margin:0 0 16px;max-width:690px}
+.guru-compare-panel{border:1px solid #e9e9ea;border-radius:17px;overflow:hidden;width:100%;background:#fff}
+.guru-compare-heading,.guru-compare-metric-row{
+ display:grid;grid-template-columns:minmax(160px,.95fr) repeat(var(--guru-compare-columns,2),minmax(0,1fr));
+ align-items:stretch;
+}
+.guru-compare-heading{background:#fafafa;border-bottom:1px solid #e9e9ea}
+.guru-compare-corner{display:flex;align-items:flex-end;padding:19px 16px;font-size:11px;font-weight:650;color:#888}
+.guru-compare-store-heading{display:flex;flex-direction:column;gap:6px;padding:17px 16px;min-width:0;border-left:1px solid #ebebeb}
+.guru-compare-number{font-size:9px;letter-spacing:.08em;font-weight:750;color:#888}
+.guru-compare-store-name{font-size:clamp(12px,1.3vw,15px);color:#171717;line-height:1.35;overflow-wrap:anywhere}
+.guru-compare-store-location{font-size:10px;color:#888;overflow-wrap:anywhere}
+.guru-compare-metric-row{border-bottom:1px solid #eeeeef}
+.guru-compare-metric-row:last-child{border-bottom:0}
+.guru-compare-metric-row:nth-of-type(odd){background:#fdfdfd}
+.guru-compare-metric-key{display:flex;flex-direction:column;justify-content:center;gap:4px;padding:13px 16px;min-width:0}
+.guru-compare-metric-key strong{font-size:11px;color:#333;font-weight:700}
+.guru-compare-metric-key span{font-size:10px;color:#999;line-height:1.45}
+.guru-compare-metric-value{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:5px;padding:13px 16px;border-left:1px solid #efefef;font-size:12px;font-weight:650;color:#333;line-height:1.45;min-width:0;overflow-wrap:anywhere}
+.guru-compare-metric-value.guru-compare-advantage{background:#f5f6f6;color:#111}
+.guru-compare-advantage-label{font-size:9px;letter-spacing:.01em;color:#60676a;font-weight:650;background:#e8ebeb;border-radius:999px;padding:3px 7px}
+.guru-compare-disclaimer{font-size:11px;line-height:1.5;color:#8a8a8a;margin:13px 0 10px}
+.guru-compare-actions{display:flex;flex-wrap:wrap;gap:8px}
+.guru-compare-actions .guru-compare-open{font-size:11px;padding:9px 13px;border:1px solid #dcdcdc}
+@media(max-width:760px){
+ .guru-compare-heading,.guru-compare-metric-row{grid-template-columns:minmax(112px,.78fr) repeat(var(--guru-compare-columns,2),minmax(0,1fr))}
+ .guru-compare-corner,.guru-compare-store-heading,.guru-compare-metric-key,.guru-compare-metric-value{padding:11px 9px}
+ .guru-compare-metric-key strong{font-size:10px}
+ .guru-compare-metric-key span{font-size:9px}
+ .guru-compare-metric-value{font-size:10.5px}
+ .guru-compare-advantage-label{font-size:8px}
+}
+@media(max-width:520px){
+ .guru-compare-panel{overflow-x:auto;scrollbar-width:thin}
+ .guru-compare-heading,.guru-compare-metric-row{min-width:560px;grid-template-columns:150px repeat(var(--guru-compare-columns,2),minmax(180px,1fr))}
+ .guru-compare-intro{font-size:11px}
+ .guru-compare-actions .guru-compare-open{flex:1 1 auto;text-align:center}
+}

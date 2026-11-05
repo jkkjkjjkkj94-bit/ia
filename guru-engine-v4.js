@@ -7,6 +7,7 @@ import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
 import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './guru-search-v7.mjs?v=1';
 import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=1';
+import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=20';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
@@ -320,7 +321,8 @@ async function loadData(force=false){
    read(AI,'local_ai_taxonomy_categories','&active=eq.true'),
    read(AI,'local_ai_taxonomy_groups','&active=eq.true'),
    read(AI,'local_ai_taxonomy_terms','&active=eq.true'),
-   read(AI,'local_ai_store_highlights','','store_id')
+   read(AI,'local_ai_store_highlights','','store_id'),
+   read(AI,'guru_approved_aliases','&active=eq.true')
   ]);
   const get=i=>all[i].status==='fulfilled'?all[i].value:[];
   if(all[0].status==='rejected')throw all[0].reason;
@@ -331,7 +333,7 @@ async function loadData(force=false){
   const highlightsByStore=new Map(get(8).map(h=>[h.store_id,h]));
   const now=Date.now();
   // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
-  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
+  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),sharedAliases:get(9),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
   lastLoad=Date.now();rehydrate();if(input?.value)updateSuggestions();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;
@@ -687,7 +689,7 @@ async function run(text){
  // só entram quando a consulta original não encontrou nenhum resultado.
  let finalState=draft,rows=searchStores(db,draft,position,{limit:60}),recovery=null;
  if(!rows.length){
-  for(const alt of [...guidedSearchAlternatives(text,db,taxonomy,aliases),...catalogAwareAlternatives(text,db,taxonomy,aliases)]){
+  for(const alt of [...guidedSearchAlternatives(text,db,taxonomy,aliases),...catalogAwareAlternatives(text,db,taxonomy,aliases),...sharedAlternatives(text,db.sharedAliases,db)]){
    const alternatePlan=interpret(alt.query,taxonomy,aliases,state,{products:db?.products||[]});
    if(alternatePlan.kind!=='search')continue;
    const alternateState=preserveMandatoryFilters(draft,nextState(state,alternatePlan));

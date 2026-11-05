@@ -10,7 +10,7 @@ const askComparison=/\b(comparar|compare|comparacao|diferenca|diferencas|qual e 
 const aboutPrevious=/\b(dessas|deles|delas|dessas lojas|das opcoes|da lista|entre elas|entre esses|entre essas|alguma delas|qual delas|qual dessas)\b/;
 const deliveryRe=/\b(entrega|delivery|frete|entregam)\b/;
 const cheaper=/\b(mais barat[oa]|menor preco|mais em conta|economica|economico|preco mais baixo)\b/;
-const closer=/\b(mais perto|mais proxima|mais proximo|menor distancia)\b/;
+const closer=/\b(mais perto|mais proxim[ao]s?|menor distancia)\b/;
 const higherRated=/\b(melhor avaliada|melhor avaliadas|maior nota|mais estrelas|melhor avaliados)\b/;
 const onlyStock=/\b(em estoque|disponivel|disponiveis|tem o produto)\b/;
 

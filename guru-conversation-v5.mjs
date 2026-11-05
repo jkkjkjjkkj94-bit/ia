@@ -98,7 +98,10 @@ export function followupPrompts(rows=[],state={}){
  if(rows.some(r=>r.minPrice!=null))prompts.push('Qual é mais barata?');
  if(rows.some(r=>r.distance!=null))prompts.push('Qual fica mais perto?');
  if(state.selectedStore)prompts.push('Qual o horário dela?');
- return prompts.slice(0,3);
+ if(rows.some(r=>r.store?.whatsapp))prompts.push('Como entrar em contato?');
+ if(rows.some(r=>r.store?.address))prompts.push('Qual é o endereço?');
+ if(rows.length>2)prompts.push('Mostre outras opções');
+ return [...new Set(prompts)].slice(0,5);
 }
 export function suggestBroadConversation(text){
  const n=canonical(text);

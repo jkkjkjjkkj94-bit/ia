@@ -5,6 +5,9 @@ on:
       - 'guru-ranking-v9.mjs'
       - 'guru-context-v10.mjs'
       - 'tests/guru-v10.test.mjs'
+      - 'guru-semantic-v12.mjs'
+      - 'tests/guru-semantic-v12.test.mjs'
+      - 'guru-engine-v4.js'
       - 'guru-knowledge-v11.mjs'
       - 'tests/guru-v11.test.mjs'
       - 'guru-engine-v4-core.mjs'
@@ -21,4 +24,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/guru-v9.test.mjs tests/guru-v10.test.mjs tests/guru-v11.test.mjs
+      - run: node --test tests/guru-v9.test.mjs tests/guru-v10.test.mjs tests/guru-v11.test.mjs tests/guru-semantic-v12.test.mjs

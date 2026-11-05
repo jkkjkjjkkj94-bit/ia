@@ -275,7 +275,10 @@ function rehydrate(){
  const ids=Array.isArray(state._lastIds)?state._lastIds:(state.lastResults||[]).map(r=>r.store?.id).filter(Boolean);
  if(ids.length){
   // Reaplica todos os filtros para impedir seleção de loja desativada ou sem requisito obrigatório.
-  const valid=new Map((userCity?searchStores(db,citySearchState(),position,{limit:db.stores.length}):[]).map(row=>[row.store.id,row]));
+  const restored=state.shoppingNeed&&userCity
+   ?findStoresForNeed(db,state.shoppingNeed,userCity,position,searchStores,emptyState,60)
+   :(userCity?searchStores(db,citySearchState(),position,{limit:db.stores.length}):[]);
+  const valid=new Map(restored.map(row=>[row.store.id,row]));
   state.lastResults=ids.map(id=>valid.get(id)).filter(Boolean);
   state.resultOffset=Math.min(Number(state.resultOffset)||0,state.lastResults.length);
  }else state.lastResults=[];

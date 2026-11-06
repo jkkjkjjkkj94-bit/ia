@@ -14,7 +14,7 @@ import {semanticNeedAlternatives} from './guru-semantic-v12.mjs?v=2';
 import {followupRefinement} from './guru-followup-v13.mjs?v=1';
 import {evidenceForStore,evidenceForField} from './guru-evidence-v1.mjs?v=1';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=24';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=25';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
@@ -336,6 +336,22 @@ function mergeTaxonomy(cats=[],groups=[],terms=[]){
  for(const groupsObj of Object.values(map))for(const k of Object.keys(groupsObj))groupsObj[k]=[...new Set(groupsObj[k])];
  taxonomy=map;aliases=catAliases;
 }
+// Mantém a taxonomia já treinada e acrescenta a navegação unificada, sem apagar sinônimos.
+function extendCanonicalTaxonomy(stores=[]){
+ const legacyNames=new Map();
+ for(const s of stores){
+  const primary=String(s.main_category||'').trim(),specialty=String(s.category||'').trim();
+  if(!primary)continue;
+  if(!legacyNames.has(primary))legacyNames.set(primary,new Set());
+  if(specialty)legacyNames.get(primary).add(specialty);
+ }
+ for(const [primary,children] of legacyNames){
+  const groups=taxonomy[primary]||{};
+  for(const label of children)if(!groups[label])groups[label]=[label];
+  taxonomy[primary]=groups;
+  if(!aliases[primary])aliases[primary]=[primary];
+ }
+}
 async function loadData(force=false){
  if(db&&!force&&Date.now()-lastLoad<90000)return db;
  if(loadPromise)return loadPromise;
@@ -358,6 +374,7 @@ async function loadData(force=false){
   const failures=all.map((x,i)=>x.status==='rejected'?i:null).filter(x=>x!==null);
   if(failures.length)console.warn('[GURU v4] Dados complementares indisponíveis',failures);
   mergeTaxonomy(get(5),get(6),get(7));
+  extendCanonicalTaxonomy(get(0));
   const highlightsByStore=new Map(get(8).map(h=>[h.store_id,h]));
   const now=Date.now();
   // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
@@ -519,7 +536,7 @@ function chooseStore(row){
  identity.appendChild(el('div','selected-store-eyebrow','LOJA SELECIONADA'));
  identity.appendChild(el('h3','selected-store-title',s.name||'Estabelecimento'));
  const tags=el('div','selected-store-tags');
- for(const label of [s.category,s.group].filter(Boolean))tags.appendChild(el('span','selected-store-tag',label));
+ for(const label of [...new Set([s.main_category,s.category,s.group].filter(Boolean))])tags.appendChild(el('span','selected-store-tag',label));
  const selectedDistance=position&&Number.isFinite(row.distance)&&row.distance>=0;
  const distanceChip=el('span','selected-store-tag store-chip-distance',selectedDistance?'A '+row.distance.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' km de você':!position?'Distância: ativar localização':'Distância não disponível');
  distanceChip.title=selectedDistance?'Distância aproximada em linha reta.':!position?'Use a localização para consultar a distância.':'Loja sem coordenadas disponíveis.';
@@ -589,7 +606,7 @@ function makeCard(row,index){
  const title=el('h3','',s.name||'Estabelecimento');identity.appendChild(title);
  if(s.address){const city=getCityFromAddress(s.address);if(city)identity.appendChild(el('div','smart-location',city))}
  const tags=el('div','store-card-meta');
- for(const label of [s.category,s.group].filter(Boolean))tags.appendChild(el('span','store-chip',label));
+ for(const label of [...new Set([s.main_category,s.category,s.group].filter(Boolean))])tags.appendChild(el('span','store-chip',label));
  const validDistance=position&&Number.isFinite(row.distance)&&row.distance>=0;
  const distanceText=validDistance
   ?'A '+row.distance.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' km de você'

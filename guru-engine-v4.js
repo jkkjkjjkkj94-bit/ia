@@ -644,7 +644,15 @@ function chooseStore(row){
  ]){
   const b=el('button','selected-store-action');
   b.type='button';b.append(storeDetailIcon(iconKey),document.createTextNode(label));
-  b.onclick=()=>submitText(q);actions.appendChild(b);
+  b.onclick=()=>{
+   if(label==='Horário'){
+    // Ação do card: não passar pelo interpretador de buscas/seleções.
+    if(searchBusy){notice('Aguarde a resposta atual.');return}
+    state.selectedStore=s;state.selectedProduct=null;
+    renderContext();save();
+    submitSelectedStoreHours(s);
+   }else submitText(q);
+  };actions.appendChild(b);
  }
  shell.appendChild(actions);box.appendChild(shell);return box;
 }
@@ -1241,7 +1249,23 @@ async function run(text){
  hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE)).then(natural=>{if(natural && !searchBusy)add(natural)}).catch(()=>{});
  save();
 }
-async function submitText(raw){
+async async function submitSelectedStoreHours(store){
+ if(!store||searchBusy)return;
+ searchBusy=true;input.disabled=true;
+ add('Qual o horário?',true);
+ const typing=showTypingIndicator();
+ replyBuffer=document.createDocumentFragment();
+ try{
+  await loadData();
+  state.selectedStore=store;
+  replyAboutStore('Qual o horário?','hours',{});
+  renderContext();save();
+ }catch(err){msgError(err)}finally{
+  const fragment=replyBuffer;replyBuffer=null;typing.remove();
+  try{await showAssistantReply(fragment)}finally{input.disabled=false;searchBusy=false}
+ }
+}
+function submitText(raw){
  const t=String(raw||'').trim();if(!t)return;
  setSuggestions();
  if(searchBusy){notice('Aguarde a conclusão da busca atual.');return}

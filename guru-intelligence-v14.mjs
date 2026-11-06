@@ -93,9 +93,16 @@ function matching(row,query){
 export function contextualRank(rows=[],raw='',sort=null){
  const decorated=rows.map((row,index)=>({...row,searchMatch:matching(row,raw),stableIndex:index}));
  if(!['price','distance','rating'].includes(sort)){
-  decorated.sort((a,b)=>b.searchMatch.score-a.searchMatch.score
+  // O score de qualidade cadastral é a prioridade padrão da GURU.
+  // Relevância contextual e sinais de busca desempatarão resultados de mesma qualidade.
+  // Ordenações explícitas (preço, distância, avaliação) preservam a ordem recebida.
+  decorated.sort((a,b)=>
+   (Number(b.rankScore)||0)-(Number(a.rankScore)||0)
    ||b.searchMatch.relevance-a.searchMatch.relevance
-   ||b.searchMatch.quality-a.searchMatch.quality
+   ||(Number(b.relevanceEvidence?.relevance)||0)-(Number(a.relevanceEvidence?.relevance)||0)
+   ||b.searchMatch.score-a.searchMatch.score
+   ||(Number(b.contextScore)||0)-(Number(a.contextScore)||0)
+   ||(Number(b.learningSignals)||0)-(Number(a.learningSignals)||0)
    ||a.stableIndex-b.stableIndex);
  }
  return decorated.map(({stableIndex,...row})=>row);

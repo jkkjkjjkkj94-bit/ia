@@ -507,7 +507,7 @@ export function searchStores(data={},state={},position=null,options={}){
   const where=state.location||{};
   // Municipio deve corresponder ao campo final do endereco, e nao ao nome de uma rua.
   const address=String(store.address||'');
-  const cityUF=address.match(/^(.*?)\s+-\s+([A-Z]{2})\s*$/i);
+  const cityUF=address.match(/^(.*?)\s+-\s+([A-Z]{2})(?:\s*,\s*\d{5}-?\d{3})?\s*$/i);
   const registeredCity=cityUF?norm(cityUF[1].split(/,|\s+-\s+/).pop()):'';
   if(where.city&&registeredCity!==norm(where.city))continue;
   if(where.uf&&(!cityUF||norm(cityUF[2])!==norm(where.uf)))continue;

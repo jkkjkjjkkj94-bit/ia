@@ -114,7 +114,7 @@ function parseFilters(raw,prev={},options={}){
  if(required.length){f.payment=required[0];if(required.length>1)f.paymentsAll=required}
  if(excluded.length)f.excludedPayments=excluded;
  const rangeAfter=n.match(/\b(?:depois das|apos as|a partir das)\s*(\d{1,2})(?::(\d{2}))?/);
- const rangeBefore=n.match(/\b(?:antes das|ate as)\s*(\d{1,2})(?::(\d{2}))?/);
+ const rangeBefore=n.match(/\b(?:antes das|ate as|ate)\s*(\d{1,2})(?::(\d{2}))?\s*(?:h|horas)?\b/);
  const exact=n.match(/\b(?:as)\s*(\d{1,2})(?::(\d{2}))?\s*(?:h|horas)?\b/);
  if(rangeAfter||rangeBefore||exact||/\b(madrugada|manha|tarde|noite|almoco)\b/.test(n)){
   f.openNow=false;
@@ -210,7 +210,7 @@ export function interpret(raw,taxonomy={},aliases={},prev={},options={}){
   mentionedType.group?norm(mentionedType.group)!==norm(prev.selectedStore.group):
   norm(mentionedType.category)!==norm(prev.selectedStore.category)
  );
- if(ask&&prev.selectedStore&&!newType&&!switchProduct&&!/\b(nova|outra|outro|procuro|encontrar)\b/.test(n)&&!(/\b(?:quero|queria|busco|buscando)\s+(?:uma?|alguma?)\b/.test(n)&&mentionedType))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
+ if(ask&&prev.selectedStore&&!newType&&!switchProduct&&!/\b(?:quais|qual|alguma|algum|existem|tem|encontre|buscar|busque|procuro|encontrar|lojas|estabelecimentos|mercados|farmacias|padarias|pet shops|nova|outra|outro)\b/.test(n)&&!(/\b(?:quero|queria|busco|buscando)\s+(?:uma?|alguma?)\b/.test(n)&&mentionedType))return{kind:'ask',ask,raw:text,filters:parseFilters(text,{},options)};
  if(prev.selectedStore&&!ask&&!switchProduct&&!getTaxon(n,lexicon)&&!/(com entrega|sem entrega|mais perto|promocao|qualquer tipo)/.test(n))return{kind:'ask',ask:'knowledge',raw:text,filters:{}};
  if(ask&&!prev.selectedStore&&/\b(ela|ele|essa|esse|a loja|essa loja)\b/.test(n))return{kind:'clarify',raw:text,reason:'store'};
  const neg=n.match(/^(.*?)\b(?:nao quero|sem(?!\s+(?:ideias?|saber)\b)|exceto|menos|tirando|evitar|excluir)\b\s+(.+)$/);

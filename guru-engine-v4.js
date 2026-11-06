@@ -383,6 +383,31 @@ function extendCanonicalTaxonomy(stores=[]){
   if(!aliases[primary])aliases[primary]=[primary];
  }
 }
+// Converte os horários publicados no COREDB para o formato semanal usado pelo filtro.
+function coreStoreHours(stores){
+ const days=['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+ const result=[];
+ for(const store of stores){
+  const raw=norm(store.operating_days||'');
+  if(!raw)continue;
+  const segments=String(store.operating_days).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(';');
+  for(const segment of segments){
+   const range=segment.match(/(\\d{1,2}:\\d{2})\\s*[-–]\\s*(\\d{1,2}:\\d{2})/);
+   const all=/(segunda\\s+a\\s+domingo|todos\\s+os\\s+dias)/.test(segment);
+   const matches=[];
+   if(all)matches.push(...[0,1,2,3,4,5,6]);
+   else{
+    const span=segment.match(/(domingo|segunda|terca|quarta|quinta|sexta|sabado)\\s+a\\s+(domingo|segunda|terca|quarta|quinta|sexta|sabado)/);
+    if(span){let i=days.indexOf(span[1]),end=days.indexOf(span[2]);for(let n=0;n<7;n++){matches.push(i);if(i===end)break;i=(i+1)%7}}
+    else for(let i=0;i<7;i++)if(new RegExp('\\b'+days[i]+'\\b').test(segment))matches.push(i);
+   }
+   const open=range?.[1]||(all?String(store.opening_time||'').slice(0,5):'');
+   const close=range?.[2]||(all?String(store.closing_time||'').slice(0,5):'');
+   for(const weekday of matches)result.push({store_id:store.id,weekday,opens_at:open||null,closes_at:close||null,closed:!open||!close||segment.includes('fechado')});
+  }
+ }
+ return result;
+}
 async function loadData(force=false){
  if(db&&!force&&Date.now()-lastLoad<90000)return db;
  if(loadPromise)return loadPromise;
@@ -409,7 +434,7 @@ async function loadData(force=false){
   const highlightsByStore=new Map(get(8).map(h=>[h.store_id,h]));
   const now=Date.now();
   // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
-  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
+  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:[...get(2),...coreStoreHours(get(0)).filter(h=>!get(2).some(a=>a.store_id===h.store_id&&Number(a.weekday)===h.weekday))],reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
   renderCategoryBrowser(db.stores);lastLoad=Date.now();rehydrate();if(input?.value)updateSuggestions();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;

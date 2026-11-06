@@ -21,7 +21,10 @@ export function contextualIntent(raw,state={}){
  if(askComparison.test(n)&&(ordinals.length>=2||aboutPrevious.test(n)||/\b(compare|comparar|diferenca|qual e melhor|qual vale mais a pena)\b/.test(n))) {
   return {kind:'compare',indices:ordinals.length>=2?[...new Set(ordinals)].slice(0,3):[0,1]};
  }
- const prior=aboutPrevious.test(n)||/^e\s+(?:qual|quais|com|a|as|os|tem)/.test(n)||/^(?:qual|quais|alguma|algum|tem|mostra|mostre|quero|me diga|me mostre|prefiro)\b/.test(n);
+ // Perguntas curtas dependem da lista anterior, sem mudar o assunto pesquisado.
+ // Não capturar "a segunda entrega?": a seleção ordinal pertence ao interpretador.
+ const shortFollowup=/^(?:e\s+)?(?:(?:tem|ha|existe|mostra|mostre|quero|prefiro)\s+)?(?:(?:alguma|algum|uma|um|outra|outro|opcao|loja)\s+)?(?:mais\s+)?(?:barata|barato|em conta|economica|economico|perto|proxima|proximo|bem avaliada|bem avaliado)(?:\s+que\s+(?:essa|esta|a anterior))?\??$/.test(n);
+ const prior=aboutPrevious.test(n)||/^e\s+(?:qual|quais|com|a|as|os|uma|um|alguma|algum|tem|mais)/.test(n)||/^(?:qual|quais|alguma|algum|tem|mostra|mostre|quero|me diga|me mostre|prefiro|existe|ha)\b/.test(n)||shortFollowup;
  if(prior){
   if(deliveryRe.test(n)&&/\b(qual|quais|alguma|algum|tem|com|entrega|entregam|fazem)\b/.test(n)&&!/\b(preco|taxa|quanto|valor|horario)\b/.test(n))return{kind:'filterPrevious',attribute:/\b(sem|nao)\s+(?:faz|tem|oferece)?\s*(?:entrega|delivery)\b/.test(n)?'noDelivery':'delivery'};
   if(cheaper.test(n))return{kind:'sortPrevious',attribute:'price'};

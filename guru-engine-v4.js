@@ -385,25 +385,22 @@ function extendCanonicalTaxonomy(stores=[]){
 }
 // Converte os horários publicados no COREDB para o formato semanal usado pelo filtro.
 function coreStoreHours(stores){
- const days=['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
- const result=[];
+ const days=['domingo','segunda','terca','quarta','quinta','sexta','sabado'],result=[];
  for(const store of stores){
-  const raw=norm(store.operating_days||'');
-  if(!raw)continue;
-  const segments=String(store.operating_days).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(';');
+  const segments=String(store.operating_days||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(';');
   for(const segment of segments){
-   const range=segment.match(/(\\d{1,2}:\\d{2})\\s*[-–]\\s*(\\d{1,2}:\\d{2})/);
-   const all=/(segunda\\s+a\\s+domingo|todos\\s+os\\s+dias)/.test(segment);
-   const matches=[];
-   if(all)matches.push(...[0,1,2,3,4,5,6]);
+   const range=segment.match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+   const all=/(segunda\s+a\s+domingo|todos\s+os\s+dias)/.test(segment);
+   const matched=[];
+   if(all)matched.push(0,1,2,3,4,5,6);
    else{
-    const span=segment.match(/(domingo|segunda|terca|quarta|quinta|sexta|sabado)\\s+a\\s+(domingo|segunda|terca|quarta|quinta|sexta|sabado)/);
-    if(span){let i=days.indexOf(span[1]),end=days.indexOf(span[2]);for(let n=0;n<7;n++){matches.push(i);if(i===end)break;i=(i+1)%7}}
-    else for(let i=0;i<7;i++)if(new RegExp('\\b'+days[i]+'\\b').test(segment))matches.push(i);
+    const span=segment.match(/(domingo|segunda|terca|quarta|quinta|sexta|sabado)\s+a\s+(domingo|segunda|terca|quarta|quinta|sexta|sabado)/);
+    if(span){let i=days.indexOf(span[1]);const last=days.indexOf(span[2]);for(let n=0;n<7;n++){matched.push(i);if(i===last)break;i=(i+1)%7}}
+    else for(let i=0;i<7;i++)if(new RegExp('\\b'+days[i]+'\\b').test(segment))matched.push(i);
    }
-   const open=range?.[1]||(all?String(store.opening_time||'').slice(0,5):'');
-   const close=range?.[2]||(all?String(store.closing_time||'').slice(0,5):'');
-   for(const weekday of matches)result.push({store_id:store.id,weekday,opens_at:open||null,closes_at:close||null,closed:!open||!close||segment.includes('fechado')});
+   const opens=range?.[1]||(all?String(store.opening_time||'').slice(0,5):'');
+   const closes=range?.[2]||(all?String(store.closing_time||'').slice(0,5):'');
+   for(const weekday of matched)result.push({store_id:store.id,weekday,opens_at:opens||null,closes_at:closes||null,closed:segment.includes('fechado')||!opens||!closes});
   }
  }
  return result;
@@ -907,7 +904,7 @@ function replyAboutStore(text,ask,filter={}){
  if(record?.answer&&!structuredAsk&&!explicitCatalog){add(String(record.answer));return}
  if(ask==='knowledge'){if(db.unavailable.knowledge){add('Não consegui consultar as respostas cadastradas desta loja agora. Tente novamente.');return}recordUnansweredKnowledge(text,s.category);add('Não encontrei uma resposta específica cadastrada. Dados da loja: '+[s.name,s.category,s.group,s.address].filter(Boolean).join(' · ')+'.');return}
  if(ask==='hours'){
-  if(db.unavailable.hours){add('Não consegui consultar os horários dessa loja agora. Tente novamente.');return}
+  if(db.unavailable.hours&&!(db.hours||[]).some(x=>x.store_id===s.id)){add('Não consegui consultar os horários dessa loja agora. Tente novamente.');return}
   const entries=(db.hours||[]).filter(x=>x.store_id===s.id&&Number(x.weekday)===day);
   const open=entries.filter(h=>!h.closed&&h.opens_at&&h.closes_at);
   if(open.length){

@@ -278,10 +278,31 @@ export function nextState(current,plan){
  next.query=plan.raw;
  return next;
 }
+// Categoria principal é adicional: os nomes legados continuam válidos para pesquisa.
+const LEGACY_CATEGORY_FAMILIES={
+ 'roupas':['Moda e acessórios'],
+ 'mercado':['Mercados e alimentos'],
+ 'comida':['Restaurantes e lanchonetes','Padarias e doces','Sorvetes e açaí'],
+ 'beleza':['Beleza e estética'],
+ 'farmacia':['Saúde e farmácias'],
+ 'construcao':['Construção e casa'],
+ 'automoveis':['Automóveis'],
+ 'tecnologia':['Tecnologia e eletrônicos'],
+ 'pet shop':['Animais e agropecuária'],
+ 'agropecuaria':['Animais e agropecuária'],
+ 'servicos':['Serviços especializados'],
+ 'varejo':['Papelarias e variedades','Moda e acessórios','Construção e casa']
+};
+function categoryMatchesStore(store,requested){
+ const asked=norm(requested);
+ if(!asked)return true;
+ if(norm(store.category)===asked||norm(store.main_category)===asked)return true;
+ return (LEGACY_CATEGORY_FAMILIES[asked]||[]).some(group=>norm(group)===norm(store.main_category));
+}
 function storeGroups(store){
  // Grupos e especialidades são caminhos de descoberta equivalentes;
  // a especialidade pode ser mais específica que o grupo principal.
- return [...new Set([store.group,...(Array.isArray(store.groups)?store.groups:[]),...(Array.isArray(store.specialties)?store.specialties:[])].map(norm).filter(Boolean))];
+ return [...new Set([store.category,store.group,...(Array.isArray(store.groups)?store.groups:[]),...(Array.isArray(store.specialties)?store.specialties:[])].map(norm).filter(Boolean))];
 }
 function productName(p){return norm([p.name,p.description,p.category,p.brand,p.color,(Array.isArray(p.sizes)?p.sizes:[]).join(' ')].join(' '))}
 export function activePromo(p,now=Date.now()){
@@ -379,10 +400,10 @@ export function explainEmptySearch(data={},state={},position=null){
  const active=(data.stores||[]).filter(s=>s.active===true&&s.status==='active');
  const category=state.category,group=state.group;
  if(!active.length)return 'Não há estabelecimentos ativos disponíveis no cadastro neste momento.';
- if(category&&!active.some(s=>norm(s.category)===norm(category))){
+ if(category&&!active.some(s=>categoryMatchesStore(s,category))){
   return 'Não há estabelecimentos ativos cadastrados na categoria '+category+' no momento. Você pode pesquisar outra categoria.';
  }
- if(group&&!active.some(s=>(!category||norm(s.category)===norm(category))&&storeGroups(s).includes(norm(group)))){
+ if(group&&!active.some(s=>(!category||categoryMatchesStore(s,category))&&storeGroups(s).includes(norm(group)))){
   return 'Não há estabelecimentos ativos cadastrados como '+group+' no momento. Você pode pesquisar outro tipo de estabelecimento.';
  }
  // Diga qual combinação realmente falhou: nunca confunda ausência de Pix com falha do interpretador.
@@ -460,11 +481,11 @@ export function searchStores(data={},state={},position=null,options={}){
  for(const k of knowledge)if(k.active!==false){if(!kByStore.has(k.store_id))kByStore.set(k.store_id,[]);kByStore.get(k.store_id).push(k)}
  for(const store of stores){
   if(store.active!==true||store.status!=='active')continue;
-  if(state.category&&norm(store.category)!==norm(state.category))continue;
+  if(state.category&&!categoryMatchesStore(store,state.category))continue;
   const groups=storeGroups(store);
   if(state.group&&!groups.includes(norm(state.group)))continue;
   if(state.specialtyTerm&&!(Array.isArray(store.specialties)?store.specialties:[]).some(s=>norm(s)===norm(state.specialtyTerm)))continue;
-  if((state.excludedCategories||[]).includes(norm(store.category)))continue;
+  if((state.excludedCategories||[]).some(group=>categoryMatchesStore(store,group)))continue;
   if(groups.some(g=>(state.excludedGroups||[]).includes(g)))continue;
   if(f.delivery===true&&!store.delivery)continue;
   if(f.delivery===false&&store.delivery)continue;

@@ -81,6 +81,7 @@ const CATEGORY_EDGE='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/admin
 const CATEGORY_CORE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
 let classificationTaxonomy=null;
 let categoryEditorBusy=false;
+let categoryEditorRequestId=0;
 async function loadClassificationTaxonomy(){
  const [categories,groups]=await Promise.all([
   sb.from('local_ai_taxonomy_categories').select('id,name').eq('active',true).order('sort_order'),
@@ -94,11 +95,20 @@ async function loadClassificationTaxonomy(){
  return classificationTaxonomy;
 }
 async function openCategoryEditor(id){
+ // Cada abertura possui sua própria identidade. Respostas assíncronas antigas
+ // não podem preencher a janela depois que outra loja for selecionada.
+ if(categoryEditorBusy)return;
+ const requestId=++categoryEditorRequestId;
  const store=stores.find(s=>s.id===id);
  if(!store){toast('Loja não encontrada.');return}
- if(categoryEditorBusy)return;
  let tax;
- try{tax=await loadClassificationTaxonomy()}catch(error){toast(error.message);return}
+ try{
+  tax=await loadClassificationTaxonomy();
+  if(requestId!==categoryEditorRequestId)return;
+ }catch(error){
+  if(requestId===categoryEditorRequestId)toast(error.message);
+  return;
+ }
  let modal=document.getElementById('categoryEditorModal');
  if(!modal){
   modal=document.createElement('div');
@@ -106,7 +116,7 @@ async function openCategoryEditor(id){
   modal.innerHTML='<div class="modal-lite-card" role="dialog" aria-modal="true" aria-labelledby="categoryEditorTitle" style="width:min(530px,calc(100vw - 28px));max-height:90dvh;overflow:auto"><h3 id="categoryEditorTitle">Alterar categoria</h3><p class="meta" id="categoryEditorStore"></p><div class="field"><label for="categoryEditorCategory">Categoria principal</label><select id="categoryEditorCategory"></select></div><div class="field"><label for="categoryEditorGroup">Grupo / tipo de estabelecimento</label><select id="categoryEditorGroup"></select></div><div class="field"><label for="categoryEditorSpecialties">Especialidades (separe por vírgula)</label><textarea id="categoryEditorSpecialties" rows="3" maxlength="2000" placeholder="Ex.: Lanchonete, Salgados"></textarea></div><p class="meta">A mudança altera a classificação usada nas buscas, sem desativar a loja ou excluir produtos.</p><div class="actions-wrap" style="justify-content:flex-end;margin-top:15px;display:flex;gap:8px"><button class="btn sm" id="categoryEditorCancel" type="button">Cancelar</button><button class="btn sm dark" id="categoryEditorSave" type="button">Salvar categoria</button></div><p id="categoryEditorFeedback" role="status" aria-live="polite" style="display:none;margin-top:12px;font-size:12px;line-height:1.5;overflow-wrap:anywhere"></p></div>';
   document.body.appendChild(modal);
  }
- const close=()=>{if(!categoryEditorBusy)modal.classList.add('hidden')};
+ const close=()=>{if(!categoryEditorBusy){categoryEditorRequestId++;modal.classList.add('hidden')}};
  const catInput=modal.querySelector('#categoryEditorCategory');
  const groupInput=modal.querySelector('#categoryEditorGroup');
  const specialtyInput=modal.querySelector('#categoryEditorSpecialties');
@@ -126,32 +136,34 @@ async function openCategoryEditor(id){
  for(const category of tax.categories){
   const option=document.createElement('option');option.value=category.name;option.textContent=category.name;catInput.append(option);
  }
- const startingCategory=tax.categories.some(row=>row.name===store.category)?store.category:tax.categories[0]?.name||'';
- if(!startingCategory){toast('Nenhuma categoria ativa cadastrada.');return}
+ const startingCategory=tax.categories.find(row=>row.name===store.category)?.name;
+ if(!startingCategory){
+  showFeedback('A categoria atual desta loja não está ativa na taxonomia. Revise o cadastro antes de alterar.',true);
+  return;
+ }
  catInput.value=startingCategory;
- const refreshGroups=preserve=>{
+ const refreshGroups=(selectedGroup=null,resetSpecialties=false)=>{
   const cat=tax.categories.find(row=>row.name===catInput.value);
   const available=tax.groups.filter(row=>row.category_id===cat?.id);
-  const previous=preserve?(groupInput.value||store.group||''):'';
+  // Nunca usar groupInput.value como origem: o elemento é reutilizado entre lojas.
   groupInput.replaceChildren();
   const none=document.createElement('option');none.value='';none.textContent='Sem grupo específico';groupInput.append(none);
   for(const group of available){
    const option=document.createElement('option');option.value=group.name;option.textContent=group.name;groupInput.append(option);
   }
-  groupInput.value=available.some(row=>row.name===previous)?previous:'';
-  // Não manter especialidades antigas de outra categoria por acidente.
-  if(!preserve)specialtyInput.value=groupInput.value||'';
+  groupInput.value=selectedGroup&&available.some(row=>row.name===selectedGroup)?selectedGroup:'';
+  if(resetSpecialties)specialtyInput.value='';
  };
  specialtyInput.value=(Array.isArray(store.specialties)?store.specialties:[]).join(', ');
- refreshGroups(true);
- catInput.onchange=()=>refreshGroups(false);
+ refreshGroups(store.group||null);
+ catInput.onchange=()=>refreshGroups(null,true);
  groupInput.onchange=()=>{
   if(!specialtyInput.value.trim()&&groupInput.value)specialtyInput.value=groupInput.value;
  };
  modal.querySelector('#categoryEditorCancel').onclick=close;
  modal.onclick=event=>{if(event.target===modal)close()};
  modal.querySelector('#categoryEditorSave').onclick=async()=>{
-  if(categoryEditorBusy)return;
+  if(categoryEditorBusy||requestId!==categoryEditorRequestId)return;
   const category=catInput.value,group=groupInput.value||null;
   const specialties=[...new Set(specialtyInput.value.split(/[,;\n]+/).map(s=>s.trim()).filter(Boolean))];
   if(!category||specialties.length>20||specialties.some(s=>s.length>120)){

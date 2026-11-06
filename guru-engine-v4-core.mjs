@@ -512,7 +512,11 @@ export function searchStores(data={},state={},position=null,options={}){
   if(where.city&&registeredCity!==norm(where.city))continue;
   if(where.uf&&(!cityUF||norm(cityUF[2])!==norm(where.uf)))continue;
   if(where.neighborhood&&!norm(address).includes(norm(where.neighborhood)))continue;
-  if(!scheduleMatches(store,hours,f,now))continue;
+  const scheduleConfirmed=scheduleMatches(store,hours,f,now);
+  const scheduleUnknown=!hoursByStore.has(store.id);
+  // Na recuperação, lojas sem horário podem aparecer apenas como não confirmadas.
+  // Nunca extrapolar essa regra para "aberta agora" nem incluir horário explicitamente fechado.
+  if(!scheduleConfirmed&&!(options.includeUnknownHours===true&&!f.openNow&&scheduleUnknown))continue;
   const km=distanceKm(position,store);if(f.maxDistance!=null&&(km==null||km>f.maxDistance))continue;
   const rv=rating.get(store.id),avg=rv?rv.sum/rv.count:0;
   if(f.minRating!=null&&(!rv||avg<f.minRating))continue;
@@ -552,7 +556,7 @@ export function searchStores(data={},state={},position=null,options={}){
   if(store.verified)score+=2;
   if(!score){const generic=STOP.has(norm(state.query))||/^(lojas?|comercios?|negocios?|estabelecimentos?|lugares?)\b/.test(norm(state.query));if(!generic)continue;score=1}
   const ranking=storeRankingPoints(store,{products:byStore.get(store.id)||[],hours:hoursByStore.get(store.id)||[],reviews:reviewsByStore.get(store.id)||[]});
-  output.push({store,products:eligible,score,rankScore:ranking.total,reason:reasons,distance:km,rating:avg,reviewCount:rv?.count||0,minPrice:eligible.length?Math.min(...eligible.map(p=>priceOf(p,now.getTime()))):null});
+  output.push({store,products:eligible,score,rankScore:ranking.total,reason:reasons,hoursUnknown:!scheduleConfirmed&&scheduleUnknown,distance:km,rating:avg,reviewCount:rv?.count||0,minPrice:eligible.length?Math.min(...eligible.map(p=>priceOf(p,now.getTime()))):null});
  }
  const sort=f.sort;
  // O mesmo score 0–100 exibido no Admin determina a ordem padrão dos cards.

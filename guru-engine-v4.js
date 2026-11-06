@@ -10,7 +10,7 @@ import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './g
 import {catalogAwareAlternatives} from './guru-search-v8.mjs?v=1';
 import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=2';
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
-import {semanticNeedAlternatives} from './guru-semantic-v12.mjs?v=1';
+import {semanticNeedAlternatives} from './guru-semantic-v12.mjs?v=2';
 import {followupRefinement} from './guru-followup-v13.mjs?v=1';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=24';

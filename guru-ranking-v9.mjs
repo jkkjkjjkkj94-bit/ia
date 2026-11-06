@@ -49,7 +49,7 @@ export function rankV9(rows=[],query='',sort=null){
  const learned=read()[keyForQuery(query)]||{};
  const queryTerms=canonicalTokens(query);
  const normalized=norm(query);
- const evaluated=rows.map((row,index)=>{
+ const evaluated=rows.map(row=>{
   const store=row.store||{};
   const name=norm(store.name);
   const group=norm([store.category,store.group,...(Array.isArray(store.groups)?store.groups:[])].join(' '));
@@ -65,16 +65,9 @@ export function rankV9(rows=[],query='',sort=null){
   if(name&&normalized.includes(name))relevance+=30;
   const learnedCount=Number(learned[String(store.id)]||0);
   // Aprendizado influencia apenas empates e nunca altera o score administrativo.
-  return {...row,contextScore:relevance,learningSignals:learnedCount,index};
+  return {...row,contextScore:relevance,learningSignals:learnedCount};
  });
- if(!['rating','price','distance'].includes(sort)){
-  evaluated.sort((a,b)=>
-   Number(b.rankScore||0)-Number(a.rankScore||0)||
-   b.contextScore-a.contextScore||
-   b.learningSignals-a.learningSignals||
-   Number(b.score||0)-Number(a.score||0)||
-   a.index-b.index
-  );
- }
- return evaluated.map(({index,...row})=>row);
+ // Apenas agrega sinais: contextualRank é o único classificador final.
+ // Não reordene aqui, inclusive quando o usuário pediu preço, distância ou nota.
+ return evaluated;
 }

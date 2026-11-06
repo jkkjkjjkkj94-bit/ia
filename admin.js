@@ -103,13 +103,24 @@ async function openCategoryEditor(id){
  if(!modal){
   modal=document.createElement('div');
   modal.id='categoryEditorModal';modal.className='modal-lite hidden';
-  modal.innerHTML='<div class="modal-lite-card" role="dialog" aria-modal="true" aria-labelledby="categoryEditorTitle" style="width:min(530px,calc(100vw - 28px));max-height:90dvh;overflow:auto"><h3 id="categoryEditorTitle">Alterar categoria</h3><p class="meta" id="categoryEditorStore"></p><div class="field"><label for="categoryEditorCategory">Categoria principal</label><select id="categoryEditorCategory"></select></div><div class="field"><label for="categoryEditorGroup">Grupo / tipo de estabelecimento</label><select id="categoryEditorGroup"></select></div><div class="field"><label for="categoryEditorSpecialties">Especialidades (separe por vírgula)</label><textarea id="categoryEditorSpecialties" rows="3" maxlength="2000" placeholder="Ex.: Lanchonete, Salgados"></textarea></div><p class="meta">A mudança altera a classificação usada nas buscas, sem desativar a loja ou excluir produtos.</p><div class="actions-wrap" style="justify-content:flex-end;margin-top:15px;display:flex;gap:8px"><button class="btn sm" id="categoryEditorCancel" type="button">Cancelar</button><button class="btn sm dark" id="categoryEditorSave" type="button">Salvar categoria</button></div></div>';
+  modal.innerHTML='<div class="modal-lite-card" role="dialog" aria-modal="true" aria-labelledby="categoryEditorTitle" style="width:min(530px,calc(100vw - 28px));max-height:90dvh;overflow:auto"><h3 id="categoryEditorTitle">Alterar categoria</h3><p class="meta" id="categoryEditorStore"></p><div class="field"><label for="categoryEditorCategory">Categoria principal</label><select id="categoryEditorCategory"></select></div><div class="field"><label for="categoryEditorGroup">Grupo / tipo de estabelecimento</label><select id="categoryEditorGroup"></select></div><div class="field"><label for="categoryEditorSpecialties">Especialidades (separe por vírgula)</label><textarea id="categoryEditorSpecialties" rows="3" maxlength="2000" placeholder="Ex.: Lanchonete, Salgados"></textarea></div><p class="meta">A mudança altera a classificação usada nas buscas, sem desativar a loja ou excluir produtos.</p><div class="actions-wrap" style="justify-content:flex-end;margin-top:15px;display:flex;gap:8px"><button class="btn sm" id="categoryEditorCancel" type="button">Cancelar</button><button class="btn sm dark" id="categoryEditorSave" type="button">Salvar categoria</button></div><p id="categoryEditorFeedback" role="status" aria-live="polite" style="display:none;margin-top:12px;font-size:12px;line-height:1.5;overflow-wrap:anywhere"></p></div>';
   document.body.appendChild(modal);
  }
  const close=()=>{if(!categoryEditorBusy)modal.classList.add('hidden')};
  const catInput=modal.querySelector('#categoryEditorCategory');
  const groupInput=modal.querySelector('#categoryEditorGroup');
  const specialtyInput=modal.querySelector('#categoryEditorSpecialties');
+ const feedback=modal.querySelector('#categoryEditorFeedback');
+ const showFeedback=(message,isError=false)=>{
+  feedback.textContent=message;
+  feedback.style.display='block';
+  feedback.style.color=isError?'#a32121':'#256d44';
+  feedback.style.background=isError?'#fff2f2':'#ecf8ef';
+  feedback.style.border='1px solid '+(isError?'#f1cccc':'#c8e6d0');
+  feedback.style.borderRadius='10px';
+  feedback.style.padding='10px 12px';
+ };
+ feedback.textContent='';feedback.style.display='none';
  modal.querySelector('#categoryEditorStore').textContent=store.name+' · '+(store.status==='active'?'Ativa':store.status||'');
  catInput.replaceChildren();
  for(const category of tax.categories){
@@ -144,13 +155,18 @@ async function openCategoryEditor(id){
   const category=catInput.value,group=groupInput.value||null;
   const specialties=[...new Set(specialtyInput.value.split(/[,;\n]+/).map(s=>s.trim()).filter(Boolean))];
   if(!category||specialties.length>20||specialties.some(s=>s.length>120)){
-   toast('Verifique a categoria e o máximo de 20 especialidades (até 120 caracteres cada).');return;
+   showFeedback('Verifique a categoria e o máximo de 20 especialidades (até 120 caracteres cada).',true);return;
+  }
+  if(!tax.groups.some(row=>row.name===group&&row.category_id===tax.categories.find(c=>c.name===category)?.id)&&group){
+   showFeedback('O grupo selecionado não pertence à categoria escolhida.',true);return;
   }
   if(!window.confirm('Salvar a categoria e o grupo de '+store.name+'?'))return;
   categoryEditorBusy=true;
   const save=modal.querySelector('#categoryEditorSave');save.disabled=true;save.textContent='Salvando...';
   try{
-   const {data:{session:current}}=await sb.auth.getSession();
+   showFeedback('Salvando a classificação no banco de dados...');
+   const {data:{session:current},error:sessionError}=await sb.auth.getSession();
+   if(sessionError)throw sessionError;
    if(!current?.access_token)throw Error('Sessão administrativa expirada.');
    const response=await fetch(CATEGORY_EDGE,{
     method:'POST',
@@ -158,14 +174,25 @@ async function openCategoryEditor(id){
     body:JSON.stringify({action:'change_category',id:store.id,category,group,specialties})
    });
    const payload=await response.json().catch(()=>({}));
-   if(!response.ok||payload?.ok!==true)throw Error(payload.error||'Erro ao salvar a categoria.');
+   if(!response.ok||payload?.ok!==true||!payload.store)throw Error(payload.error||'O servidor não confirmou a alteração (HTTP '+response.status+').');
+   if(payload.store.id!==store.id||payload.store.category!==category||(payload.store.group||null)!==group){
+    throw Error('O servidor retornou uma classificação diferente da solicitada. Atualize o painel e tente novamente.');
+   }
+   // A resposta da função é a fonte autoritativa; não depender de um reload amplo.
+   const index=stores.findIndex(s=>s.id===store.id);
+   if(index!==-1)stores[index]={...stores[index],...payload.store};
+   rebuildStoreRankings();renderStoreFilters();renderStores();
    await logAction('store_category_changed','store',store.id,{
     previous_category:store.category,previous_group:store.group,category,group,specialties
    });
    modal.classList.add('hidden');
-   await loadData();
    toast('Categoria e especialidades atualizadas.');
-  }catch(error){toast(error.message||'Não foi possível salvar a categoria.')}
+   // Recarregamento auxiliar: erro secundário não deve mascarar gravação confirmada.
+   loadData().catch(error=>console.warn('[GURU Categoria] Dados atualizados; falha ao recarregar painel:',error));
+  }catch(error){
+   console.error('[GURU Categoria] Falha ao salvar:',error);
+   showFeedback(error.message||'Não foi possível salvar a categoria.',true);
+  }
   finally{categoryEditorBusy=false;save.disabled=false;save.textContent='Salvar categoria'}
  };
  modal.classList.remove('hidden');

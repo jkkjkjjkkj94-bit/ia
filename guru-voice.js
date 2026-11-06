@@ -11,6 +11,7 @@
   let recognition = null;
   let state = 'idle';
   let finalText = '';
+  let previousSegments = '';
   let interimText = '';
   let initialText = '';
   let heardSpeech = false;
@@ -42,7 +43,7 @@
   };
   const join = (...parts) => parts.map(x => String(x || '').trim()).filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   const renderTranscript = () => {
-    const next = join(initialText, finalText, interimText);
+    const next = join(initialText, previousSegments, finalText, interimText);
     input.value = next;
     input.dispatchEvent(new Event('input', { bubbles: true }));
   };
@@ -64,7 +65,7 @@
     if (!pendingSubmit) return;
     pendingSubmit = false;
     const query = join(initialText, finalText, interimText);
-    if (!query || !join(finalText, interimText)) {
+    if (!query || !join(previousSegments, finalText, interimText)) {
       statusText('Não consegui identificar a pergunta. Tente novamente ou digite.');
       return;
     }
@@ -100,6 +101,7 @@
     }
     setState('idle');
     finalText = '';
+    previousSegments = '';
     interimText = '';
     initialText = '';
     heardSpeech = false;
@@ -180,6 +182,9 @@
       // Retomada limitada, sem solicitar permissão novamente.
       if (restartCount < MAX_RESTARTS && !['not-allowed', 'service-not-allowed', 'audio-capture', 'language-not-supported', 'network'].includes(lastError)) {
         restartCount++;
+        previousSegments = join(previousSegments, finalText);
+        finalText = '';
+        interimText = '';
         setState('starting');
         statusText('Reconectando ao microfone…');
         restartTimer = setTimeout(() => {
@@ -191,7 +196,7 @@
         }, 320);
       } else {
         setState('idle');
-        if (join(finalText, interimText)) {
+        if (join(previousSegments, finalText, interimText)) {
           pendingSubmit = true;
           send();
         } else if (!lastError || lastError === 'no-speech') {

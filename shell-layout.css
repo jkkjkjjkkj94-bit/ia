@@ -339,3 +339,49 @@ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:
  }
  .chat .ctx .guru-clear-filters{padding-inline:4px}
 }
+
+/* GURU v23 — barra de filtros leve, hierarquia visual e mobile compacto */
+.chat .ctx{
+ gap:6px 7px!important;
+ padding:7px 0 9px!important;
+ align-items:center!important;
+}
+.chat .ctx .guru-filter-chip,
+.chat .ctx .guru-filter-more{
+ border:1px solid #e6e7e9!important;
+ background:#f7f8f9!important;
+ color:#36393e!important;
+ border-radius:12px!important;
+ min-height:34px!important;
+ padding:7px 11px!important;
+ font-size:12px!important;
+ font-weight:500!important;
+ line-height:1.35!important;
+ max-width:min(100%,280px)!important;
+ box-shadow:none!important;
+}
+.chat .ctx .guru-filter-chip{
+ text-align:left!important;
+ justify-content:space-between!important;
+}
+.chat .ctx .guru-filter-chip:hover,
+.chat .ctx .guru-filter-more:hover{background:#ededf0!important;border-color:#d9dade!important}
+.chat .ctx .guru-filter-remove{color:#8c9097!important;font-size:17px!important;margin-left:3px!important}
+.chat .ctx .guru-filter-more{border-style:dashed!important;background:transparent!important;color:#565a61!important}
+.chat .ctx .guru-clear-filters{
+ border:0!important;background:transparent!important;color:#737780!important;
+ padding:6px 5px!important;min-height:32px!important;
+ font-size:12px!important;text-decoration:underline;text-underline-offset:3px;
+}
+@media(max-width:680px){
+ .chat .ctx{gap:6px!important;padding:5px 0 8px!important}
+ .chat .ctx .guru-filter-chip,
+ .chat .ctx .guru-filter-more{
+  min-height:32px!important;max-width:min(100%,230px)!important;
+  font-size:11px!important;padding:6px 9px!important;border-radius:10px!important;
+ }
+ .chat .ctx .guru-clear-filters{font-size:11px!important;min-height:30px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .chat .ctx button{transition:none!important}
+}

@@ -3,6 +3,19 @@ import{storeRankingPoints}from'./guru-engine-v4-core.mjs?v=20';
 const SUPABASE_URL='https://innziuzgtpfsiywqmies.supabase.co';
 const SUPABASE_KEY='sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1';
 const sb=createClient(SUPABASE_URL,SUPABASE_KEY);
+const CORE_URL='https://ccsypggvelcxsqszepfs.supabase.co';
+const CORE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
+const core=createClient(CORE_URL,CORE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+async function readAllCore(table){
+ const pageSize=500,items=[];
+ for(let start=0;start<50000;start+=pageSize){
+  const {data,error}=await core.from(table).select('*').order('created_at',{ascending:false}).range(start,start+pageSize-1);
+  if(error)return{data:items,error};
+  items.push(...(data||[]));
+  if(!data||data.length<pageSize)break;
+ }
+ return{data:items,error:null};
+}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
@@ -39,8 +52,8 @@ function getHighlight(id){const now=Date.now();return highlights.find(h=>h.store
 function highlightType(id){return getHighlight(id)?.highlight_type||'normal'}
 function highlightBadge(id){const h=getHighlight(id);if(!h||h.highlight_type==='normal')return'';return `<span class="badge ${h.highlight_type==='sponsored'?'sponsored':'good'}">${h.highlight_type==='sponsored'?'Patrocinada':'Verificada'}</span>`}
 async function loadData(){const results=await Promise.all([
- sb.from('local_ai_stores').select('*').order('created_at',{ascending:false}),
- sb.from('local_ai_products').select('*').order('created_at',{ascending:false}),
+ readAllCore('local_ai_stores'),
+ readAllCore('local_ai_products'),
  sb.from('local_ai_profiles').select('*').order('created_at',{ascending:false}),
  sb.from('local_ai_accounts').select('*').order('created_at',{ascending:false}),
  sb.from('local_ai_store_questions').select('*').order('last_asked_at',{ascending:false}),

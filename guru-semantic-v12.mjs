@@ -13,7 +13,13 @@ const RULES=[
  {pattern:/\b(?:estou\s+)?com\s+vontade\s+de\s+(?:comer\s+)?pizza\b/,categories:['pizzaria']},
  {pattern:/\b(?:meu|minha)\s+(?:carro|moto)\s+(?:quebrou|nao\s+liga)\b/,categories:['oficina mecanica','mecanica']},
  {pattern:/\b(?:quero|preciso|gostaria\s+de)\s+(?:um\s+)?(?:lugar\s+)?(?:para\s+)?jantar\b/,categories:['restaurante']},
- {pattern:/\b(?:encomendar|comprar|pedir)\s+(?:um\s+)?bolo\s+de\s+aniversario\b/,categories:['confeitaria','padaria']}
+ {pattern:/\b(?:encomendar|comprar|pedir)\s+(?:um\s+)?bolo\s+de\s+aniversario\b/,categories:['confeitaria','padaria']},
+ // Necessidades indiretas: sugerir apenas tipos de loja já existentes no catálogo ativo.
+ {pattern:/\b(?:organizar|preparar|montar|planejar|fazer)\s+(?:uma?\s+)?(?:festa|aniversario|comemoracao)\b/,categories:['artigos para festas','loja de festas','decoracao de festas']},
+ {pattern:/\b(?:pintar|repintar)\s+(?:a\s+|o\s+|minha\s+|meu\s+)?(?:casa|quarto|parede|sala|muro)\b/,categories:['materiais de construcao','material de construcao','construcao','tintas']},
+ {pattern:/\b(?:reformar|renovar)\s+(?:a\s+|o\s+|minha\s+|meu\s+)?(?:casa|quarto|cozinha|banheiro)\b/,categories:['materiais de construcao','material de construcao','construcao']},
+ {pattern:/\b(?:algo|coisas|itens|produtos|acessorios)\s+para\s+(?:o\s+|a\s+|meu\s+|minha\s+)?(?:cachorro|cao|gato|pet)\b/,categories:['pet shop','petshop','agropecuaria']},
+ {pattern:/\b(?:fazer|organizar|preparar)\s+(?:uma?\s+)?(?:faxina|limpeza)\s+(?:na\s+|da\s+|em\s+)?(?:casa|cozinha|banheiro)\b/,categories:['mercado','supermercado','produtos de limpeza']}
 ];
 const NEGATIVE=/\b(?:nao|sem|exceto|evitar|tirando)\b/;
 const includesPhrase=(text,term)=>(' '+text+' ').includes(' '+term+' ');
@@ -34,7 +40,9 @@ export function semanticNeedAlternatives(raw,data={}){
  const active=activeCategories(data),out=[],seen=new Set([n]);
  for(const rule of RULES){
   if(!rule.pattern.test(n))continue;
-  const category=rule.categories.find(c=>[...active].some(v=>includesPhrase(v,c)||includesPhrase(c,v)&&v.length>=6));
+  const category=rule.categories
+   .map(c=>[...active].find(v=>includesPhrase(v,c)||(includesPhrase(c,v)&&v.length>=6)))
+   .find(Boolean);
   if(!category)continue;
   const replaced=normalizeQuery(n.replace(rule.pattern,' '+category+' '));
   // Nomes, horários, preço e demais restrições fora da expressão permanecem intactos.

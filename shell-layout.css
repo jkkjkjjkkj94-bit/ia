@@ -306,3 +306,36 @@ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:
     min-height: 0;
   }
 }
+
+
+/* GURU — filtros compactos, legíveis e responsivos (v22). */
+.chat .ctx{
+ display:flex;align-items:center;align-content:center;flex-wrap:wrap;
+ gap:7px;max-height:none;overflow:visible;white-space:normal;
+ padding:5px 1px 8px;box-sizing:border-box;
+}
+.chat .ctx .guru-filter-chip,
+.chat .ctx .guru-filter-more,
+.chat .ctx .guru-clear-filters{
+ display:inline-flex;align-items:center;justify-content:center;gap:7px;
+ flex:0 1 auto;min-width:0;max-width:min(100%,340px);
+ min-height:32px;padding:7px 11px;
+ border:1px solid #e5e5e5;border-radius:999px;
+ background:#f7f7f7;color:#474747;
+ font-size:12px;font-weight:500;line-height:1.25;
+ text-decoration:none;white-space:normal;overflow-wrap:anywhere;
+ cursor:pointer;transition:background .15s,border-color .15s;
+}
+.chat .ctx .guru-filter-chip[hidden]{display:none!important}
+.chat .ctx .guru-filter-chip:hover{background:#ededed;border-color:#d2d2d2}
+.chat .ctx .guru-filter-remove{font-size:17px;font-weight:400;line-height:1;color:#858585;flex-shrink:0}
+.chat .ctx .guru-filter-more{background:transparent;border-style:dashed;color:#555}
+.chat .ctx .guru-clear-filters{background:transparent;border-color:transparent;color:#777;padding-inline:5px;font-weight:400}
+.chat .ctx button:focus-visible{outline:2px solid #555;outline-offset:2px}
+@media(max-width:680px){
+ .chat .ctx{gap:6px;padding:4px 0 7px}
+ .chat .ctx .guru-filter-chip,.chat .ctx .guru-filter-more,.chat .ctx .guru-clear-filters{
+  min-height:31px;padding:6px 9px;font-size:11px;max-width:100%;
+ }
+ .chat .ctx .guru-clear-filters{padding-inline:4px}
+}

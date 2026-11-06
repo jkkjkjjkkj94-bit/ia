@@ -1249,7 +1249,7 @@ async function run(text){
  hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE)).then(natural=>{if(natural && !searchBusy)add(natural)}).catch(()=>{});
  save();
 }
-async async function submitSelectedStoreHours(store){
+async function submitSelectedStoreHours(store){
  if(!store||searchBusy)return;
  searchBusy=true;input.disabled=true;
  add('Qual o horário?',true);

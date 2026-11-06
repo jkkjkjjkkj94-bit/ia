@@ -252,11 +252,25 @@ function renderContext(){
  if(state.excludedGroups?.length)chip('Excluídos: '+state.excludedGroups.join(', '),()=>{state.excludedGroups=[]});
  if(!chips.length){ctx.hidden=true;return}
  ctx.hidden=false;
- for(const entry of chips){
-  const button=el('button','guru-filter-chip',entry.label+' ×');button.type='button';
+ const priority=chips.filter(x=>/^(Cidade:|sábado$|domingo$|segunda$|terça$|quarta$|quinta$|sexta$|Abertas agora)/i.test(x.label));
+ const rest=chips.filter(x=>!priority.includes(x));
+ const ordered=[...priority,...rest];
+ const collapsed=ordered.length>3&&!ctx.dataset.expanded;
+ ctx.classList.toggle('guru-context-expanded',!collapsed);
+ ordered.forEach((entry,index)=>{
+  const button=el('button','guru-filter-chip',entry.label);
+  button.type='button';
+  if(collapsed&&index>=3)button.hidden=true;
+  const remove=el('span','guru-filter-remove','×');remove.setAttribute('aria-hidden','true');button.appendChild(remove);
   button.setAttribute('aria-label','Remover filtro '+entry.label);
   button.addEventListener('click',()=>{entry.clear();renderContext();save();if(db)refreshFilteredResults()});
   ctx.appendChild(button);
+ });
+ if(ordered.length>3){
+  const more=el('button','guru-filter-more',collapsed?'+'+(ordered.length-3)+' filtros':'Mostrar menos');more.type='button';
+  more.setAttribute('aria-expanded',String(!collapsed));
+  more.addEventListener('click',()=>{if(collapsed)ctx.dataset.expanded='true';else delete ctx.dataset.expanded;renderContext()});
+  ctx.appendChild(more);
  }
  const clear=el('button','guru-clear-filters','Limpar filtros');
  clear.type='button';clear.addEventListener('click',()=>{

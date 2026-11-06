@@ -1272,7 +1272,7 @@ async function submitSelectedStoreHours(store){
   try{await showAssistantReply(fragment)}finally{input.disabled=false;searchBusy=false}
  }
 }
-function submitText(raw){
+async function submitText(raw){
  const t=String(raw||'').trim();if(!t)return;
  setSuggestions();
  if(searchBusy){notice('Aguarde a conclusão da busca atual.');return}

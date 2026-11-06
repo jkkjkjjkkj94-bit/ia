@@ -1018,6 +1018,13 @@ async function run(text){
  const routed=routeConversation(text);
  if(routed.kind==='social'){add(routed.answer);return}
  text=routed.query;
+ // Pergunta curta sobre horário nunca deve iniciar uma busca de estabelecimentos.
+ // Sem loja selecionada, solicitar escolha explícita para evitar horários de terceiros.
+ if(/^(?:qual(?: e| eh)? o horario\??|que horas (?:abre|fecha)\??|horario\??)$/i.test(norm(text).trim())){
+  if(!state.selectedStore){add('Selecione uma loja pelo botão “Ver loja” para consultar o horário dela.');return}
+  await loadData();
+  replyAboutStore(text,'hours',{});renderContext();save();return;
+ }
  const pendingNeed=state.shoppingNeed;
  const chosenNeed=pendingNeed?choiceForNeed(pendingNeed,text):null;
  if(chosenNeed){

@@ -99,14 +99,33 @@ async function openCategoryEditor(id){
  // não podem preencher a janela depois que outra loja for selecionada.
  if(categoryEditorBusy)return;
  const requestId=++categoryEditorRequestId;
- const store=stores.find(s=>s.id===id);
- if(!store){toast('Loja não encontrada.');return}
- let tax;
+ const cachedStore=stores.find(s=>s.id===id);
+ if(!cachedStore){toast('Loja não encontrada.');return}
+ let tax,store;
  try{
-  tax=await loadClassificationTaxonomy();
+  // A lista em memória pode estar desatualizada. Consultar o CORE pelo ID
+  // antes de preencher categoria, grupo ou especialidades.
+  const {data:{session:current},error:sessionError}=await sb.auth.getSession();
+  if(sessionError)throw sessionError;
+  if(!current?.access_token)throw Error('Sessão administrativa expirada. Entre novamente.');
+  const [taxonomy,response]=await Promise.all([
+   loadClassificationTaxonomy(),
+   fetch(CATEGORY_EDGE+'?store_id='+encodeURIComponent(id),{
+    method:'GET',
+    headers:{apikey:CATEGORY_CORE_KEY,Authorization:'Bearer '+current.access_token,Accept:'application/json'},
+    cache:'no-store'
+   })
+  ]);
   if(requestId!==categoryEditorRequestId)return;
+  tax=taxonomy;
+  const payload=await response.json().catch(()=>({}));
+  if(requestId!==categoryEditorRequestId)return;
+  if(!response.ok||payload.error)throw Error(payload.error||'Falha ao consultar o cadastro atual (HTTP '+response.status+').');
+  store=payload.store;
+  if(!store||store.id!==id)throw Error('O servidor não retornou o cadastro correto desta loja.');
+  if(store.name!==cachedStore.name)throw Error('O nome da loja retornada não corresponde ao registro selecionado. Atualize a lista.');
  }catch(error){
-  if(requestId===categoryEditorRequestId)toast(error.message);
+  if(requestId===categoryEditorRequestId)toast('Não foi possível carregar a classificação atual: '+(error.message||'erro de conexão'));
   return;
  }
  let modal=document.getElementById('categoryEditorModal');
@@ -131,7 +150,7 @@ async function openCategoryEditor(id){
   feedback.style.padding='10px 12px';
  };
  feedback.textContent='';feedback.style.display='none';
- modal.querySelector('#categoryEditorStore').textContent=store.name+' · '+(store.status==='active'?'Ativa':store.status||'');
+ modal.querySelector('#categoryEditorStore').textContent=store.name+' · '+(store.status==='active'?'Ativa':store.status||'')+' · Cadastro atualizado';
  catInput.replaceChildren();
  for(const category of tax.categories){
   const option=document.createElement('option');option.value=category.name;option.textContent=category.name;catInput.append(option);

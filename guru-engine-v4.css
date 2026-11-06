@@ -452,3 +452,11 @@
  .guru-need-item{font-size:10.5px;padding:7px 9px}
  .guru-need-options .guru-need-choice{flex:1 1 auto;text-align:center}
 }
+
+/* Cards mobile: mostrar somente informacoes relevantes para a escolha da loja. */
+@media (max-width:680px) {
+  .store-result-card.smart-card > .guru-need-verification,
+  .store-result-card.smart-card > .guru-score-line {
+    display:none;
+  }
+}

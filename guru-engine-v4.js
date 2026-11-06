@@ -337,6 +337,29 @@ function mergeTaxonomy(cats=[],groups=[],terms=[]){
  taxonomy=map;aliases=catAliases;
 }
 // Mantém a taxonomia já treinada e acrescenta a navegação unificada, sem apagar sinônimos.
+// Catálogo navegável: só exibe grupos e especialidades que realmente têm lojas.
+function renderCategoryBrowser(stores=[]){
+ const host=document.getElementById('guruCategoryList');if(!host)return;
+ const groups=new Map();
+ for(const s of stores){
+  if(s.active!==true||s.status!=='active'||!s.main_category)continue;
+  const main=s.main_category,sub=s.category||'Outras especialidades';
+  if(!groups.has(main))groups.set(main,{count:0,children:new Map()});
+  const bucket=groups.get(main);bucket.count++;
+  bucket.children.set(sub,(bucket.children.get(sub)||0)+1);
+ }
+ host.replaceChildren();
+ for(const [main,item] of [...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0],'pt-BR'))){
+  const row=el('details','guru-category-item'),heading=el('summary','',main+' ('+item.count+')');
+  const actions=el('div','guru-category-actions');
+  const addButton=(label,query)=>{const button=el('button','guru-category-option',label);button.type='button';button.addEventListener('click',()=>submitText(query));actions.appendChild(button)};
+  addButton('Todas as lojas',main);
+  for(const [sub,count] of [...item.children.entries()].sort((a,b)=>a[0].localeCompare(b[0],'pt-BR'))){
+   addButton(sub+' ('+count+')',sub);
+  }
+  row.append(heading,actions);host.appendChild(row);
+ }
+}
 function extendCanonicalTaxonomy(stores=[]){
  const legacyNames=new Map();
  for(const s of stores){
@@ -379,7 +402,7 @@ async function loadData(force=false){
   const now=Date.now();
   // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
   db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:get(2),reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
-  lastLoad=Date.now();rehydrate();if(input?.value)updateSuggestions();return db;
+  renderCategoryBrowser(db.stores);lastLoad=Date.now();rehydrate();if(input?.value)updateSuggestions();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;
 }

@@ -3,7 +3,7 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
-import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=2';
+import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=3';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
 import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
 import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './guru-search-v7.mjs?v=2';
@@ -978,7 +978,10 @@ async function run(text){
    const reason=follow.attribute==='price'?'preços dos produtos':follow.attribute==='distance'?'distâncias confirmadas':follow.attribute==='rating'?'avaliações verificadas':follow.attribute==='delivery'?'opções com entrega':follow.attribute==='noDelivery'?'opções sem entrega':'produtos em estoque';
    add('Ainda não tenho '+reason+' suficientes nessas opções. Posso fazer uma nova busca se você quiser.');return;
   }
-  state.lastResults=matching;state.resultOffset=0;save();
+  // O conjunto exibido mudou: uma referência pronominal não deve apontar para uma
+  // loja selecionada antes do refinamento. A próxima escolha deve ser explícita.
+  state.selectedStore=null;state.selectedProduct=null;
+  state.lastResults=matching;state.resultOffset=0;renderContext();save();
   add(follow.kind==='sortPrevious'?'Organizei as opções com base nas informações cadastradas.':'Separei as opções da lista que atendem ao que você pediu.');
   showNextResultPage();return;
  }

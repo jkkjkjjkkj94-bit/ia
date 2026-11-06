@@ -14,7 +14,7 @@
  function merge(previous,next){
   const a=clean(previous),b=clean(next);
   if(!a)return b;if(!b)return a;
-  const norm=x=>x.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const norm=x=>x.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
   const aw=a.split(' '),bw=b.split(' ');
   const max=Math.min(aw.length,bw.length);
   for(let n=max;n>=1;n--){

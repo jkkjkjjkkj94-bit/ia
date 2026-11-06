@@ -1189,9 +1189,9 @@ async function run(text){
   const hint=recovery.mode==='correction'?'Identifiquei uma possível correção de escrita.':recovery.mode==='concept'||recovery.mode==='semantic-need'?'Entendi a necessidade descrita e procurei uma categoria cadastrada.':'Encontrei uma expressão relacionada no catálogo.';
   add(hint+' Pesquisei por “'+recovery.query+'”.');
  }
- const natural=await hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE));
- if(natural)add(natural);
+ // Resultados locais devem aparecer sem aguardar serviço externo de IA.
  showNextResultPage();
+ hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE)).then(natural=>{if(natural && !searchBusy)add(natural)}).catch(()=>{});
  save();
 }
 async function submitText(raw){
@@ -1204,13 +1204,13 @@ async function submitText(raw){
  const typing=showTypingIndicator();
  const start=performance.now();
  replyBuffer=document.createDocumentFragment();
- try{await run(t)}catch(err){msgError(err)}finally{
+ try{await Promise.race([run(t),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Tempo limite da pesquisa')),15000))])}catch(err){console.error('[GURU] Falha na pesquisa',err);try{msgError(err)}catch{add('Não foi possível concluir esta pesquisa. Tente novamente em instantes.')}}finally{
   const remaining=Math.max(0,minTypingMs-(performance.now()-start));
   if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining));
   const completed=replyBuffer;
   replyBuffer=null;
   typing.remove();
-  try{await showAssistantReply(completed)}
+  try{await showAssistantReply(completed)}catch(err){console.error('[GURU] Falha ao mostrar resposta',err);add('Não consegui exibir o resultado. Tente outra pesquisa.');}
   finally{
    input.disabled=false;input.focus();searchBusy=false;
   }

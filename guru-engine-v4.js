@@ -923,10 +923,11 @@ function replyAboutStore(text,ask,filter={}){
  if(ask==='hours'){
   if(db.unavailable.hours&&!(db.hours||[]).some(x=>x.store_id===s.id)){add('Não consegui consultar os horários dessa loja agora. Tente novamente.');return}
   const entries=(db.hours||[]).filter(x=>x.store_id===s.id&&Number(x.weekday)===day);
-  const open=entries.filter(h=>!h.closed&&h.opens_at&&h.closes_at);
+  const open=[...new Map(entries.filter(h=>!h.closed&&h.opens_at&&h.closes_at).map(h=>[String(h.opens_at).slice(0,5)+'-'+String(h.closes_at).slice(0,5),h])).values()];
   if(open.length){
    const ranges=open.map(h=>'das '+String(h.opens_at).slice(0,5)+' às '+String(h.closes_at).slice(0,5));
-   add(s.name+' funciona no '+dayNames[day]+' '+ranges.join(' e ')+'.');
+   const unique=[...new Set(ranges)];
+   add(s.name+' funciona no '+dayNames[day]+' '+unique.join(' e ')+'.');
   }else if(entries.length&&entries.every(x=>x.closed))add('Essa loja está cadastrada como fechada no '+dayNames[day]+'.');
   else add('Essa loja ainda não informou o horário de '+dayNames[day]+'.');
   return;
@@ -1049,6 +1050,13 @@ async function run(text){
  if(userCity&&!state.selectedStore&&!(state.lastResults||[]).length){
   const verified=approvedAnswerFor(text,db.approvedAnswers||[]);
   if(verified){add(verified.answer);return}
+ }
+ // Consulta direta sobre o horário da loja selecionada deve produzir UMA resposta,
+ // sem acionar comparações, pesquisa geral ou outra loja do histórico.
+ if(state.selectedStore && /\\b(?:horario|horarios|que horas|abre|fecha|funciona|funcionamento)\\b/.test(norm(text))
+    && !/\\b(?:quais|lojas|estabelecimentos|mercados|farmacias|padarias|academias|outras|outros|compare|comparar)\\b/.test(norm(text))){
+  const parsed=interpret(text,taxonomy,aliases,state,{products:db?.products||[]});
+  replyAboutStore(text,'hours',parsed.filters||{});renderContext();save();return;
  }
  const refinement=followupRefinement(text,state);
  const follow=refinement?null:contextualIntent(text,state);

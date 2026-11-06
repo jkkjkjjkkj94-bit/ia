@@ -56,17 +56,15 @@
    'language-not-supported':'Português não está disponível no reconhecimento deste navegador.'
   };
   if(fatal[err])finish(fatal[err]);
-  else if(err==='no-speech')say('Não detectei fala. Tente falar novamente.','hint');
-  else if(err!=='aborted')say('A escuta foi interrompida. Tentando recuperar…','hint');
+  else if(err==='no-speech')say('Nenhuma fala detectada. A gravação será encerrada.','hint');
+  else if(err!=='aborted')say('A gravação foi interrompida. Toque no microfone para tentar novamente.','hint');
  };
  rec.onend=()=>{
   starting=false;clearTimeout(watchdog);
   if(!active||requestedStop){ui();return}
+  // Encerramento automático do navegador ou pausa na fala: nunca reiniciar sem clique.
   base=merge(base,final);final='';write();
-  if(Date.now()-started>90000){finish('Tempo máximo de ditado atingido. Confira o texto e envie.');return}
-  if(restarts>=3){finish('A escuta foi interrompida várias vezes. Confira o texto e tente novamente.');return}
-  const id=token;restarts++;say('Reconectando microfone… o texto já captado foi preservado.','hint');
-  restartTimer=setTimeout(()=>begin(id),350*restarts);
+  finish(input.value.trim()?'Gravação encerrada. Confira a pergunta e toque em enviar.':'Gravação encerrada. Toque no microfone para tentar novamente.');
  };
  mic.addEventListener('click',()=>{
   if(active){finish();input.focus();return}

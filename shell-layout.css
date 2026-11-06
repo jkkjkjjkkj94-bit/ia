@@ -282,3 +282,27 @@ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:
     flex-basis:34px;width:34px;min-width:34px;height:34px
   }
 }
+
+
+/* v21 mobile: o titulo inicial nunca se sobrepoe ao teclado ou ao campo de pergunta. */
+@media (max-width: 680px) {
+  body:has(#chatForm:focus-within) .hero,
+  body:has(#chatForm:focus-within) .quick,
+  body.guru-keyboard-open .hero,
+  body.guru-keyboard-open .quick {
+    display: none !important;
+  }
+  /* Ao focar, o layout reduz seu espaco pelo viewport, sem deslocar o chat duas vezes. */
+  body:has(#chatForm:focus-within) .chat,
+  body.guru-keyboard-open .chat {
+    bottom: 0 !important;
+  }
+  body:has(#chatForm:focus-within) .chat .guru-chat-dock,
+  body.guru-keyboard-open .chat .guru-chat-dock {
+    z-index: 8;
+  }
+  body:has(#chatForm:focus-within) .chat .guru-messages-region,
+  body.guru-keyboard-open .chat .guru-messages-region {
+    min-height: 0;
+  }
+}

@@ -9,10 +9,26 @@
  const originalPlaceholder=input.placeholder;
  const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
  const join=(...parts)=>parts.map(clean).filter(Boolean).join(' ');
+ // A API de voz pode repetir hipóteses completas, especialmente após reconectar.
+ // Combina trechos pela sobreposição de palavras, sem repetir o prefixo já captado.
+ function merge(previous,next){
+  const a=clean(previous),b=clean(next);
+  if(!a)return b;if(!b)return a;
+  const norm=x=>x.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const aw=a.split(' '),bw=b.split(' ');
+  const max=Math.min(aw.length,bw.length);
+  for(let n=max;n>=1;n--){
+   if(aw.slice(-n).every((word,i)=>norm(word)===norm(bw[i])))return join(a,bw.slice(n).join(' '));
+  }
+  // Uma nova hipótese que contém o texto anterior não deve duplicá-lo.
+  if(bw.length>=aw.length&&aw.every((word,i)=>norm(word)===norm(bw[i])))return b;
+  return join(a,b);
+ }
+ function fold(parts){return parts.reduce((acc,part)=>merge(acc,part),'')}
  function say(message,state=''){if(status){status.textContent=message;status.dataset.state=state}}
  function ui(){mic.classList.toggle('is-listening',active);mic.classList.toggle('is-starting',starting);mic.setAttribute('aria-pressed',String(active));mic.setAttribute('aria-label',active?'Finalizar ditado':'Falar com a GURU');mic.title=active?'Finalizar ditado e revisar':'Ditar pergunta';input.placeholder=active?'Sua pergunta aparece aqui enquanto você fala…':originalPlaceholder}
  function clear(){clearTimeout(restartTimer);clearTimeout(watchdog)}
- function write(interim=''){const value=join(base,final,interim);if(value){input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}))}}
+ function write(interim=''){const value=merge(merge(base,final),interim);if(value){input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}))}}
  function finish(message){requestedStop=true;active=false;starting=false;token++;clear();try{rec?.stop()}catch{}ui();say(message||(input.value.trim()?'Pergunta captada. Confira o texto e toque em enviar.':'Não detectei sua fala. Tente novamente.'),input.value.trim()?'ready':'hint')}
  if(!Speech){mic.disabled=true;mic.title='Reconhecimento de voz indisponível';say('Este navegador não oferece reconhecimento de voz. Use o teclado ou outro navegador compatível.','error');return}
  rec=new Speech();rec.lang='pt-BR';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;
@@ -28,7 +44,7 @@
   if(!active||requestedStop)return;
   const parts=[];let interim='';
   for(let i=0;i<event.results.length;i++){const result=event.results[i],txt=clean(result?.[0]?.transcript);if(!txt)continue;if(result.isFinal)parts.push(txt);else interim=join(interim,txt)}
-  final=join(...parts);write(interim);say(interim?'Captando sua fala…':'Fala reconhecida. Continue falando ou finalize.','listening');
+  final=fold(parts);write(interim);say(interim?'Captando sua fala…':'Fala reconhecida. Continue falando ou finalize.','listening');
  };
  rec.onerror=event=>{
   const err=event.error;
@@ -46,7 +62,7 @@
  rec.onend=()=>{
   starting=false;clearTimeout(watchdog);
   if(!active||requestedStop){ui();return}
-  base=join(base,final);final='';write();
+  base=merge(base,final);final='';write();
   if(Date.now()-started>90000){finish('Tempo máximo de ditado atingido. Confira o texto e envie.');return}
   if(restarts>=3){finish('A escuta foi interrompida várias vezes. Confira o texto e tente novamente.');return}
   const id=token;restarts++;say('Reconectando microfone… o texto já captado foi preservado.','hint');

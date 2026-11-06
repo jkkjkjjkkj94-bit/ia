@@ -304,6 +304,12 @@ function storeGroups(store){
  // a especialidade pode ser mais específica que o grupo principal.
  return [...new Set([store.category,store.group,...(Array.isArray(store.groups)?store.groups:[]),...(Array.isArray(store.specialties)?store.specialties:[])].map(norm).filter(Boolean))];
 }
+function groupMatchesStore(store,requested){
+ const target=norm(requested);
+ if(!target)return true;
+ const values=storeGroups(store);
+ return values.some(value=>value===target||(' '+value+' ').includes(' '+target+' '));
+}
 function productName(p){return norm([p.name,p.description,p.category,p.brand,p.color,(Array.isArray(p.sizes)?p.sizes:[]).join(' ')].join(' '))}
 export function activePromo(p,now=Date.now()){
  const price=p.price==null?NaN:Number(p.price),promo=p.promo_price==null?NaN:Number(p.promo_price);
@@ -403,7 +409,7 @@ export function explainEmptySearch(data={},state={},position=null){
  if(category&&!active.some(s=>categoryMatchesStore(s,category))){
   return 'Não há estabelecimentos ativos cadastrados na categoria '+category+' no momento. Você pode pesquisar outra categoria.';
  }
- if(group&&!active.some(s=>(!category||categoryMatchesStore(s,category))&&storeGroups(s).includes(norm(group)))){
+ if(group&&!active.some(s=>(!category||categoryMatchesStore(s,category))&&groupMatchesStore(s,group))){
   return 'Não há estabelecimentos ativos cadastrados como '+group+' no momento. Você pode pesquisar outro tipo de estabelecimento.';
  }
  // Diga qual combinação realmente falhou: nunca confunda ausência de Pix com falha do interpretador.
@@ -483,10 +489,10 @@ export function searchStores(data={},state={},position=null,options={}){
   if(store.active!==true||store.status!=='active')continue;
   if(state.category&&!categoryMatchesStore(store,state.category))continue;
   const groups=storeGroups(store);
-  if(state.group&&!groups.includes(norm(state.group)))continue;
+  if(state.group&&!groupMatchesStore(store,state.group))continue;
   if(state.specialtyTerm&&!(Array.isArray(store.specialties)?store.specialties:[]).some(s=>norm(s)===norm(state.specialtyTerm)))continue;
   if((state.excludedCategories||[]).some(group=>categoryMatchesStore(store,group)))continue;
-  if(groups.some(g=>(state.excludedGroups||[]).includes(g)))continue;
+  if((state.excludedGroups||[]).some(g=>groupMatchesStore(store,g)))continue;
   if(f.delivery===true&&!store.delivery)continue;
   if(f.delivery===false&&store.delivery)continue;
   if(f.pickup===true&&!store.pickup)continue;

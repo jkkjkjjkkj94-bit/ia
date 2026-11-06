@@ -88,9 +88,9 @@ export function evidenceForRow(query,row={},data={}){
 export function rerankSearchResults(rows=[],query='',data={},sort=null){
  // Preserva a regra já estabelecida da GURU: classificação maior aparece antes.
  // Relevância serve exclusivamente como desempate entre pontuações idênticas.
- const decorated=rows.map((row,index)=>({row,index,evidence:evidenceForRow(query,row,data)}));
- if(!['price','distance','rating'].includes(sort))decorated.sort((a,b)=>(Number(b.row.rankScore||0)-Number(a.row.rankScore||0))||
-  (b.evidence.relevance-a.evidence.relevance)||(a.index-b.index));
+ // Esta etapa apenas anexa evidências. A ordenação final é responsabilidade de contextualRank.
+ // Preservar a ordem de entrada também mantém ordenações explícitas do usuário.
+ const decorated=rows.map(row=>({row,evidence:evidenceForRow(query,row,data)}));
  return decorated.map(({row,evidence})=>({...row,
   relevanceEvidence:evidence,
   reason:uniq([...(row.reason||[]),...evidence.reasons]).slice(0,9)

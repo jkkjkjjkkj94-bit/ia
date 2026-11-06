@@ -1053,8 +1053,8 @@ async function run(text){
  }
  // Consulta direta sobre o horário da loja selecionada deve produzir UMA resposta,
  // sem acionar comparações, pesquisa geral ou outra loja do histórico.
- if(state.selectedStore && /\\b(?:horario|horarios|que horas|abre|fecha|funciona|funcionamento)\\b/.test(norm(text))
-    && !/\\b(?:quais|lojas|estabelecimentos|mercados|farmacias|padarias|academias|outras|outros|compare|comparar)\\b/.test(norm(text))){
+ if(state.selectedStore && /\b(?:horario|horarios|que horas|abre|fecha|funciona|funcionamento)\b/.test(norm(text))
+    && !/\b(?:quais|lojas|estabelecimentos|mercados|farmacias|padarias|academias|outras|outros|compare|comparar)\b/.test(norm(text))){
   const parsed=interpret(text,taxonomy,aliases,state,{products:db?.products||[]});
   replyAboutStore(text,'hours',parsed.filters||{});renderContext();save();return;
  }

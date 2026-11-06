@@ -252,23 +252,25 @@ function renderContext(){
  if(state.excludedGroups?.length)chip('Excluídos: '+state.excludedGroups.join(', '),()=>{state.excludedGroups=[]});
  if(!chips.length){ctx.hidden=true;return}
  ctx.hidden=false;
- const priority=chips.filter(x=>/^(Cidade:|sábado$|domingo$|segunda$|terça$|quarta$|quinta$|sexta$|Abertas agora)/i.test(x.label));
- const rest=chips.filter(x=>!priority.includes(x));
- const ordered=[...priority,...rest];
- const visibleLimit=window.matchMedia('(max-width:680px)').matches?2:3;
- const collapsed=ordered.length>visibleLimit&&!ctx.dataset.expanded;
+ const isDay=label=>/^(sábado|domingo|segunda|terça|quarta|quinta|sexta|Abertas agora|Dias:)/i.test(label);
+ const priority=[...chips.filter(x=>x.label.startsWith('Cidade:')),...chips.filter(x=>x.label.startsWith('Categoria:')),...chips.filter(x=>isDay(x.label))];
+ const extras=chips.filter(x=>!priority.includes(x));
+ const ordered=[...priority,...extras];
+ const visible=new Set(priority.slice(0,3));
+ const collapsed=!ctx.dataset.expanded;
  ctx.classList.toggle('guru-context-expanded',!collapsed);
- ordered.forEach((entry,index)=>{
-  const button=el('button','guru-filter-chip',entry.label);
+ ordered.forEach(entry=>{
+  const button=el('button','guru-filter-chip',entry.label.replace(/^Categoria: /,'').replace(/^Cidade: /,''));
   button.type='button';
-  if(collapsed&&index>=visibleLimit)button.hidden=true;
+  if(collapsed&&!visible.has(entry))button.hidden=true;
   const remove=el('span','guru-filter-remove','×');remove.setAttribute('aria-hidden','true');button.appendChild(remove);
   button.setAttribute('aria-label','Remover filtro '+entry.label);
   button.addEventListener('click',()=>{entry.clear();renderContext();save();if(db)refreshFilteredResults()});
   ctx.appendChild(button);
  });
- if(ordered.length>visibleLimit){
-  const more=el('button','guru-filter-more',collapsed?'+'+(ordered.length-visibleLimit)+' filtros':'Mostrar menos');more.type='button';
+ const hiddenCount=ordered.length-visible.size;
+ if(hiddenCount>0){
+  const more=el('button','guru-filter-more',collapsed?'Filtros ('+hiddenCount+')':'Mostrar menos');more.type='button';
   more.setAttribute('aria-expanded',String(!collapsed));
   more.addEventListener('click',()=>{if(collapsed)ctx.dataset.expanded='true';else delete ctx.dataset.expanded;renderContext()});
   ctx.appendChild(more);

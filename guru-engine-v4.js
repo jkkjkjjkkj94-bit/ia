@@ -14,7 +14,7 @@ import {semanticNeedAlternatives} from './guru-semantic-v12.mjs?v=2';
 import {followupRefinement} from './guru-followup-v13.mjs?v=1';
 import {evidenceForStore,evidenceForField} from './guru-evidence-v1.mjs?v=1';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
-import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=26';
+import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=27';
 
 const CORE={url:'https://ccsypggvelcxsqszepfs.supabase.co',key:'sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG'};
 const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1'};
@@ -366,7 +366,8 @@ function extendCanonicalTaxonomy(stores=[]){
   const primary=String(s.main_category||'').trim(),specialty=String(s.category||'').trim();
   if(!primary)continue;
   if(!legacyNames.has(primary))legacyNames.set(primary,new Set());
-  if(specialty)legacyNames.get(primary).add(specialty);
+  // Categorias amplas já existem como raízes legadas; não viram subgrupos restritivos.
+  if(specialty&&!['comida','roupas','mercado','farmacia','beleza','tecnologia','servicos','construcao','automoveis','varejo','pet shop','agropecuaria'].includes(norm(specialty)))legacyNames.get(primary).add(specialty);
  }
  for(const [primary,children] of legacyNames){
   const groups=taxonomy[primary]||{};
@@ -645,6 +646,7 @@ function makeCard(row,index){
  if(s.sponsored)tags.appendChild(el('span','store-chip','Patrocinada'));
  identity.appendChild(tags);top.appendChild(identity);card.appendChild(top);
  if(s.address)card.appendChild(el('div','store-address',s.address));
+ if(row.hoursUnknown)card.appendChild(el('div','guru-hours-unconfirmed','Horário neste dia não confirmado — consulte a loja'));
  if(Array.isArray(s.specialties)&&s.specialties.length){
   const info=el('div','smart-specialties');
   info.appendChild(el('b','','Especialidades'));
@@ -1038,7 +1040,9 @@ async function run(text){
   }
  }
  const specialtyMention=specialtyMentionInQuery(text);
- const newSpecialty=isNewSpecialtyRequest(text,specialtyMention);
+ // Rótulos amplos, como "comida", não são uma especialidade obrigatória.
+ const broadCategoryNames=new Set(['comida','roupas','roupa','mercado','farmacia','beleza','tecnologia','servicos','automoveis','construcao','varejo','pet shop','agropecuaria']);
+ const newSpecialty=!!specialtyMention&&!broadCategoryNames.has(norm(specialtyMention))&&isNewSpecialtyRequest(text,specialtyMention);
  // Consulta direta de categoria/grupo não pode virar pergunta sobre a loja
  // anterior nem herdar filtros antigos.
  const rawPlan=interpret(text,taxonomy,aliases,{...state,selectedStore:null},{products:db?.products||[]});
@@ -1090,6 +1094,12 @@ async function run(text){
  // Uma categoria ou grupo digitado isoladamente representa nova pesquisa.
  // Não exigir produto, entrega ou outra especialidade da conversa anterior.
  if(bareTaxonomy){draft.productTerm=null;draft.specialtyTerm=null}
+ // O agrupador antigo "Comida" não deve ser reaplicado como grupo/especialidade.
+ if(plan.taxon?.group&&broadCategoryNames.has(norm(plan.taxon.group))&&norm(plan.taxon.term)===norm(plan.taxon.group)){
+  draft.category=plan.taxon.group;draft.group=null;draft.specialtyTerm=null;
+ }
+ if(draft.specialtyTerm&&broadCategoryNames.has(norm(draft.specialtyTerm)))draft.specialtyTerm=null;
+ if(draft.group&&broadCategoryNames.has(norm(draft.group))&&norm(draft.group)===norm(draft.category))draft.group=null;
  draft.location={...(draft.location||{}),city:userCity,uf:null,neighborhood:null};
  if(db.unavailable.hours&&(draft.filters.openNow||draft.filters.day!=null||(Array.isArray(draft.filters.days)&&draft.filters.days.length)||draft.filters.start!=null||draft.filters.end!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
  if(db.unavailable.reviews&&(draft.filters.minRating!=null||draft.filters.sort==='rating')){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
@@ -1127,11 +1137,24 @@ async function run(text){
    recovery=null;
   }
  }
+ // A falta de horários cadastrados não deve ser apresentada como "nenhum comércio existe".
+ // Busca de alternativas é separada e sempre informa que o dia NÃO está confirmado.
+ let unconfirmedDayResults=false;
+ const fDay=draft.filters||{};
+ const dayRequested=fDay.day!=null||(Array.isArray(fDay.days)&&fDay.days.length>0)||(Array.isArray(fDay.daysAll)&&fDay.daysAll.length>0)||fDay.start!=null||fDay.end!=null;
+ if(!rows.length&&dayRequested&&!fDay.openNow){
+  const candidates=searchStores(db,draft,position,{limit:60,includeUnknownHours:true});
+  if(candidates.length){rows=candidates;finalState=draft;recovery=null;unconfirmedDayResults=true}
+ }
  state=finalState;
  renderContext();save();
  rows=contextualRank(rankV9(rerankSearchResults(rows,text,db,state.filters?.sort),text,state.filters?.sort),text,state.filters?.sort).slice(0,60);
  lastSearchText=text;
  state.lastResults=rows;state.resultOffset=0;
+ if(unconfirmedDayResults){
+  const dayText=fDay.day!=null?dayNames[fDay.day]:Array.isArray(fDay.days)&&fDay.days.length?'nos dias selecionados':'no horário solicitado';
+  add('Ainda não tenho horário de funcionamento confirmado para '+dayText+' nesses estabelecimentos. Veja algumas opções relacionadas em '+userCity+', mas confirme diretamente com cada loja antes de ir.');
+ }
  recordSearch(text,plan,rows,'search',rows.length?'':diagnosisForNoResults(text,db,plan).reason);
  if(!rows.length){
   if(diagnosisForNoResults(text,db,plan).reason==='catalogo_sem_produtos'){

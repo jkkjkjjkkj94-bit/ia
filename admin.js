@@ -150,7 +150,7 @@ async function openCategoryEditor(id){
   feedback.style.padding='10px 12px';
  };
  feedback.textContent='';feedback.style.display='none';
- modal.querySelector('#categoryEditorStore').textContent=store.name+' · '+(store.status==='active'?'Ativa':store.status||'')+' · Cadastro atualizado';
+ modal.querySelector('#categoryEditorStore').textContent=store.name+' · '+(cachedStore.status==='active'?'Ativa':cachedStore.status||'')+' · Cadastro atualizado';
  catInput.replaceChildren();
  for(const category of tax.categories){
   const option=document.createElement('option');option.value=category.name;option.textContent=category.name;catInput.append(option);

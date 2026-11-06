@@ -12,3 +12,12 @@
 @keyframes guru-pulse-voice { 50% { box-shadow:0 0 0 5px #dc26261a; } }
 @media(max-width:480px){ .guru-voice-btn { flex-basis:34px; width:34px; height:34px; padding:7px; } #chatForm.send { gap:4px; } }
 @media(prefers-reduced-motion:reduce){ .guru-voice-btn.is-listening { animation:none; } }
+
+/* Voice 3: feedback de captação acessível em desktop e mobile. */
+.guru-voice-btn.is-starting{opacity:.75;border-color:var(--line,#d5d7dc)}
+.guru-voice-btn.is-listening{background:#dc262614;border-color:#dc2626;box-shadow:0 0 0 3px #dc262610}
+.guru-voice-status[data-state="listening"]{color:var(--text,#30343b)}
+.guru-voice-status[data-state="error"]{color:#b42318}
+.guru-voice-status[data-state="ready"]{color:var(--text,#30343b)}
+.guru-voice-status[data-state="hint"]{color:var(--muted,#777)}
+@media(max-width:480px){.guru-voice-status{font-size:11px;line-height:1.45;margin:4px 7px 0}}

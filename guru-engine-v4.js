@@ -12,6 +12,7 @@ import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=2'
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
 import {semanticNeedAlternatives} from './guru-semantic-v12.mjs?v=2';
 import {followupRefinement} from './guru-followup-v13.mjs?v=1';
+import {evidenceForStore,evidenceForField} from './guru-evidence-v1.mjs?v=1';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=24';
 
@@ -636,8 +637,9 @@ function makeCard(row,index){
  const why=el('button','smart-why-btn','Por que apareceu?');why.type='button';
  const panel=el('div','smart-why-panel');
  panel.appendChild(el('div','','Qualidade cadastral: '+Number(row.rankScore||0).toFixed(0)+'/100 (não é avaliação de clientes).'));
- if(row.searchMatch)panel.appendChild(el('div','','Relevância desta consulta: '+row.searchMatch.score+'/100 (75% correspondência, 25% qualidade).'));
+ if(row.searchMatch)panel.appendChild(el('div','','Relevância desta consulta: '+row.searchMatch.score+'/100 (pontuação interna, não é garantia de disponibilidade).'));
  for(const evidence of explainMatch(row))panel.appendChild(el('div','',evidence));
+ for(const statement of evidenceForStore(row,{productsUnavailable:db?.unavailable?.products===true}))panel.appendChild(el('div','',statement));
  if(Number(row.contextScore)>0)panel.appendChild(el('div','','Relevância contextual: '+row.contextScore+' pontos.'));
  row.reason.forEach(t=>panel.appendChild(el('div','',t)));
  const qualityInfo=storeDataQuality(s,db||{});
@@ -848,15 +850,15 @@ function replyAboutStore(text,ask,filter={}){
   if(s.delivery_fee==null){add('O preço do produto é '+money(priceOf(p))+', mas a taxa de entrega ainda não foi informada.');return}
   add(p.name+': '+money(priceOf(p))+' + entrega '+money(s.delivery_fee)+' = '+money(priceOf(p)+Number(s.delivery_fee))+'.');return;
  }
- if(ask==='delivery'){add(s.delivery?('Sim, '+s.name+' oferece entrega'+(s.delivery_fee!=null?' com taxa de '+money(s.delivery_fee):' (taxa não informada)')+'.'):'Não há entrega disponível cadastrada nessa loja.');return}
- if(ask==='payment'){const methods=s.payment_methods||[];add(methods.length?s.name+' aceita '+methods.join(', ')+'.':'Essa loja ainda não informou formas de pagamento.');return}
+ if(ask==='delivery'){add(evidenceForField('delivery',s)+(s.delivery&&s.delivery_fee!=null?' Taxa informada: '+money(s.delivery_fee)+'.':''));return}
+ if(ask==='payment'){add(evidenceForField('payment',s));return}
  if(ask==='address'){add(s.address||'Essa loja ainda não informou o endereço.');return}
  if(ask==='contact'){add(s.whatsapp?'WhatsApp: '+s.whatsapp:s.phone?'Telefone: '+s.phone:'Essa loja ainda não informou um contato.');return}
- if(ask==='rating'){if(db.unavailable.reviews){add('Não consegui consultar as avaliações dessa loja agora. Tente novamente.');return}const rv=ratingsMap(db.reviews).get(s.id);add(rv?'Avaliação real: '+(rv.sum/rv.count).toFixed(1)+'/5 em '+rv.count+' avaliação(ões).':'Essa loja ainda não possui avaliações cadastradas.');return}
+ if(ask==='rating'){if(db.unavailable.reviews){add('Não consegui consultar as avaliações dessa loja agora. Tente novamente.');return}const rv=ratingsMap(db.reviews).get(s.id);add(rv?'Média das avaliações cadastradas na GURU: '+(rv.sum/rv.count).toFixed(1)+'/5 em '+rv.count+' avaliação(ões).':'Essa loja ainda não possui avaliações cadastradas.');return}
  const ps=productListFor(s,text);
  if(!ps.length){add('Não encontrei produto ativo e disponível em estoque que corresponda a essa pergunta.');return}
  if(ps.length===1)state.selectedProduct=ps[0];
- add('Na '+s.name+', encontrei:\n'+ps.slice(0,8).map(p=>'• '+p.name+' — '+money(priceOf(p))+' · estoque '+p.stock).join('\n'));save();
+ add('No catálogo cadastrado de '+s.name+', encontrei:\n'+ps.slice(0,8).map(p=>'• '+p.name+' — '+money(priceOf(p))+' · estoque informado: '+p.stock).join('\n')+'\nConfirme os valores e a disponibilidade com a loja antes de comprar.');save();
 }
 function specialtyMentionInQuery(text){
  const request=norm(text);
@@ -975,7 +977,7 @@ async function run(text){
    matching=[...usable].sort((a,b)=>follow.attribute==='price'?a.minPrice-b.minPrice:follow.attribute==='distance'?a.distance-b.distance:b.rating-a.rating);
   }
   if(!matching.length){
-   const reason=follow.attribute==='price'?'preços dos produtos':follow.attribute==='distance'?'distâncias confirmadas':follow.attribute==='rating'?'avaliações verificadas':follow.attribute==='delivery'?'opções com entrega':follow.attribute==='noDelivery'?'opções sem entrega':'produtos em estoque';
+   const reason=follow.attribute==='price'?'preços dos produtos':follow.attribute==='distance'?'distâncias calculadas':follow.attribute==='rating'?'avaliações cadastradas':follow.attribute==='delivery'?'opções com entrega':follow.attribute==='noDelivery'?'opções sem entrega':'produtos em estoque';
    add('Ainda não tenho '+reason+' suficientes nessas opções. Posso fazer uma nova busca se você quiser.');return;
   }
   // O conjunto exibido mudou: uma referência pronominal não deve apontar para uma

@@ -6,7 +6,7 @@ async function loadAdminModules(){
 const load=async(path,label)=>{try{return await import(path)}catch(err){console.error(`[GURU Admin] ${label}`,err);return null}};
 await load('./admin-ai-editor.js?v=3','AI Editor');
 await load('./admin-store-group.js?v=4','Store Group');
-await load('./admin-pending-core.js?v=8','Pending Stores');
+await load('./admin-pending-core.js?v=9','Pending Stores');
 await load('./admin-synonym-suggestions.js?v=2','Synonym Suggestions');
 await load('./guru-quality-admin.js?v=2','Quality');
 await load('./admin-delete-controls.js?v=1','Delete Controls');

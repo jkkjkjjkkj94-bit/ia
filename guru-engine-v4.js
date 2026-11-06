@@ -1,5 +1,5 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
-import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,diagnosisForNoResults} from './guru-intelligence-v14.mjs?v=2';
+import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,diagnosisForNoResults} from './guru-intelligence-v14.mjs?v=3';
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
@@ -1111,7 +1111,7 @@ async function run(text){
    : 'Não encontrei lojas classificadas como Tintas nesta busca. Estas lojas de materiais de construção são alternativas relacionadas, mas não há confirmação de que vendam tintas. Consulte cada loja antes de ir.');
  }
  if(recovery){
-  const hint=recovery.mode='correction'?'Identifiquei uma possível correção de escrita.':recovery.mode==='concept'||recovery.mode==='semantic-need'?'Entendi a necessidade descrita e procurei uma categoria cadastrada.':'Encontrei uma expressão relacionada no catálogo.';
+  const hint=recovery.mode==='correction'?'Identifiquei uma possível correção de escrita.':recovery.mode==='concept'||recovery.mode==='semantic-need'?'Entendi a necessidade descrita e procurei uma categoria cadastrada.':'Encontrei uma expressão relacionada no catálogo.';
   add(hint+' Pesquisei por “'+recovery.query+'”.');
  }
  const natural=await hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE));

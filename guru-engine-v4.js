@@ -209,8 +209,15 @@ async function refreshFilteredResults(){
   await loadData();
   if(!userCity){askForCity();return}
   state.location=citySearchState().location;
-  const rows=searchStores(db,citySearchState(),position,{limit:60});
+  const current=citySearchState();
+  let rows=searchStores(db,current,position,{limit:60}),unconfirmed=false;
+  const f=current.filters||{};
+  const requestedDay=f.day!=null||(Array.isArray(f.days)&&f.days.length)||(Array.isArray(f.daysAll)&&f.daysAll.length)||f.start!=null||f.end!=null;
+  if(!rows.length&&requestedDay&&!f.openNow){
+   rows=searchStores(db,current,position,{limit:60,includeUnknownHours:true});unconfirmed=rows.length>0;
+  }
   state.lastResults=rows;state.resultOffset=0;save();
+  if(unconfirmed)add('Não há horários confirmados para esse dia entre as opções encontradas. Essas lojas podem ser relevantes, mas confirme o funcionamento diretamente antes de ir.');
   if(rows.length)showNextResultPage();
   else add(explainEmptySearch(db,state,position));
  }catch(err){msgError(err)}
@@ -1101,7 +1108,7 @@ async function run(text){
  if(draft.specialtyTerm&&broadCategoryNames.has(norm(draft.specialtyTerm)))draft.specialtyTerm=null;
  if(draft.group&&broadCategoryNames.has(norm(draft.group))&&norm(draft.group)===norm(draft.category))draft.group=null;
  draft.location={...(draft.location||{}),city:userCity,uf:null,neighborhood:null};
- if(db.unavailable.hours&&(draft.filters.openNow||draft.filters.day!=null||(Array.isArray(draft.filters.days)&&draft.filters.days.length)||draft.filters.start!=null||draft.filters.end!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
+ if(db.unavailable.hours&&(draft.filters.openNow||draft.filters.day!=null||(Array.isArray(draft.filters.days)&&draft.filters.days.length)||(Array.isArray(draft.filters.daysAll)&&draft.filters.daysAll.length)||draft.filters.start!=null||draft.filters.end!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
  if(db.unavailable.reviews&&(draft.filters.minRating!=null||draft.filters.sort==='rating')){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
  // Busca híbrida: resultados literais primeiro; sinônimos e erros de escrita
  // só entram quando a consulta original não encontrou nenhum resultado.
@@ -1152,7 +1159,7 @@ async function run(text){
  lastSearchText=text;
  state.lastResults=rows;state.resultOffset=0;
  if(unconfirmedDayResults){
-  const dayText=fDay.day!=null?dayNames[fDay.day]:Array.isArray(fDay.days)&&fDay.days.length?'nos dias selecionados':'no horário solicitado';
+  const dayText=fDay.day!=null?dayNames[fDay.day]:Array.isArray(fDay.days)&&fDay.days.length||Array.isArray(fDay.daysAll)&&fDay.daysAll.length?'nos dias selecionados':'no horário solicitado';
   add('Ainda não tenho horário de funcionamento confirmado para '+dayText+' nesses estabelecimentos. Veja algumas opções relacionadas em '+userCity+', mas confirme diretamente com cada loja antes de ir.');
  }
  recordSearch(text,plan,rows,'search',rows.length?'':diagnosisForNoResults(text,db,plan).reason);

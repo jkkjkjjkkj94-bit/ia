@@ -1260,7 +1260,7 @@ async function run(text){
  hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE)).then(natural=>{if(natural && !searchBusy)add(natural)}).catch(()=>{});
  save();
 }
-async // Atalhos do card usam a loja selecionada, sem passar por interpretação de busca.
+// Atalhos do card usam a loja selecionada, sem passar por interpretação de busca.
 async function submitSelectedStoreAction(store,label,question){
  if(!store||searchBusy)return;
  const actionByLabel={ 'Horário':'hours','Entrega':'delivery','Produtos':'products','Pagamento':'payment','Contato':'contact' };

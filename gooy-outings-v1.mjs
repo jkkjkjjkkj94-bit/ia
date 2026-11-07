@@ -49,6 +49,7 @@ export function outingRankRows(rows,outing){
   if(!VENUE.test(n))return null;
   const goodCompanion=(GROUPS[outing.companion]||VENUE).test(n);
   const fitsMood=!outing.mood||(MOOD_TERMS[outing.mood]||VENUE).test(n);
+  if(outing.mood&&!fitsMood)return null;
   const base=(goodCompanion?45:0)+(fitsMood?25:0);
   const costHint=/\b(gratis|gratuito|gratuita|entrada franca)\b/.test(n);
   if(outing.budget==='gratis'&&!costHint)return null; // não presume acesso gratuito

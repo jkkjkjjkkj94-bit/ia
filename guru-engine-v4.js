@@ -635,26 +635,37 @@ function chooseStore(row){
  }
  if(details.childNodes.length)shell.appendChild(details);
  const actions=el('div','chat-actions selected-store-actions');
- for(const [iconKey,label,q] of [
-  ['clock','Horário','Qual o horário?'],
-  ['truck','Entrega','Ela entrega?'],
-  ['bag','Produtos','Quais produtos tem?'],
-  ['card','Pagamento','Aceita Pix?'],
-  ['phone','Contato','Qual o WhatsApp?']
- ]){
+ // Cada atalho só é mostrado quando há informação verificável para esta loja.
+ const hasHours=!db?.unavailable?.hours&&(db?.hours||[]).some(h=>h.store_id===s.id&&h.closed!==true&&h.opens_at&&h.closes_at);
+ const hasDelivery=s.delivery===true;
+ const hasProducts=(db?.products||[]).some(p=>p.store_id===s.id&&eligibleProduct(p));
+ const hasPayment=Array.isArray(s.payment_methods)?s.payment_methods.some(v=>String(v||'').trim()):Boolean(String(s.payment_methods||'').trim());
+ const hasContact=Boolean(String(s.whatsapp||s.phone||'').trim());
+ const availableActions=[
+  [hasHours,'clock','Horário','Qual o horário?'],
+  [hasDelivery,'truck','Entrega','Ela entrega?'],
+  [hasProducts,'bag','Produtos','Quais produtos tem?'],
+  [hasPayment,'card','Pagamento','Quais formas de pagamento aceita?'],
+  [hasContact,'phone','Contato','Qual o contato?']
+ ].filter(([available])=>available);
+ for(const [available,iconKey,label,q] of availableActions){
   const b=el('button','selected-store-action');
   b.type='button';b.append(storeDetailIcon(iconKey),document.createTextNode(label));
   b.onclick=()=>{
-   if(label==='Horário'){
-    // Ação do card: não passar pelo interpretador de buscas/seleções.
-    if(searchBusy){notice('Aguarde a resposta atual.');return}
-    state.selectedStore=s;state.selectedProduct=null;
-    renderContext();save();
-    submitSelectedStoreHours(s);
-   }else submitText(q);
-  };actions.appendChild(b);
+   if(searchBusy){notice('Aguarde a resposta atual.');return}
+   actions.querySelectorAll('.selected-store-action').forEach(button=>button.classList.remove('active'));
+   b.classList.add('active');
+   state.selectedStore=s;state.selectedProduct=null;
+   renderContext();save();
+   if(label==='Horário')submitSelectedStoreHours(s);
+   else submitText(q);
+  };
+  if(!actions.childElementCount)b.classList.add('active');
+  actions.appendChild(b);
  }
- shell.appendChild(actions);box.appendChild(shell);return box;
+ if(availableActions.length)shell.appendChild(actions);
+ else shell.appendChild(el('div','selected-store-no-actions','Informações complementares ainda não cadastradas.'));
+ box.appendChild(shell);return box;
 }
 function makeCard(row,index){
  const s=row.store,card=el('article','store-result-card smart-card');

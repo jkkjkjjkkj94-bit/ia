@@ -138,9 +138,9 @@ export function editOutingStops(text,stops=[],pool=[]){
  const position=indexByWord??(numeric?Number(numeric[1])-1:null);
  const remove=/\b(tira|tire|tirar|remova|remove|remover|exclua|excluir|retira|retire|retirar)\b/.test(n);
  const change=/\b(troca|troque|trocar|substitua|substituir|muda|mude|mudar|altera|altere|alterar)\b/.test(n);
- const reroute=/\b(refaca|refazer|reorganize|reorganizar|reordene|reordenar)\b/.test(n);
+ const reroute=/\b(refaca|refazer|reorganize|reorganizar|reordene|reordenar|mais perto|menos deslocamento|rota mais curta)\b/.test(n);
  if(!remove&&!change&&!reroute)return null;
- if(reroute&&!remove&&!change)return {kind:'reorder',stops:reorderOutingStops(stops)};
+ if(reroute&&!remove&&!change)return {kind:'reorder',stops:reorderOutingStops(stops),needsCoordinates:stops.some(r=>r.store?.latitude==null||r.store?.longitude==null)};
  if(!stops.length)return {kind:'empty',stops};
  let index=position;
  if(index==null){

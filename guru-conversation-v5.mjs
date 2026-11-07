@@ -1,4 +1,4 @@
-// GURU V5 — interpretação contextual complementar, comparação baseada no catálogo
+// GOOY V5 — interpretação contextual complementar, comparação baseada no catálogo
 import {priceOf,eligibleProduct} from './guru-engine-v4-core.mjs';
 // e indicadores de qualidade. Sem rede, sem dados pessoais e sem alteração do ranking.
 export const canonical = text => String(text??'').toLowerCase().normalize('NFD')
@@ -91,7 +91,7 @@ export function comparisonSummary(items=[],topic=''){
  }else{
   detail='Compare entrega, localização e avaliações verificadas abaixo; quando um dado não foi informado, ele aparece como não disponível.';
  }
- return 'Comparei '+first.name+' e '+second.name+'. '+detail+' A pontuação GURU é uma classificação interna, não a nota dada pelos clientes.';
+ return 'Comparei '+first.name+' e '+second.name+'. '+detail+' A pontuação GOOY é uma classificação interna, não a nota dada pelos clientes.';
 }
 export function followupPrompts(rows=[],state={}){
  if(!rows.length)return[];

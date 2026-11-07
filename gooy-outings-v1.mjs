@@ -3,7 +3,7 @@ import {outingTrophyMatch,requiredTrophies} from './gooy-trophies-v1.mjs?v=2';
 export const outingNormalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 const contains=(text,pattern)=>pattern.test(outingNormalize(text));
 const COMPANIONS=[
- ['casal',/\b(namorad[ao]|espos[ao]|marid[oa]|companheir[ao]|parceir[ao]|crush|casal|romantico|romantica)\b/],
+ ['casal',/\b(namorad[ao]|espos[ao]|marid[oa]|companheir[ao]|parceir[ao]|crush|casal|romantico|romantica|a dois|para dois)\b/],
  ['amigos',/\b(amig[oa]s?|galera|turma|colegas?)\b/],
  ['familia',/\b(familia|familiares|filh[oa]s?|criancas|pais|mae|pai)\b/]
 ];
@@ -24,6 +24,8 @@ const OUTING=/\b(role|roles|rolinho|rol[eê]|passeio|passear|programa|programaca
 const REFINEMENT=/\b(barato|barata|economico|economica|gratuito|gratis|tranquilo|calmo|animado|natureza|cultura|cinema|comer|jantar|evento|eventos|hoje|amanha|sabado|domingo|mais opcoes|pet|pets|cachorro|cachorra|gato|gata|musica|aventura|aconchegante|educativo|acessibilidade)\b/;
 export function detectOuting(raw,previous=null) {
  const normalized=outingNormalize(raw);
+ // Pedidos de compra e serviços veterinários permanecem na busca comum.
+ if(/\b(comprar|compro|preco de|produto|produtos|racao|pet shop|gaiola|veterinario|veterinaria|remedio|medicamento)\b/.test(normalized)&&!/\b(passeio|passear|role|roles|rolinho)\b/.test(normalized))return null;
  const pet=/\b(pet|pets|cachorr[oa]s?|caes|cao|dog|dogs|gat[oa]s?|animal de estimacao|animais de estimacao)\b/.test(normalized);
  const children=/\b(espaco infantil|espaco para criancas|brinquedoteca|area infantil|parquinho)\b/.test(normalized);
  const companion=COMPANIONS.find(([,regex])=>regex.test(normalized))?.[0]||null;

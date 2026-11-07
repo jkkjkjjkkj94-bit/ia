@@ -148,7 +148,20 @@ export function editOutingStops(text,stops=[],pool=[]){
  const reroute=/\b(refaca|refazer|reorganize|reorganizar|reordene|reordenar|mais perto|menos deslocamento|rota mais curta)\b/.test(n);
  const legacyReplace=/\b(troca|troque|trocar|substitua|substituir|muda|mude|mudar|altera|altere|alterar)\b/.test(n);
  if(!add&&!remove&&!reroute&&!legacyReplace)return null;
- if(legacyReplace&&!add&&!remove)return {kind:'choose_action',stops};
+ // Pedidos explícitos de troca por nome são atendidos sem exigir a mesma categoria.
+ if(legacyReplace&&!add&&!remove){
+  const index=(()=>{const word={primeiro:0,primeira:0,segundo:1,segunda:1,terceiro:2,terceira:2,quarto:3,quarta:3,quinto:4,quinta:4};const w=Object.entries(word).find(([key])=>new RegExp('\\\\b'+key+'\\\\b').test(n));if(w)return w[1];const numeric=/\\b([1-8])\\s*(?:a|o)?\\s*(?:parada|opcao|lugar|local)\\b/.exec(n);if(numeric)return Number(numeric[1])-1;return stops.findIndex(r=>outingNormalize(r.store?.name)&&n.includes(outingNormalize(r.store.name)))})();
+  const used=new Set(stops.map(r=>String(r.store?.id)));
+  const candidates=pool.filter(r=>r.store?.id&&r.store?.name&&r.store?.address&&!used.has(String(r.store.id)));
+  const matched=candidates.find(r=>n.includes(outingNormalize(r.store.name)))||candidates.find(r=>{
+   const name=outingNormalize(r.store.name).replace(/\\b(padaria|pizzaria|restaurante|cafeteria|lanchonete|sorveteria|loja)\\b/g,'').trim();
+   return name.length>=4&&n.includes(name);
+  });
+  if(index<0||index>=stops.length)return {kind:'clarify',stops};
+  if(!matched)return {kind:'unavailable_replace',stops};
+  const next=[...stops];next[index]=matched;
+  return {kind:'replace',stops:next,added:matched,index};
+ }
  if(reroute&&!add&&!remove)return {kind:'reorder',stops:reorderOutingStops(stops),needsCoordinates:stops.some(r=>r.store?.latitude==null||r.store?.longitude==null)};
  const orderWords={primeiro:0,primeira:0,segundo:1,segunda:1,terceiro:2,terceira:2,quarto:3,quarta:3,quinto:4,quinta:4,sexto:5,sexta:5,setimo:6,setima:6,oitavo:7,oitava:7};
  const positions=Object.entries(orderWords).find(([word])=>new RegExp('\\b'+word+'\\b').test(n))?.[1];

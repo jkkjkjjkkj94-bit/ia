@@ -1,3 +1,4 @@
+import {outingTrophyMatch,requiredTrophies} from './gooy-trophies-v1.mjs?v=1';
 // GOOY Rolês v1 — descoberta por companhia, clima e cidade, sem inventar locais.
 export const outingNormalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 const contains=(text,pattern)=>pattern.test(outingNormalize(text));
@@ -42,20 +43,15 @@ const MOOD_TERMS={
  animado:/(boliche|jogos|arcade|karaoke|cinema|diversao|entretenimento|shopping)/,
  tranquilo:/(cafeteria|cafe|parque|jardim|praca|livraria|museu|doceria|sorveteria|restaurante)/
 };
-export function outingRankRows(rows,outing){
+export function outingRankRows(rows,outing,trophies=[]){
  return rows.map(row=>{
   const s=row.store||{};
-  const n=outingNormalize([s.name,s.category,s.main_category,s.group,...(s.groups||[]),...(s.specialties||[]),s.description,s.additional_info].join(' '));
-  if(!VENUE.test(n))return null;
-  const goodCompanion=(GROUPS[outing.companion]||VENUE).test(n);
-  const fitsMood=!outing.mood||(MOOD_TERMS[outing.mood]||VENUE).test(n);
-  if(outing.mood&&!fitsMood)return null;
-  const base=(goodCompanion?45:0)+(fitsMood?25:0);
-  const costHint=/\b(gratis|gratuito|gratuita|entrada franca)\b/.test(n);
-  if(outing.budget==='gratis'&&!costHint)return null; // não presume acesso gratuito
-  const score=base+(outing.budget==='gratis'&&costHint?20:0)+(row.distance!=null?Math.max(0,12-row.distance):0)+(Number(row.rankScore)||0)*.1;
-  return {...row,outingScore:score};
- }).filter(Boolean).filter(row=>row.outingScore>=45).sort((a,b)=>b.outingScore-a.outingScore||b.rankScore-a.rankScore).slice(0,40);
+  const activeCodes=(trophies||[]).filter(t=>t.store_id===s.id&&t.active===true).map(t=>t.trophy_code);
+  if(!outingTrophyMatch(activeCodes,outing))return null;
+  if(outing.budget==='gratis'&&!/\\b(gratis|gratuito|entrada franca)\\b/.test(outingNormalize([s.description,s.additional_info].join(' '))))return null;
+  const matched=requiredTrophies(outing).length;
+  return {...row,outingScore:80+matched*10+(Number(row.rankScore)||0)*.1,outingTrophies:activeCodes};
+ }).filter(Boolean).sort((a,b)=>b.outingScore-a.outingScore||b.rankScore-a.rankScore).slice(0,40);
 }
 export function outingRankPlaces(places,outing,city){
  return (places||[]).filter(p=>outingNormalize(p.city)===outingNormalize(city)&&p.name&&p.address)

@@ -176,6 +176,7 @@ export function editOutingStops(text,stops=[],pool=[]){
   const isReplace=legacyReplace&&!add;
   if(!isReplace&&stops.length>=8)return {kind:'limit',stops};
   if(isReplace&&(!stops.length||index==null||index<0||index>=stops.length))return {kind:'choose_action',stops};
+  if(isReplace&&!named.length)return {kind:'choose_action',stops};
   if(!eligible.length)return {kind:'unavailable_add',stops,requestedType:targetType};
   const pick=rank(eligible)[0];
   const next=[...stops];

@@ -460,3 +460,7 @@
     display:none;
   }
 }
+
+/* Card selecionado: atalhos condicionados aos dados cadastrados. */
+.selected-store-no-actions{font-size:11px;color:#888;padding:12px 0 2px;line-height:1.5}
+html[data-theme="dark"] .selected-store-no-actions{color:#a4a7ae}

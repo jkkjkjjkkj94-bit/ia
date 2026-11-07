@@ -29,6 +29,97 @@ let replyBuffer=null;
 let lastSearchText='';
 const minTypingMs=850;
 const RESULT_PAGE_SIZE=3;
+
+/* Busca regional sob consentimento: somente cidades reconhecidas na região,
+   sem GPS obrigatório, sem consulta externa e sem alterar a cidade preferida. */
+let regionalSearchInfo=null;
+let regionalConsentVersion=0;
+const GURU_NEARBY_CITIES={
+ 'salto de pirapora':['Votorantim','Sorocaba','Araçoiaba da Serra','Pilar do Sul','Piedade','Sarapuí'],
+ 'sorocaba':['Votorantim','Araçoiaba da Serra','Salto de Pirapora','Iperó','Porto Feliz','Alumínio','Boituva'],
+ 'votorantim':['Sorocaba','Salto de Pirapora','Piedade','Araçoiaba da Serra','Alumínio'],
+ 'aracoiaba da serra':['Sorocaba','Salto de Pirapora','Votorantim','Iperó','Capela do Alto'],
+ 'pilar do sul':['Salto de Pirapora','Piedade','Sarapuí','São Miguel Arcanjo'],
+ 'piedade':['Votorantim','Salto de Pirapora','Pilar do Sul','Ibiúna','São Roque'],
+ 'sarapui':['Salto de Pirapora','Pilar do Sul','Itapetininga','Alambari'],
+ 'ipero':['Sorocaba','Araçoiaba da Serra','Porto Feliz','Boituva','Capela do Alto'],
+ 'porto feliz':['Sorocaba','Iperó','Boituva','Itu','Salto'],
+ 'boituva':['Iperó','Porto Feliz','Tatuí','Cerquilho','Sorocaba'],
+ 'itu':['Salto','Porto Feliz','Sorocaba','Cabreúva','Mairinque'],
+ 'salto':['Itu','Porto Feliz','Cabreúva','Boituva'],
+ 'tatui':['Boituva','Cerquilho','Cesário Lange','Itapetininga','Capela do Alto'],
+ 'cerquilho':['Tatuí','Boituva','Cesário Lange','Tietê'],
+ 'cesario lange':['Tatuí','Cerquilho','Boituva','Itapetininga'],
+ 'itapetininga':['Alambari','Sarapuí','Tatuí','São Miguel Arcanjo'],
+ 'alambari':['Itapetininga','Sarapuí','Tatuí'],
+ 'sao miguel arcanjo':['Itapetininga','Pilar do Sul','Sarapuí'],
+ 'sao roque':['Mairinque','Araçariguama','Alumínio','Ibiúna'],
+ 'mairinque':['São Roque','Alumínio','Araçariguama','Itu'],
+ 'aluminio':['Mairinque','São Roque','Sorocaba','Votorantim'],
+ 'aracariguama':['São Roque','Mairinque','Cabreúva'],
+ 'cabreuva':['Itu','Salto','Araçariguama'],
+ 'ibiuna':['Piedade','São Roque','Votorantim'],
+ 'capela do alto':['Araçoiaba da Serra','Iperó','Tatuí','Sorocaba'],
+ 'tiete':['Cerquilho','Boituva','Tatuí']
+};
+function availableNearbyCities(city){
+ if(!db?.stores?.length||!city)return [];
+ const known=new Map();
+ for(const store of db.stores){
+  if(store.active!==true||store.status!=='active')continue;
+  const found=getCityFromAddress(store.address);
+  if(found&&!known.has(norm(found)))known.set(norm(found),found);
+ }
+ return (GURU_NEARBY_CITIES[norm(city)]||[])
+  .filter(c=>norm(c)!==norm(city)&&known.has(norm(c)))
+  .map(c=>known.get(norm(c))).slice(0,7);
+}
+function askRegionalSearchPermission(query,searchState){
+ const origin=userCity;
+ const cities=availableNearbyCities(origin);
+ if(!cities.length)return;
+ const version=++regionalConsentVersion;
+ const prompt=add('Não encontrei opções que atendam à sua busca em '+origin+'. Você autoriza pesquisar também em cidades próximas da região? Só ampliarei a busca se você permitir.');
+ const actions=el('div','guru-next-buttons');
+ const yes=el('button','guru-next-button','Sim, buscar na região');
+ const no=el('button','guru-next-button','Não, somente '+origin);
+ yes.type='button';no.type='button';
+ const status=el('div','guru-regional-consent-status');
+ const close=()=>{yes.disabled=true;no.disabled=true;actions.hidden=true};
+ yes.addEventListener('click',()=>{
+  if(version!==regionalConsentVersion||userCity!==origin||searchBusy)return;
+  close();
+  status.textContent='Buscando somente nos estabelecimentos cadastrados das cidades próximas...';
+  const found=[];
+  const seen=new Set();
+  for(const city of cities){
+   const regionalState={...searchState,location:{...(searchState.location||{}),city,uf:null,neighborhood:null}};
+   for(const row of searchStores(db,regionalState,position,{limit:25})){
+    if(seen.has(row.store.id))continue;
+    seen.add(row.store.id);
+    found.push({...row,regionalCity:city});
+   }
+  }
+  if(!found.length){
+   status.textContent='Não encontrei opções correspondentes nas cidades próximas consultadas: '+cities.join(', ')+'. Mantive '+origin+' como sua cidade preferida.';
+   return;
+  }
+  const ranked=contextualRank(rankV9(rerankSearchResults(found,query,db,searchState.filters?.sort),query,searchState.filters?.sort),query,searchState.filters?.sort).slice(0,60);
+  regionalSearchInfo={origin,cities};
+  state.lastResults=ranked;
+  state.resultOffset=0;
+  lastSearchText=query;
+  save();
+  status.textContent='Busca regional autorizada. Sua cidade preferida continua sendo '+origin+'.';
+  showNextResultPage();
+ });
+ no.addEventListener('click',()=>{
+  if(version!==regionalConsentVersion)return;
+  close();status.textContent='Certo. Vou manter a busca somente em '+origin+'.';
+ });
+ actions.append(yes,no);prompt.append(actions,status);
+}
+
 const isMoreResultsRequest=text=>/^(?:(?:por favor\s*)?(?:quero|queria|pode|poderia|me mostra|me mostre|mostra|mostrar|mostre|ver|tem|me de|exiba|traga|buscar|preciso de|gostaria de)\s+)?(?:mais\s+(?:\d+\s+)?(?:opcoes|opcao|resultados|lojas|estabelecimentos|alternativas|sugestoes)|outras\s+(?:opcoes|lojas|alternativas|sugestoes)|proximas\s+(?:opcoes|lojas|alternativas)|proximos\s+(?:resultados|tres|3)|mais\s+tres|mais\s+3|mostrar\s+mais|ver\s+mais)(?:\s+por favor)?$/.test(norm(text));
 let taxonomy=structuredClone(fallbackTaxonomy),aliases=structuredClone(fallbackAliases);
 const memoryKey='guru_context_v4',ttl=2*60*60*1000;
@@ -830,7 +921,7 @@ function citySearchState(source=state){
 function displayResults(rows,offset=0){
  const m=add('',false);m.classList.add('hashtag-result-msg');
  const end=offset+rows.length,total=(state.lastResults||[]).length;
- const intro=offset===0?'Encontrei estas opções em '+userCity+':':'Outras opções em '+userCity+':';
+ const intro=regionalSearchInfo?(offset===0?'Encontrei opções em outras cidades da região de '+regionalSearchInfo.origin+':':'Mais opções em cidades próximas de '+regionalSearchInfo.origin+':'):(offset===0?'Encontrei estas opções em '+userCity+':':'Outras opções em '+userCity+':');
  m.appendChild(el('div','hashtag-intro',intro));
  if(position){
   m.appendChild(el('div','guru-city-distance-note','Distâncias aproximadas em linha reta. A classificação continua sendo por relevância, não por proximidade.'));
@@ -848,9 +939,9 @@ function displayResults(rows,offset=0){
  // A explicação textual fica sempre acima dos cards, dentro do mesmo resultado.
  if(offset===0 && rows.length){
   const summary=el('div','guru-result-summary',
-   rows.length===1
+   regionalSearchInfo?'Resultados de outras cidades, exibidos com sua autorização. Confira a cidade e o endereço de cada estabelecimento antes de ir.':(rows.length===1
     ? 'Encontrei '+rows[0].store.name+', que combina com o que você procura. A opção está logo abaixo.'
-    : 'Encontrei '+rows.length+' opções para sua busca. Confira os estabelecimentos logo abaixo.');
+    : 'Encontrei '+rows.length+' opções para sua busca. Confira os estabelecimentos logo abaixo.'));
   m.appendChild(summary);
  }
  const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,offset+i)));m.appendChild(grid);
@@ -1172,6 +1263,8 @@ async function run(text){
  draft.location={...(draft.location||{}),city:userCity,uf:null,neighborhood:null};
  if(db.unavailable.hours&&(draft.filters.openNow||draft.filters.day!=null||(Array.isArray(draft.filters.days)&&draft.filters.days.length)||(Array.isArray(draft.filters.daysAll)&&draft.filters.daysAll.length)||draft.filters.start!=null||draft.filters.end!=null)){add('Não consegui consultar os horários agora, então não vou afirmar que alguma loja está aberta. Tente novamente.');return}
  if(db.unavailable.reviews&&(draft.filters.minRating!=null||draft.filters.sort==='rating')){add('Não consegui consultar as avaliações agora. Tente novamente antes de aplicar esse filtro.');return}
+ regionalSearchInfo=null;
+ regionalConsentVersion++;
  // Busca híbrida: resultados literais primeiro; sinônimos e erros de escrita
  // só entram quando a consulta original não encontrou nenhum resultado.
  let finalState=draft,rows=searchStores(db,draft,position,{limit:60}),recovery=null;
@@ -1240,6 +1333,7 @@ async function run(text){
    }
    m.appendChild(panel);
   }
+  askRegionalSearchPermission(text,draft);
   save();return;
  }
  if(paintFallback){
@@ -1312,6 +1406,7 @@ async function submitText(raw){
  }
 }
 function resetConversation(){
+ regionalSearchInfo=null;regionalConsentVersion++;
  state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};
  msgs.replaceChildren(el('div','msg bot','Olá! Diga o que você procura.'));
  document.body.classList.remove('chat-started');

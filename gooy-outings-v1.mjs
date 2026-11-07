@@ -166,7 +166,7 @@ export function editOutingStops(text,stops=[],pool=[]){
  // Candidatos marcados manualOnly só aparecem quando o usuário pede a loja pelo nome.
  const choices=pool.filter(r=>r.store?.id&&r.store?.name&&r.store?.address&&!used.has(String(r.store.id)));
  const named=choices.filter(r=>{const name=outingNormalize(r.store.name);return name.length>=5&&n.includes(name)});
- const eligible=named.length?named:choices.filter(r=>!r.manualOnly&&(!targetType||outingStopType(r.store)===targetType));
+ const eligible=named.length?named:choices.filter(r=>(!r.manualOnly||targetType!=null)&&(!targetType||outingStopType(r.store)===targetType));
  const rank=(list)=>[...list].sort((a,b)=>{
   const distance=r=>stops.length?outingStraightKm(stops[stops.length-1].store,r.store):null;
   const value=r=>(Number(r.outingScore)||0)+Math.max(0,12-(distance(r)??12));

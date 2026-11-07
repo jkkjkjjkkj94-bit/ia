@@ -87,7 +87,7 @@ window.GuruBoot={status:'loading',error:null};
  },true);
 })();
 </script><script type="module">
-import('./guru-engine-v4.js?v=122').then(()=>{
+import('./guru-engine-v4.js?v=123').then(()=>{
  window.GuruBoot.status=window.GuruEngineV4?'ready':'error';
  if(!window.GuruEngineV4)window.GuruBoot.report(new Error('Módulo carregado, mas o mecanismo de chat não foi inicializado.'));
 }).catch(error=>window.GuruBoot.report(error));

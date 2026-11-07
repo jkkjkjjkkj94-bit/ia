@@ -3,7 +3,7 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=2';
-import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents} from './gooy-outings-v1.mjs?v=4';
+import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents} from './gooy-outings-v1.mjs?v=5';
 
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
@@ -835,8 +835,11 @@ function makeCard(row,index){
  const quality=storeDataQuality(s,db||{});
  if(quality.stale)card.appendChild(el('div','guru-data-alert','Informações da loja podem estar desatualizadas ('+quality.daysSinceUpdate+' dias).'));
  const actions=el('div','store-card-actions');
- const view=el('button','store-action primary','Ver loja');view.type='button';view.onclick=()=>chooseStore(row);actions.appendChild(view);
- const products=el('button','store-action','Produtos');products.type='button';products.onclick=()=>{state.selectedStore=s;state.selectedProduct=null;replyAboutStore('quais produtos tem?','products');renderContext();save()};actions.appendChild(products);
+ const outingResult=!!lastOuting&&(state.lastResults||[]).some(x=>x.store?.id===s.id);
+ const view=el('button','store-action primary',outingResult?'Ver local':'Ver loja');view.type='button';view.onclick=()=>chooseStore(row);actions.appendChild(view);
+ if(!outingResult){
+  const products=el('button','store-action','Produtos');products.type='button';products.onclick=()=>{state.selectedStore=s;state.selectedProduct=null;replyAboutStore('quais produtos tem?','products');renderContext();save()};actions.appendChild(products);
+ }
  const phone=String(s.whatsapp||'').replace(/\D/g,'');
  if(phone.length>=10&&phone.length<=15){const a=el('a','store-action link','WhatsApp');a.href='https://wa.me/'+phone;a.target='_blank';a.rel='noopener noreferrer';actions.appendChild(a)}
  card.appendChild(actions);return card;

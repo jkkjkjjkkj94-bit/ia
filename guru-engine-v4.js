@@ -845,30 +845,52 @@ function makeCard(row,index){
  if(phone.length>=10&&phone.length<=15){const a=el('a','store-action link','WhatsApp');a.href='https://wa.me/'+phone;a.target='_blank';a.rel='noopener noreferrer';actions.appendChild(a)}
  card.appendChild(actions);return card;
 }
+function resultPageSize(){
+ // Mobile: duas opções por vez; telas maiores preservam a paginação desktop.
+ return window.matchMedia?.('(max-width:680px)')?.matches?2:RESULT_PAGE_SIZE;
+}
 function renderNextQuestions(host,rows,offset=0){
- // Pesquisas de passeio ficam sem botões extras sob os cards; refinamento via chat.
- if(lastOuting)return;
- const questions=followupPrompts(rows,state);
- const total=(state.lastResults||[]).length;
- const remaining=Math.max(0,total-offset-rows.length);
- if(!questions.length&&!remaining)return;
+ const all=state.lastResults||[];
+ const count=offset+rows.length;
+ const remaining=Math.max(0,all.length-count);
+ const compact=window.matchMedia?.('(max-width:680px)')?.matches===true;
+ const questions=lastOuting||compact?[]:followupPrompts(rows,state);
+ if(!remaining&&!questions.length)return;
  const panel=el('div','guru-next-questions');
- panel.appendChild(el('div','guru-next-label','Você também pode perguntar:'));
+ if(questions.length)panel.appendChild(el('div','guru-next-label','Você também pode perguntar:'));
  const buttons=el('div','guru-next-buttons');
  if(remaining){
-  const more=el('button','guru-next-button guru-more-question','Mostrar mais '+Math.min(RESULT_PAGE_SIZE,remaining)+' opções');
-  more.type='button';more.onclick=()=>submitText('mais opções');
+  const more=el('button','guru-next-button guru-more-question gooy-more-options','Mais opções');
+  more.type='button';
+  more.setAttribute('aria-label','Mostrar mais estabelecimentos');
+  const activeResults=all, grid=host.querySelector('.store-results-grid');
+  more.onclick=()=>{
+   // Evita misturar resultados de pesquisas diferentes.
+   if(state.lastResults!==activeResults||!grid?.isConnected){more.remove();return}
+   const start=Math.max(count,Number(state.resultOffset)||count);
+   const batch=activeResults.slice(start,start+resultPageSize());
+   if(!batch.length){more.remove();return}
+   batch.forEach((row,i)=>grid.appendChild(makeCard(row,start+i)));
+   state.resultOffset=start+batch.length;
+   save();
+   const left=activeResults.length-state.resultOffset;
+   if(left<=0){panel.remove();return}
+   more.textContent='Mais opções';
+   more.setAttribute('aria-label','Mostrar mais '+Math.min(left,resultPageSize())+' estabelecimentos');
+  };
   buttons.appendChild(more);
  }
  for(const question of questions){
-  const b=el('button','guru-next-button',question);b.type='button';
-  b.addEventListener('click',()=>submitText(question));buttons.appendChild(b);
+  const button=el('button','guru-next-button',question);
+  button.type='button';
+  button.onclick=()=>submitText(question);
+  buttons.appendChild(button);
  }
  panel.appendChild(buttons);host.appendChild(panel);
 }
 function renderComparison(indices,question){
  const all=state.lastResults||[];
- const offset=Math.max(0,(Number(state.resultOffset)||RESULT_PAGE_SIZE)-RESULT_PAGE_SIZE);
+ const offset=Math.max(0,(Number(state.resultOffset)||resultPageSize())-resultPageSize());
  const rows=[...new Set(indices)].map(index=>all[offset+index]).filter(Boolean);
  if(rows.length<2){add('Preciso de pelo menos duas opções deste grupo para comparar.');return}
  const items=compareStores(rows,db||{});
@@ -966,7 +988,7 @@ function showNextResultPage(){
  const all=state.lastResults||[];
  const offset=Math.min(Math.max(0,Number(state.resultOffset)||0),all.length);
  if(offset>=all.length){add(lastOuting?'Essas são todas as opções cadastradas que encontrei para este passeio.':'Não há mais opções nesta pesquisa. Você pode procurar outra categoria ou produto.');return false}
- const page=all.slice(offset,offset+RESULT_PAGE_SIZE);
+ const page=all.slice(offset,offset+resultPageSize());
  state.resultOffset=offset+page.length;
  save();const message=displayResults(page,offset);
  return message;
@@ -1391,7 +1413,7 @@ async function run(text){
  }
  if(plan.kind==='select'){
   if(!userCity){askForCity(text);return}
-  const visibleOffset=Math.max(0,(Number(state.resultOffset)||RESULT_PAGE_SIZE)-RESULT_PAGE_SIZE);
+  const visibleOffset=Math.max(0,(Number(state.resultOffset)||resultPageSize())-resultPageSize());
   const index=plan.index<0?state.lastResults.length-1:visibleOffset+plan.index,row=state.lastResults[index];
   if(!row){add('Essa opção não existe na lista atual.');return}
   recordSelection(row.store?.id);

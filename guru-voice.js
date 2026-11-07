@@ -1,4 +1,4 @@
-// GURU Voice 3: entrada por voz, transcrição ao vivo, revisão antes do envio.
+// GOOY Voice 3: entrada por voz, transcrição ao vivo, revisão antes do envio.
 (() => {
  'use strict';
  const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -26,7 +26,7 @@
  }
  function fold(parts){return parts.reduce((acc,part)=>merge(acc,part),'')}
  function say(message,state=''){if(status){status.textContent=message;status.dataset.state=state}}
- function ui(){mic.classList.toggle('is-listening',active);mic.classList.toggle('is-starting',starting);mic.setAttribute('aria-pressed',String(active));mic.setAttribute('aria-label',active?'Finalizar ditado':'Falar com a GURU');mic.title=active?'Finalizar ditado e revisar':'Ditar pergunta';input.placeholder=active?'Sua pergunta aparece aqui enquanto você fala…':originalPlaceholder}
+ function ui(){mic.classList.toggle('is-listening',active);mic.classList.toggle('is-starting',starting);mic.setAttribute('aria-pressed',String(active));mic.setAttribute('aria-label',active?'Finalizar ditado':'Falar com a GOOY');mic.title=active?'Finalizar ditado e revisar':'Ditar pergunta';input.placeholder=active?'Sua pergunta aparece aqui enquanto você fala…':originalPlaceholder}
  function clear(){clearTimeout(restartTimer);clearTimeout(watchdog)}
  function write(interim=''){const value=merge(merge(base,final),interim);if(value){input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}))}}
  function finish(message){requestedStop=true;active=false;starting=false;token++;clear();try{rec?.stop()}catch{}ui();say(message||(input.value.trim()?'Pergunta captada. Confira o texto e toque em enviar.':'Não detectei sua fala. Tente novamente.'),input.value.trim()?'ready':'hint')}

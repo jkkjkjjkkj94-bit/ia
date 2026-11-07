@@ -91,6 +91,13 @@ export function outingUpcomingEvents(events,outing,city,now=new Date()){
   if(outing.date==='hoje'&&new Date(when).toDateString()!==now.toDateString())return false;
   if(outing.date==='amanha'&&new Date(when).toDateString()!==new Date(start+86400000).toDateString())return false;
   if(!matchesDay(new Date(when),outing.date))return false;
+  // "Sábado", "domingo" e "fim de semana" significam a próxima ocorrência,
+  // não todos os eventos de sábados e domingos dos próximos três meses.
+  if(['sabado','domingo','fim de semana'].includes(outing.date)){
+   const target=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+   const max=new Date(target.getTime()+7*86400000);
+   if(new Date(when)>max)return false;
+  }
   if(outing.budget==='gratis'&&e.free_entry!==true)return false;
   return true;
  }).sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at)).slice(0,6);

@@ -1,0 +1,42 @@
+/* GURU Mobile UI 2.0 — somente telas pequenas; desktop permanece intacto. */
+@media (max-width:680px){
+ html,body{width:100%;max-width:100%;overflow-x:hidden}
+ body .top{height:58px!important;min-height:58px;padding:0 18px!important;border-bottom:0!important;background:var(--bg,#fff)!important;display:flex!important;align-items:center;justify-content:space-between}
+ body .top .brand{display:flex!important;align-items:center;gap:9px;font-size:16px;font-weight:720;letter-spacing:-.035em}
+ body .top .brand:before{content:"";width:26px;height:26px;display:block;background:currentColor;mask:url("./guru-logo.svg") center/contain no-repeat;-webkit-mask:url("./guru-logo.svg") center/contain no-repeat}
+ body .top .brand:after{content:"GURU"}
+ body .guru-mobile-theme-toggle{width:42px!important;height:42px!important;border:1px solid #e9e9eb!important;border-radius:14px!important;flex:0 0 42px}
+ body .main{width:100%!important;max-width:100%!important;height:calc(100dvh - 58px)!important;min-height:0!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;padding:0 16px!important;overflow:hidden!important}
+ body .hero{flex:0 0 auto;margin:clamp(46px,11dvh,110px) 0 0!important;padding:0 8px!important;text-align:left!important}
+ body .hero h1{font-size:clamp(27px,7.3vw,35px)!important;line-height:1.14!important;letter-spacing:-.055em!important;font-weight:730!important;margin:0 0 10px!important}
+ body .hero p{font-size:14px!important;line-height:1.55!important;max-width:330px;color:#85858a!important}
+ body .quick{flex:0 0 auto;display:flex!important;flex-wrap:wrap!important;justify-content:flex-start!important;gap:8px!important;margin:26px 0 12px!important;padding:0 4px!important;max-width:100%}
+ body .quick button{min-height:40px!important;max-width:100%;padding:9px 13px!important;font-size:12px!important;font-weight:520!important;line-height:1.25!important;border:1px solid #e7e7e9!important;border-radius:999px!important;background:transparent!important;color:inherit!important;white-space:normal!important;overflow-wrap:anywhere;transition:background .15s,border-color .15s}
+ body .quick button:active{background:#ededee!important}
+ body .guru-category-browser{flex:0 0 auto;margin:0 0 8px!important;max-width:100%}
+ body .guru-category-browser>details{border-radius:14px!important;border-color:#ececef!important}
+ body .guru-category-browser>details>summary{font-size:12px!important;color:#76767b!important}
+ body .chat{position:relative!important;flex:1 1 0!important;width:100%!important;min-height:0!important;display:grid!important;grid-template-rows:minmax(0,1fr) auto!important;padding:0 0 calc(12px + env(safe-area-inset-bottom,0px))!important;overflow:hidden!important}
+ body .chat>.guru-messages-region{min-height:0!important;overflow:hidden!important}
+ body .chat .guru-messages-region>.msgs{padding:12px 2px 18px!important;scroll-padding-bottom:18px;overscroll-behavior:contain}
+ body .chat .msgs>.msg{font-size:14px!important;line-height:1.6!important}
+ body .chat .msgs>.msg.user{border-radius:17px 17px 5px 17px!important;background:#f3f3f5!important;padding:11px 14px!important}
+ body .chat>.guru-chat-dock{background:var(--bg,#fff)!important;padding:8px 0 0!important;border-top:0!important;gap:5px!important;min-width:0!important}
+ body .chat .guru-chat-dock>.send{min-height:62px!important;border-radius:22px!important;padding:7px 7px 7px 15px!important;border:1px solid #e2e2e5!important;box-shadow:0 5px 20px #00000008!important}
+ body .chat .guru-chat-dock>.send #q{font-size:16px!important;min-width:0!important}
+ body .chat .guru-chat-dock>.send button{width:46px!important;height:46px!important;min-width:46px!important;border-radius:15px!important}
+ body .chat .guru-chat-dock>.ctx{max-height:min(86px,17dvh)!important;overflow-y:auto!important;min-width:0}
+ body .chat .msgs .store-result-card.smart-card,body .chat .msgs .normal-result-card{border-radius:18px!important;padding:14px!important;box-shadow:none!important;min-width:0!important;max-width:100%!important}
+ body .app-footer-note{display:none!important}
+ body.chat-started .hero,body.chat-started .quick,body.chat-started .guru-category-browser{display:none!important}
+ body.chat-started .chat .guru-messages-region>.msgs{padding-top:16px!important}
+ html[data-theme="dark"] body .top{background:var(--guru-dark-bg)!important}
+ html[data-theme="dark"] body .guru-mobile-theme-toggle{border-color:#34363a!important}
+ html[data-theme="dark"] body .hero p{color:#aaaeb6!important}
+ html[data-theme="dark"] body .quick button{border-color:#3b3d42!important;color:#f1f1f2!important}
+ html[data-theme="dark"] body .chat .msgs>.msg.user{background:#292b30!important}
+ html[data-theme="dark"] body .chat .guru-chat-dock{background:var(--guru-dark-bg)!important}
+ html[data-theme="dark"] body .chat .guru-chat-dock>.send{border-color:#44474b!important;box-shadow:none!important}
+}
+@media(max-width:360px){body .main{padding-inline:12px!important}body .hero{margin-top:42px!important}body .quick{gap:6px!important}body .quick button{padding-inline:10px!important;font-size:11.5px!important}body .chat .guru-chat-dock>.send button{width:42px!important;min-width:42px!important;height:42px!important}}
+@media(prefers-reduced-motion:reduce){@media(max-width:680px){body .quick button{transition:none!important}}}

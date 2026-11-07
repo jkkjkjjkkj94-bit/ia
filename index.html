@@ -24,7 +24,7 @@ body .chat .guru-chat-dock .guru-filter-chip,body .chat .guru-chat-dock .guru-cl
 .guru-category-option:hover,.guru-category-option:focus-visible{background:rgba(125,125,125,.1)}
 @media(max-width:680px){.guru-category-list{grid-template-columns:1fr;max-height:35vh}.guru-category-browser>details>summary{padding:10px 12px}}
 .guru-hours-unconfirmed{font-size:12px;line-height:1.45;color:var(--text-muted,#777);padding:7px 0;overflow-wrap:anywhere}
-</style><link rel="stylesheet" href="guru-mobile-ui-v2.css?v=4"><link rel="icon" type="image/svg+xml" href="gooy-mark.svg?v=1"><script>try{document.documentElement.dataset.theme=localStorage.getItem('guru_theme_v1')==='dark'?'dark':'light'}catch{document.documentElement.dataset.theme='light'}</script><style id="gooy-branding-v1">
+</style><link rel="stylesheet" href="guru-mobile-ui-v2.css?v=5"><link rel="icon" type="image/svg+xml" href="gooy-mark.svg?v=1"><script>try{document.documentElement.dataset.theme=localStorage.getItem('guru_theme_v1')==='dark'?'dark':'light'}catch{document.documentElement.dataset.theme='light'}</script><style id="gooy-branding-v1">
 .gooy-identity{display:flex;align-items:center;gap:9px;min-width:0;white-space:nowrap}
 .gooy-identity .brand-logo{display:block;width:28px;height:28px;flex:0 0 28px;object-fit:contain}
 .gooy-wordmark{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:800;letter-spacing:-.055em;font-size:19px;line-height:1;color:#111}
@@ -87,7 +87,7 @@ window.GuruBoot={status:'loading',error:null};
  },true);
 })();
 </script><script type="module">
-import('./guru-engine-v4.js?v=125').then(()=>{
+import('./guru-engine-v4.js?v=126').then(()=>{
  window.GuruBoot.status=window.GuruEngineV4?'ready':'error';
  if(!window.GuruEngineV4)window.GuruBoot.report(new Error('Módulo carregado, mas o mecanismo de chat não foi inicializado.'));
 }).catch(error=>window.GuruBoot.report(error));

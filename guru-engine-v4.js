@@ -3,7 +3,8 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=2';
-import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents} from './gooy-outings-v1.mjs?v=2';
+import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents} from './gooy-outings-v1.mjs?v=3';
+import {trophyInfo,activeStoreTrophies} from './gooy-trophies-v1.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
 import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
@@ -528,7 +529,7 @@ async function loadData(force=false){
    read(AI,'local_ai_taxonomy_terms','&active=eq.true'),
    read(AI,'local_ai_store_highlights','','store_id'),
    read(AI,'guru_approved_aliases','&active=eq.true'),
-   read(AI,'local_ai_qa','&active=eq.true'),read(CORE,'places'),read(CORE,'local_ai_events','&active=eq.true')
+   read(AI,'local_ai_qa','&active=eq.true'),read(CORE,'places'),read(CORE,'local_ai_events','&active=eq.true'),read(AI,'local_ai_store_trophies','&active=eq.true')
   ]);
   const get=i=>all[i].status==='fulfilled'?all[i].value:[];
   if(all[0].status==='rejected')throw all[0].reason;
@@ -540,7 +541,7 @@ async function loadData(force=false){
   const highlightsByStore=new Map(get(8).map(h=>[h.store_id,h]));
   const now=Date.now();
   // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
-  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:[...get(2),...coreStoreHours(get(0)).filter(h=>!get(2).some(a=>a.store_id===h.store_id&&Number(a.weekday)===h.weekday))],reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),places:get(11),events:get(12),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
+  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:[...get(2),...coreStoreHours(get(0)).filter(h=>!get(2).some(a=>a.store_id===h.store_id&&Number(a.weekday)===h.weekday))],reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),places:get(11),events:get(12),trophies:get(13),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
   renderCategoryBrowser(db.stores);lastLoad=Date.now();rehydrate();if(input?.value)updateSuggestions();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;
@@ -802,6 +803,17 @@ function makeCard(row,index){
  if(s.verified)tags.appendChild(el('span','store-chip','Verificada'));
  if(s.sponsored)tags.appendChild(el('span','store-chip','Patrocinada'));
  identity.appendChild(tags);top.appendChild(identity);card.appendChild(top);
+ const trophyCodes=activeStoreTrophies(db?.trophies||[],s.id);
+ if(trophyCodes.length){
+  const group=el('div','gooy-trophy-group');group.setAttribute('aria-label','Troféus GOOY do estabelecimento');
+  trophyCodes.forEach(code=>{
+   const t=trophyInfo(code);if(!t)return;
+   const badge=el('span','gooy-trophy',t.icon+' '+t.label);
+   badge.title='Troféu GOOY: característica atribuída pela administração';
+   group.appendChild(badge);
+  });
+  card.appendChild(group);
+ }
  if(s.address)card.appendChild(el('div','store-address',s.address));
  if(row.hoursUnknown)card.appendChild(el('div','guru-hours-unconfirmed','Horário neste dia não confirmado — consulte a loja'));
  if(Array.isArray(s.specialties)&&s.specialties.length){
@@ -1136,16 +1148,16 @@ async function searchOuting(outing){
  await loadData();
  regionalSearchInfo=null;regionalConsentVersion++;
  const draft=emptyState();draft.location={city:userCity,uf:null,neighborhood:null};draft.query='lugares';
- const rows=outing.eventsOnly?[]:outingRankRows(searchStores(db,draft,position,{limit:db.stores.length}),outing);
- const places=outing.eventsOnly?[]:outingRankPlaces(db.places||[],outing,userCity).filter(p=>!rows.some(r=>norm(r.store.name)===norm(p.name)));
+ const rows=outing.eventsOnly?[]:outingRankRows(searchStores(db,draft,position,{limit:db.stores.length}),outing,db.trophies||[]);
+ const places=[]; // Lugares sem troféu de estabelecimento não entram como sugestão de rolê.
  const events=outingUpcomingEvents(db.events||[],outing,userCity);
  state=draft;state.lastResults=rows;state.resultOffset=0;lastOuting=outing;lastSearchText=outing.original;renderContext();save();
  const who={casal:'a dois',amigos:'com amigos',familia:'em família',geral:'para sair'}[outing.companion]||'para sair';
- const intro=add('Separei opções de rolê '+who+' em '+userCity+'. Os locais foram encontrados no cadastro; confirme horários, preços e programação antes de ir.');
+ const intro=add('Separei opções de rolê '+who+' em '+userCity+'. Os estabelecimentos sugeridos possuem troféus compatíveis. Confirme horários, preços e programação antes de ir.');
  if(outing.budget==='economico')add('Não há preços de passeio confirmados para classificar quais locais são mais baratos.');
  if(!rows.length&&!places.length&&!events.length){
-  add(outing.eventsOnly?'Não há eventos futuros ativos cadastrados nesta cidade.':outing.budget==='gratis'?'Não encontrei passeios explicitamente cadastrados como gratuitos.':'Não encontrei passeios correspondentes nos locais cadastrados desta cidade.');
-  if(!outing.eventsOnly)askRegionalSearchPermission(outing.original,draft,city=>outingRankRows(searchStores(db,{...draft,location:{city,uf:null,neighborhood:null}},position,{limit:db.stores.length}),outing));
+  add(outing.eventsOnly?'Não há eventos futuros ativos cadastrados nesta cidade.':outing.budget==='gratis'?'Não encontrei passeios explicitamente cadastrados como gratuitos.':'Não encontrei estabelecimentos com os Troféus GOOY necessários nesta cidade. Os troféus são atribuídos pela administração.');
+  if(!outing.eventsOnly)askRegionalSearchPermission(outing.original,draft,city=>outingRankRows(searchStores(db,{...draft,location:{city,uf:null,neighborhood:null}},position,{limit:db.stores.length}),outing,db.trophies||[]));
  }else{
   showOutingExtras(places,events);
   if(rows.length){add('Estabelecimentos relacionados ao seu passeio:');showNextResultPage()}

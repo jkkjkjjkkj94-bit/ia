@@ -734,18 +734,6 @@ function makeCard(row,index){
  card.appendChild(score);
  const quality=storeDataQuality(s,db||{});
  if(quality.stale)card.appendChild(el('div','guru-data-alert','Informações da loja podem estar desatualizadas ('+quality.daysSinceUpdate+' dias).'));
- const why=el('button','smart-why-btn','Por que apareceu?');why.type='button';
- const panel=el('div','smart-why-panel');
- panel.appendChild(el('div','','Qualidade cadastral: '+Number(row.rankScore||0).toFixed(0)+'/100 (não é avaliação de clientes).'));
- if(row.searchMatch)panel.appendChild(el('div','','Relevância desta consulta: '+row.searchMatch.score+'/100 (pontuação interna, não é garantia de disponibilidade).'));
- for(const evidence of explainMatch(row))panel.appendChild(el('div','',evidence));
- for(const statement of evidenceForStore(row,{productsUnavailable:db?.unavailable?.products===true}))panel.appendChild(el('div','',statement));
- if(Number(row.contextScore)>0)panel.appendChild(el('div','','Relevância contextual: '+row.contextScore+' pontos.'));
- row.reason.forEach(t=>panel.appendChild(el('div','',t)));
- const qualityInfo=storeDataQuality(s,db||{});
- panel.appendChild(el('div','','Cadastro: '+qualityInfo.completed+' de '+qualityInfo.total+' informações essenciais preenchidas.'));
- if(qualityInfo.updatedAt)panel.appendChild(el('div','','Atualizado em '+new Date(qualityInfo.updatedAt).toLocaleDateString('pt-BR')+'.'));
- why.onclick=()=>panel.classList.toggle('on');card.appendChild(why);card.appendChild(panel);
  const actions=el('div','store-card-actions');
  const view=el('button','store-action primary','Ver loja');view.type='button';view.onclick=()=>chooseStore(row);actions.appendChild(view);
  const products=el('button','store-action','Produtos');products.type='button';products.onclick=()=>{state.selectedStore=s;state.selectedProduct=null;replyAboutStore('quais produtos tem?','products');renderContext();save()};actions.appendChild(products);
@@ -857,6 +845,14 @@ function displayResults(rows,offset=0){
   }};
   m.appendChild(button);
  }
+ // A explicação textual fica sempre acima dos cards, dentro do mesmo resultado.
+ if(offset===0 && rows.length){
+  const summary=el('div','guru-result-summary',
+   rows.length===1
+    ? 'Encontrei '+rows[0].store.name+', que combina com o que você procura. A opção está logo abaixo.'
+    : 'Encontrei '+rows.length+' opções para sua busca. Confira os estabelecimentos logo abaixo.');
+  m.appendChild(summary);
+ }
  const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,offset+i)));m.appendChild(grid);
  renderNextQuestions(m,rows,offset);return m;
 }
@@ -866,8 +862,8 @@ function showNextResultPage(){
  if(offset>=all.length){add('Não há mais opções nesta pesquisa. Você pode procurar outra categoria ou produto.');return false}
  const page=all.slice(offset,offset+RESULT_PAGE_SIZE);
  state.resultOffset=offset+page.length;
- save();displayResults(page,offset);
- return true;
+ save();const message=displayResults(page,offset);
+ return message;
 }
 function renderNeedQuestion(need){
  const info=describeNeed(need);if(!info)return;
@@ -1256,8 +1252,13 @@ async function run(text){
   add(hint+' Pesquisei por “'+recovery.query+'”.');
  }
  // Resultados locais devem aparecer sem aguardar serviço externo de IA.
- showNextResultPage();
- hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE)).then(natural=>{if(natural && !searchBusy)add(natural)}).catch(()=>{});
+ const resultMessage=showNextResultPage();
+ hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE)).then(natural=>{
+  if(!natural || !resultMessage || typeof resultMessage.querySelector!=='function')return;
+  // Atualiza somente o resumo deste resultado; não cria mensagem abaixo dos cards.
+  const summary=resultMessage.querySelector('.guru-result-summary');
+  if(summary)summary.textContent=natural;
+ }).catch(()=>{});
  save();
 }
 // Atalhos do card usam a loja selecionada, sem passar por interpretação de busca.

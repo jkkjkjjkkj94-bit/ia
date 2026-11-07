@@ -694,10 +694,19 @@ html[data-theme="dark"] .gooy-outing-link{background:#292c31;border-color:#3e424
 @media(max-width:680px){body .gooy-outing-list{gap:9px!important}body .gooy-outing-heading{font-size:14px!important;margin-top:4px!important}body .gooy-outing-place{padding:13px!important;border-radius:14px!important}body .gooy-outing-link{min-height:38px}}
 
 
-/* GOOY Rolês: ações de refinamento responsivas, sem faixa horizontal cortada. */
-.chat .msgs .gooy-outing-actions{display:flex!important;flex-wrap:wrap!important;gap:8px!important;width:100%;max-width:100%;min-width:0;margin:13px 0 5px!important;padding:0!important;overflow:visible!important}
-.chat .msgs .gooy-outing-actions .guru-next-button{min-height:38px;max-width:100%;white-space:normal!important;overflow-wrap:anywhere;text-align:center}
-@media(max-width:680px){
- body .chat .msgs .gooy-outing-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;padding:0 0 8px!important}
- body .chat .msgs .gooy-outing-actions button{display:flex;align-items:center;justify-content:center;width:100%!important;min-width:0!important;min-height:40px!important;padding:8px 9px!important;line-height:1.35!important;font-size:12px!important;white-space:normal!important}
-}
+
+/* GOOY Descobertas: roteiro de passeio enxuto e responsivo. */
+.gooy-discoveries{width:100%;max-width:100%;min-width:0;padding:15px 17px;border:1px solid #e9eaec;border-radius:17px;background:#fafafa;box-sizing:border-box}
+.gooy-discoveries-title{margin:0 0 5px;font-size:15px;font-weight:750;letter-spacing:-.02em;color:inherit}
+.gooy-discoveries-subtitle,.gooy-discoveries-note{margin:0;color:#727781;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.gooy-discoveries-steps{display:grid;gap:11px;list-style:none;counter-reset:gooy-stops;margin:15px 0;padding:0}
+.gooy-discoveries-stop{counter-increment:gooy-stops;display:grid;grid-template-columns:27px minmax(0,1fr);grid-template-rows:auto auto;align-items:start;gap:2px 9px;min-width:0}
+.gooy-discoveries-stop::before{content:counter(gooy-stops);grid-column:1;grid-row:1 / span 2;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#202124;color:#fff;font-size:11px;font-weight:750}
+.gooy-discoveries-stop strong{grid-column:2;grid-row:1;font-size:13px;line-height:1.4;color:inherit}
+.gooy-discoveries-stop span{grid-column:2;grid-row:2;font-size:12px;line-height:1.45;color:#727781;overflow-wrap:anywhere}
+.gooy-discoveries-map{display:inline-flex;align-items:center;justify-content:center;min-height:39px;margin:0 0 10px;padding:9px 13px;border-radius:11px;background:#202124;color:white;text-decoration:none;font-size:12px;font-weight:650}
+.gooy-discoveries-map:hover{background:#36383c}
+html[data-theme="dark"] .gooy-discoveries{background:#1e2024;border-color:#37393e}
+html[data-theme="dark"] .gooy-discoveries-stop span,html[data-theme="dark"] .gooy-discoveries-subtitle,html[data-theme="dark"] .gooy-discoveries-note{color:#b5b9c3}
+html[data-theme="dark"] .gooy-discoveries-stop::before,html[data-theme="dark"] .gooy-discoveries-map{background:#f0f1f3;color:#17181b}
+@media(max-width:680px){body .gooy-discoveries{padding:14px!important;border-radius:15px!important}body .gooy-discoveries-map{width:100%;min-height:42px}}

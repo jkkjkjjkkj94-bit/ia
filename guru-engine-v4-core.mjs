@@ -317,8 +317,9 @@ export function activePromo(p,now=Date.now()){
 }
 export function priceOf(p,now=Date.now()){return activePromo(p,now)?Number(p.promo_price):(p.price==null?NaN:Number(p.price))}
 export function eligibleProduct(p,f={},now=Date.now()){
- if(p.active!==true||p.show_in_ai!==true||!Number.isFinite(Number(p.stock))||Number(p.stock)<=0)return false;
- if(f.quantity!=null&&Number(p.stock)<f.quantity)return false;
+ if(p.active!==true||p.show_in_ai!==true)return false;
+ if(!p.catalog_tag&&(!Number.isFinite(Number(p.stock))||Number(p.stock)<=0))return false;
+ if(f.quantity!=null&&(p.catalog_tag||Number(p.stock)<f.quantity))return false;
  if(f.promoOnly&&!activePromo(p,now))return false;
  const price=priceOf(p,now);
  if((f.minPrice!=null||f.maxPrice!=null||f.sort==='price')&&!Number.isFinite(price))return false;
@@ -545,7 +546,7 @@ export function searchStores(data={},state={},position=null,options={}){
    reasons.push((exactSpecialty?'especialidade ':'grupo ')+state.group);
   }
   if(state.specialtyTerm&&!state.group){score+=55;reasons.push('especialidade '+state.specialtyTerm)}
-  if(eligible.length&&mustHaveProduct){score+=35;reasons.push('produto disponível em estoque')}
+  if(eligible.length&&mustHaveProduct){score+=35;reasons.push(eligible.some(p=>p.catalog_tag)?'loja informou vender o produto':'produto disponível em estoque')}
   if(hits.length){score+=hits.length*9;reasons.push('correspondência com sua descrição')}
   if(f.delivery===true){score+=8;reasons.push('faz entrega')}
   if(f.pickup===true){score+=7;reasons.push('permite retirada')}
@@ -556,7 +557,7 @@ export function searchStores(data={},state={},position=null,options={}){
   if(store.verified)score+=2;
   if(!score){const generic=STOP.has(norm(state.query))||/^(lojas?|comercios?|negocios?|estabelecimentos?|lugares?)\b/.test(norm(state.query));if(!generic)continue;score=1}
   const ranking=storeRankingPoints(store,{products:byStore.get(store.id)||[],hours:hoursByStore.get(store.id)||[],reviews:reviewsByStore.get(store.id)||[]});
-  output.push({store,products:eligible,score,rankScore:ranking.total,reason:reasons,hoursUnknown:!scheduleConfirmed&&scheduleUnknown,distance:km,rating:avg,reviewCount:rv?.count||0,minPrice:eligible.length?Math.min(...eligible.map(p=>priceOf(p,now.getTime()))):null});
+  output.push({store,products:eligible,score,rankScore:ranking.total,reason:reasons,hoursUnknown:!scheduleConfirmed&&scheduleUnknown,distance:km,rating:avg,reviewCount:rv?.count||0,minPrice:eligible.length&&eligible.some(p=>Number.isFinite(priceOf(p,now.getTime())))?Math.min(...eligible.map(p=>priceOf(p,now.getTime())).filter(Number.isFinite)):null});
  }
  const sort=f.sort;
  // O mesmo score 0–100 exibido no Admin determina a ordem padrão dos cards.

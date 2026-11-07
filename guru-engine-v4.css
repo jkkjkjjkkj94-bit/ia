@@ -482,3 +482,24 @@ html[data-theme="dark"] .selected-store-no-actions{color:#a4a7ae}
   line-height:1.6;
  }
 }
+
+/* Consentimento explícito para buscar em cidades da região. */
+.guru-regional-consent-status{
+ margin:10px 0 0;
+ font-size:12px;
+ line-height:1.55;
+ color:var(--muted,#777);
+ overflow-wrap:anywhere;
+}
+.msg.bot .guru-next-buttons:has(+ .guru-regional-consent-status){
+ display:flex;
+ flex-wrap:wrap;
+ gap:8px;
+ margin-top:12px;
+}
+.msg.bot .guru-next-buttons:has(+ .guru-regional-consent-status) button{
+ min-height:36px;
+ max-width:100%;
+ white-space:normal;
+ text-align:center;
+}

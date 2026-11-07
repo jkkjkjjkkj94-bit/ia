@@ -143,7 +143,7 @@ export function reorderOutingStops(stops=[]){
 }
 export function editOutingStops(text,stops=[],pool=[]){
  const n=outingNormalize(text);
- const add=/\b(adicione|adicionar|adiciona|acrescente|acrescentar|acrescenta|inclua|incluir|coloque|colocar|ponha|por|mais uma parada|mais um lugar|outra parada|outro lugar)\b/.test(n);
+ const add=/\b(adicione|adicionar|adiciona|acrescente|acrescentar|acrescenta|inclua|incluir|coloque|colocar|ponha|mais uma parada|mais um lugar|outra parada|outro lugar)\b/.test(n);
  const remove=/\b(tira|tire|tirar|remova|remove|remover|exclua|excluir|retira|retire|retirar)\b/.test(n);
  const reroute=/\b(refaca|refazer|reorganize|reorganizar|reordene|reordenar|mais perto|menos deslocamento|rota mais curta)\b/.test(n);
  const legacyReplace=/\b(troca|troque|trocar|substitua|substituir|muda|mude|mudar|altera|altere|alterar)\b/.test(n);

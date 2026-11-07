@@ -3,6 +3,7 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=2';
+import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents} from './gooy-outings-v1.mjs?v=2';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
 import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
@@ -21,6 +22,7 @@ const AI={url:'https://innziuzgtpfsiywqmies.supabase.co',key:'sb_publishable_'+'
 const form=document.getElementById('chatForm'),input=document.getElementById('q'),msgs=document.getElementById('msgs'),ctx=document.getElementById('ctx'),toast=document.getElementById('toast');
 let state=emptyState(),db=null,loadPromise=null,lastLoad=0,position=null,searchBusy=false;
 let locationAttempted=false;
+let lastOuting=null;
 let userCity='';
 let pendingCityQuery='';
 const userCityKey='guru_city_v1';
@@ -526,7 +528,7 @@ async function loadData(force=false){
    read(AI,'local_ai_taxonomy_terms','&active=eq.true'),
    read(AI,'local_ai_store_highlights','','store_id'),
    read(AI,'guru_approved_aliases','&active=eq.true'),
-   read(AI,'local_ai_qa','&active=eq.true')
+   read(AI,'local_ai_qa','&active=eq.true'),read(CORE,'places'),read(CORE,'local_ai_events','&active=eq.true')
   ]);
   const get=i=>all[i].status==='fulfilled'?all[i].value:[];
   if(all[0].status==='rejected')throw all[0].reason;
@@ -538,7 +540,7 @@ async function loadData(force=false){
   const highlightsByStore=new Map(get(8).map(h=>[h.store_id,h]));
   const now=Date.now();
   // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
-  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:[...get(2),...coreStoreHours(get(0)).filter(h=>!get(2).some(a=>a.store_id===h.store_id&&Number(a.weekday)===h.weekday))],reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
+  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:[...get(2),...coreStoreHours(get(0)).filter(h=>!get(2).some(a=>a.store_id===h.store_id&&Number(a.weekday)===h.weekday))],reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),places:get(11),events:get(12),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
   renderCategoryBrowser(db.stores);lastLoad=Date.now();rehydrate();if(input?.value)updateSuggestions();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;
@@ -1109,6 +1111,54 @@ function relatedPaintStoreFallback(data,draft,query){
  return {rows:(explicit.length?explicit:relevant).slice(0,60),specific:explicit.length>0};
 }
 
+
+function showOutingExtras(places,events){
+ const group=(title,list,render)=>{
+  if(!list.length)return;
+  const msg=add('',false);msg.classList.add('gooy-outing-list');msg.appendChild(el('h3','gooy-outing-heading',title));
+  list.forEach(item=>{const card=el('article','gooy-outing-place');card.appendChild(el('strong','',item.name));render(card,item);msg.appendChild(card)});
+ };
+ group('Lugares para conhecer',places,(card,p)=>{
+  card.appendChild(el('p','gooy-outing-detail',[p.category,p.address].filter(Boolean).join(' · ')));
+  if(p.hours)card.appendChild(el('p','gooy-outing-detail','Horário informado: '+p.hours+' (confirme)'));
+  const a=el('a','gooy-outing-link','Ver no mapa');
+  a.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(p.name+', '+p.address+', '+p.city);
+  a.target='_blank';a.rel='noopener noreferrer';card.appendChild(a);
+ });
+ group('Eventos cadastrados',events,(card,e)=>{
+  card.appendChild(el('p','gooy-outing-detail',new Date(e.starts_at).toLocaleString('pt-BR',{dateStyle:'medium',timeStyle:'short'})+' · '+e.address));
+  card.appendChild(el('p','gooy-outing-detail',e.free_entry===true?'Entrada gratuita informada':e.price_brl!=null?'Valor informado: '+money(e.price_brl):'Valor não informado'));
+  if(e.official_url)try{const u=new URL(e.official_url);if(['https:','http:'].includes(u.protocol)){const a=el('a','gooy-outing-link','Página do evento');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';card.appendChild(a)}}catch{}
+ });
+}
+async function searchOuting(outing){
+ if(!userCity){askForCity(outing.original);return}
+ await loadData();
+ regionalSearchInfo=null;regionalConsentVersion++;
+ const draft=emptyState();draft.location={city:userCity,uf:null,neighborhood:null};draft.query='lugares';
+ const rows=outing.eventsOnly?[]:outingRankRows(searchStores(db,draft,position,{limit:db.stores.length}),outing);
+ const places=outing.eventsOnly?[]:outingRankPlaces(db.places||[],outing,userCity).filter(p=>!rows.some(r=>norm(r.store.name)===norm(p.name)));
+ const events=outingUpcomingEvents(db.events||[],outing,userCity);
+ state=draft;state.lastResults=rows;state.resultOffset=0;lastOuting=outing;lastSearchText=outing.original;renderContext();save();
+ const who={casal:'a dois',amigos:'com amigos',familia:'em família',geral:'para sair'}[outing.companion]||'para sair';
+ const intro=add('Separei opções de rolê '+who+' em '+userCity+'. Os locais foram encontrados no cadastro; confirme horários, preços e programação antes de ir.');
+ if(outing.budget==='economico')add('Não há preços de passeio confirmados para classificar quais locais são mais baratos.');
+ if(!rows.length&&!places.length&&!events.length){
+  add(outing.eventsOnly?'Não há eventos futuros ativos cadastrados nesta cidade.':outing.budget==='gratis'?'Não encontrei passeios explicitamente cadastrados como gratuitos.':'Não encontrei passeios correspondentes nos locais cadastrados desta cidade.');
+  if(!outing.eventsOnly)askRegionalSearchPermission(outing.original,draft,city=>outingRankRows(searchStores(db,{...draft,location:{city,uf:null,neighborhood:null}},position,{limit:db.stores.length}),outing));
+ }else{
+  showOutingExtras(places,events);
+  if(rows.length){add('Estabelecimentos relacionados ao seu passeio:');showNextResultPage()}
+ }
+ const panel=el('div','guru-next-buttons');
+ const company={casal:'com minha namorada',amigos:'com meus amigos',familia:'com minha família',geral:''}[outing.companion]||'';
+ for(const [label,term] of [['Mais tranquilo','tranquilo'],['Ao ar livre','na natureza'],['Para comer','para comer'],['Eventos','eventos']]){
+  const button=el('button','guru-next-button',label);button.type='button';
+  button.onclick=()=>submitText(('Quero um rolê '+term+' '+company).trim());panel.appendChild(button);
+ }
+ intro.appendChild(panel);
+}
+
 async function run(text){
  if(isMoreResultsRequest(text)){
   if(!(state.lastResults||[]).length){add('Ainda não tenho resultados para continuar. Faça uma pesquisa primeiro.');return}
@@ -1117,6 +1167,9 @@ async function run(text){
  const routed=routeConversation(text);
  if(routed.kind==='social'){add(routed.answer);return}
  text=routed.query;
+ const outing=detectOuting(text,lastOuting);
+ if(outing){await searchOuting(outing);return}
+ lastOuting=null;
  // Pergunta curta sobre horário nunca deve iniciar uma busca de estabelecimentos.
  // Sem loja selecionada, solicitar escolha explícita para evitar horários de terceiros.
  if(/^(?:qual(?: e| eh)? o horario\??|que horas (?:abre|fecha)\??|horario\??)$/i.test(norm(text).trim())){
@@ -1414,6 +1467,7 @@ async function submitText(raw){
  }
 }
 function resetConversation(){
+ lastOuting=null;
  regionalSearchInfo=null;regionalConsentVersion++;
  state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};
  msgs.replaceChildren(el('div','msg bot','Olá! Diga o que você procura.'));

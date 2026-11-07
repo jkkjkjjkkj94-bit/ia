@@ -20,7 +20,7 @@ export const taxonomy={
     Calçados:['calçados','calcados','calçado','calcado','sapatos','sapato','tênis','tenis'],
     'Moda íntima':['moda íntima','moda intima','lingerie','roupa íntima','roupa intima'],
     Esportiva:['roupa esportiva','moda esportiva','esportiva','fitness'],
-    Acessórios:['acessórios de moda','acessorios de moda','bolsas','bolsa','cintos','cinto']
+    'Acessórios de moda':['acessórios de moda','acessorios de moda','bolsas','bolsa','cintos','cinto']
   },
   Farmácia:{
     Drogaria:['drogaria','farmácia convencional','farmacia convencional'],
@@ -44,11 +44,11 @@ export const taxonomy={
     Celulares:['celulares','smartphones','loja de celular','loja de celulares'],
     Informática:['informática','informatica','computadores','notebooks','loja de informática','loja de informatica'],
     Eletrônicos:['eletrônicos','eletronicos','loja de eletrônicos','loja de eletronicos'],
-    Acessórios:['acessórios eletrônicos','acessorios eletronicos','acessórios de celular','acessorios de celular'],
-    'Assistência técnica':['assistência técnica','assistencia tecnica','conserto de celular','conserto de computador']
+    'Acessórios eletrônicos':['acessórios eletrônicos','acessorios eletronicos','acessórios de celular','acessorios de celular'],
+    'Assistência técnica de eletrônicos':['assistência técnica','assistencia tecnica','assistência técnica de eletrônicos','conserto de celular','conserto de computador']
   },
   Serviços:{
-    'Assistência técnica':['assistência técnica','assistencia tecnica','reparo técnico','reparo tecnico'],
+    'Assistência técnica geral':['assistência técnica','assistencia tecnica','assistência técnica geral','reparo técnico','reparo tecnico'],
     Manutenção:['manutenção','manutencao','serviço de manutenção','servico de manutencao'],
     Limpeza:['serviço de limpeza','servico de limpeza','limpeza residencial','limpeza comercial'],
     'Serviços profissionais':['serviços profissionais','servicos profissionais','consultoria','assessoria']

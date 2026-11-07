@@ -385,3 +385,296 @@ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:
 @media(prefers-reduced-motion:reduce){
  .chat .ctx button{transition:none!important}
 }
+
+/* ==========================================================================
+   GURU · PREMIUM v27
+   Layout declarativo: mensagens e compositor em linhas distintas.
+   Preserva integralmente IDs, formulários, callbacks e engine de pesquisa.
+   ========================================================================== */
+:root{
+  --premium-max:900px;
+  --premium-line:#e8e9ec;
+  --premium-surface:#fff;
+  --premium-soft:#f7f7f8;
+  --premium-secondary:#70747e;
+  --premium-shadow:0 5px 24px rgba(18,24,33,.045);
+}
+.app-sidebar{background:#fafafa;border-right-color:#ececef}
+.sidebar-nav button{min-height:44px;border-radius:13px;letter-spacing:-.012em}
+.sidebar-nav button.active{background:#ededf0}
+.sidebar-cta{border-radius:18px;box-shadow:none}
+.chat{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) auto;
+  row-gap:0;
+  padding:0 30px 12px;
+  isolation:isolate;
+  overflow:hidden;
+}
+.chat>.guru-messages-region{
+  display:flex;
+  grid-column:1;
+  grid-row:1;
+  flex-direction:column;
+  justify-self:center;
+  width:min(var(--premium-max),100%);
+  min-width:0;
+  min-height:0;
+  overflow:hidden;
+}
+.chat .guru-messages-region>.msgs,
+body.chat-started .chat .guru-messages-region>.msgs,
+body:has(.msgs .guru-city-choice) .chat .guru-messages-region>.msgs,
+body:has(.msgs .hashtag-result-msg) .chat .guru-messages-region>.msgs{
+  position:relative;
+  inset:auto;
+  top:auto;
+  left:auto;
+  bottom:auto;
+  transform:none;
+  width:100%;
+  height:auto;
+  max-height:none;
+  min-width:0;
+  min-height:0;
+  flex:1 1 0;
+  padding:27px 3px 24px;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#d9dce0 transparent;
+}
+.chat>.guru-chat-dock{
+  position:relative;
+  display:flex;
+  grid-column:1;
+  grid-row:2;
+  flex-direction:column;
+  justify-self:center;
+  align-items:stretch;
+  gap:5px;
+  width:min(var(--premium-max),100%);
+  max-width:100%;
+  min-width:0;
+  min-height:0;
+  padding:7px 0 0;
+  margin:0;
+  flex:0 0 auto;
+  background:var(--bg,#fff);
+  border-top:1px solid var(--premium-line);
+  z-index:5;
+}
+.chat .guru-chat-dock>.ctx,
+body.chat-started .chat .guru-chat-dock>.ctx{
+  position:static;
+  inset:auto;
+  top:auto;
+  left:auto;
+  bottom:auto;
+  transform:none;
+  width:100%;
+  min-width:0;
+  min-height:0;
+  max-height:min(88px,18dvh);
+  overflow-x:hidden;
+  overflow-y:auto;
+  flex:0 1 auto;
+  margin:0;
+  padding:3px 1px 6px!important;
+}
+.chat .guru-chat-dock>.ctx:empty,
+.chat .guru-chat-dock>.ctx[hidden]{display:none!important}
+.chat .guru-chat-dock>.send,
+body.chat-started .chat .guru-chat-dock>.send{
+  position:relative;
+  inset:auto;
+  left:auto;
+  top:auto;
+  bottom:auto;
+  transform:none;
+  display:flex;
+  align-items:center;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  flex:0 0 auto;
+  min-height:60px;
+  margin:0;
+  padding:7px 8px 7px 17px;
+  border:1px solid #dedfe3;
+  border-radius:21px;
+  box-shadow:0 5px 20px rgba(0,0,0,.055);
+  background:var(--bg,#fff);
+}
+.chat .guru-chat-dock>.send:focus-within{
+  border-color:#a2a5ad;
+  box-shadow:0 5px 20px rgba(0,0,0,.055),0 0 0 3px rgba(110,115,125,.09);
+}
+.chat .guru-chat-dock>.send #q{flex:1 1 auto;min-width:0;font-size:14px}
+.chat .guru-chat-dock>.send button{flex-shrink:0}
+.chat .guru-chat-dock>.send button,
+.chat .guru-chat-dock>.send .guru-voice-btn{border-radius:14px}
+.chat .guru-chat-dock>.guru-voice-status{
+  position:static;
+  flex:0 0 auto;
+  margin:0 5px;
+}
+.chat .guru-chat-dock>.guru-voice-status:empty{display:none}
+.chat .guru-chat-dock>.guru-suggestions,
+body:has(.ctx:not([hidden])) .chat .guru-chat-dock>.guru-suggestions,
+body.chat-started:has(.ctx:not([hidden])) .chat .guru-chat-dock>.guru-suggestions{
+  position:absolute;
+  top:auto;
+  left:0;
+  right:0;
+  bottom:calc(100% + 8px);
+  transform:none;
+  width:100%;
+  max-height:min(260px,35dvh);
+  overflow-y:auto;
+  z-index:15;
+}
+.chat .msgs>.msg{font-size:14px;line-height:1.65;overflow-wrap:anywhere}
+.chat .msgs>.msg.user{
+  border-radius:18px 18px 6px 18px;
+  padding:11px 15px;
+  background:#f3f3f4;
+}
+.chat .msgs .store-results-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  justify-items:stretch;
+  gap:14px;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+}
+.chat .msgs .store-result-card.smart-card,
+.chat .msgs .normal-result-card{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  border:1px solid var(--premium-line);
+  border-radius:19px;
+  padding:17px 18px;
+  background:var(--premium-surface);
+  box-shadow:var(--premium-shadow);
+  overflow-wrap:anywhere;
+}
+.chat .msgs .store-result-card.smart-card:hover{border-color:#d4d6db}
+.chat .msgs .store-chip,
+.chat .msgs .smart-specialty{
+  max-width:100%;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.chat .msgs .store-result-card button,
+.chat .msgs .normal-result-card button{min-height:35px;border-radius:11px}
+.chat .msgs .store-card-title,
+.chat .msgs .store-name{letter-spacing:-.02em}
+.chat .ctx .guru-filter-chip,
+.chat .ctx .guru-filter-more{
+  max-width:min(100%,240px)!important;
+  border-radius:999px!important;
+  background:var(--premium-soft)!important;
+}
+.app-footer-note{pointer-events:none;font-size:10px}
+.chat button:focus-visible,.app-sidebar button:focus-visible{
+  outline:2px solid #737883;
+  outline-offset:2px;
+}
+@media(max-width:900px){
+  .chat{padding-inline:20px}
+}
+@media(max-width:680px){
+  body .chat{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) auto;
+    padding:0 12px calc(9px + env(safe-area-inset-bottom,0px));
+    bottom:var(--guru-keyboard-inset,0px);
+  }
+  body .chat>.guru-messages-region{
+    display:flex;
+    width:100%;
+    min-height:0;
+    min-width:0;
+    overflow:hidden;
+  }
+  body .chat .guru-messages-region>.msgs,
+  body.chat-started .chat .guru-messages-region>.msgs,
+  body:has(.msgs .guru-city-choice) .chat .guru-messages-region>.msgs,
+  body:has(.msgs .hashtag-result-msg) .chat .guru-messages-region>.msgs{
+    position:relative;
+    inset:auto;
+    transform:none;
+    width:100%;
+    height:auto;
+    max-height:none;
+    padding:16px 1px 20px;
+    min-height:0;
+  }
+  body .chat>.guru-chat-dock{
+    display:flex;
+    width:100%;
+    min-width:0;
+    padding:7px 0 0;
+    gap:5px;
+  }
+  body .chat .guru-chat-dock>.ctx,
+  body.chat-started .chat .guru-chat-dock>.ctx{
+    position:static;
+    inset:auto;
+    transform:none;
+    max-height:min(84px,17dvh);
+    overflow-y:auto;
+  }
+  body .chat .guru-chat-dock>.send,
+  body.chat-started .chat .guru-chat-dock>.send{
+    position:relative;
+    inset:auto;
+    transform:none;
+    width:100%;
+    max-width:100%;
+    min-height:54px;
+    padding:6px 7px 6px 12px;
+    border-radius:18px;
+  }
+  body .chat .guru-chat-dock>.send #q{font-size:16px;min-width:0}
+  body .chat .guru-chat-dock>.guru-suggestions,
+  body:has(.ctx:not([hidden])) .chat .guru-chat-dock>.guru-suggestions{
+    bottom:calc(100% + 7px);
+    max-height:min(200px,35dvh);
+  }
+  body .chat .msgs .store-result-card.smart-card,
+  body .chat .msgs .normal-result-card{
+    width:100%;
+    max-width:100%;
+    padding:14px;
+    border-radius:16px;
+  }
+  body .chat .msgs .store-results-grid{gap:10px}
+  body .chat .msgs .msg{max-width:100%}
+}
+html[data-theme="dark"]{
+  --premium-line:#35383e;
+  --premium-surface:#1d1f23;
+  --premium-soft:#25282d;
+  --premium-secondary:#acafb8;
+  --premium-shadow:none;
+}
+html[data-theme="dark"] .chat .msgs>.msg.user{background:#292c32}
+html[data-theme="dark"] .chat .guru-chat-dock>.send{
+  border-color:#464951;
+  box-shadow:none;
+}
+html[data-theme="dark"] .chat .ctx .guru-filter-chip,
+html[data-theme="dark"] .chat .ctx .guru-filter-more{
+  background:#25282d!important;color:#ededf0!important;border-color:#3b3e44!important;
+}
+@media(prefers-reduced-motion:reduce){
+  .chat .guru-chat-dock>.send{transition:none}
+}

@@ -148,25 +148,11 @@ export function editOutingStops(text,stops=[],pool=[]){
  const reroute=/\b(refaca|refazer|reorganize|reorganizar|reordene|reordenar|mais perto|menos deslocamento|rota mais curta)\b/.test(n);
  const legacyReplace=/\b(troca|troque|trocar|substitua|substituir|muda|mude|mudar|altera|altere|alterar)\b/.test(n);
  if(!add&&!remove&&!reroute&&!legacyReplace)return null;
- // Pedidos explícitos de troca por nome são atendidos sem exigir a mesma categoria.
- if(legacyReplace&&!add&&!remove){
-  const index=(()=>{const word={primeiro:0,primeira:0,segundo:1,segunda:1,terceiro:2,terceira:2,quarto:3,quarta:3,quinto:4,quinta:4};const w=Object.entries(word).find(([key])=>new RegExp('\\\\b'+key+'\\\\b').test(n));if(w)return w[1];const numeric=/\\b([1-8])\\s*(?:a|o)?\\s*(?:parada|opcao|lugar|local)\\b/.exec(n);if(numeric)return Number(numeric[1])-1;return stops.findIndex(r=>outingNormalize(r.store?.name)&&n.includes(outingNormalize(r.store.name)))})();
-  const used=new Set(stops.map(r=>String(r.store?.id)));
-  const candidates=pool.filter(r=>r.store?.id&&r.store?.name&&r.store?.address&&!used.has(String(r.store.id)));
-  const matched=candidates.find(r=>n.includes(outingNormalize(r.store.name)))||candidates.find(r=>{
-   const name=outingNormalize(r.store.name).replace(/\\b(padaria|pizzaria|restaurante|cafeteria|lanchonete|sorveteria|loja)\\b/g,'').trim();
-   return name.length>=4&&n.includes(name);
-  });
-  if(index<0||index>=stops.length)return {kind:'clarify',stops};
-  if(!matched)return {kind:'unavailable_replace',stops};
-  const next=[...stops];next[index]=matched;
-  return {kind:'replace',stops:next,added:matched,index};
- }
- if(reroute&&!add&&!remove)return {kind:'reorder',stops:reorderOutingStops(stops),needsCoordinates:stops.some(r=>r.store?.latitude==null||r.store?.longitude==null)};
+ if(reroute&&!add&&!remove&&!legacyReplace)return {kind:'reorder',stops:reorderOutingStops(stops),needsCoordinates:stops.some(r=>r.store?.latitude==null||r.store?.longitude==null)};
  const orderWords={primeiro:0,primeira:0,segundo:1,segunda:1,terceiro:2,terceira:2,quarto:3,quarta:3,quinto:4,quinta:4,sexto:5,sexta:5,setimo:6,setima:6,oitavo:7,oitava:7};
- const positions=Object.entries(orderWords).find(([word])=>new RegExp('\\b'+word+'\\b').test(n))?.[1];
- const numeric=/\b([1-8])\s*(?:a|o)?\s*(?:parada|lugar|local)\b/.exec(n);
- const position=positions??(numeric?Number(numeric[1])-1:null);
+ const byWord=Object.entries(orderWords).find(([word])=>new RegExp('\\b'+word+'\\b').test(n))?.[1];
+ const numeric=/\b([1-8])\s*(?:a|o)?\s*(?:parada|lugar|local|opcao)\b/.exec(n);
+ const index=byWord??(numeric?Number(numeric[1])-1:null);
  const types=[
   ['ar_livre',/\b(parque|praca|jardim|natureza|ar livre|trilha)\b/],
   ['cultura',/\b(cinema|museu|teatro|cultura|livraria)\b/],
@@ -175,39 +161,45 @@ export function editOutingStops(text,stops=[],pool=[]){
   ['sobremesa',/\b(sorvete|sorveteria|acai|doce|sobremesa)\b/],
   ['diversao',/\b(boliche|jogos|karaoke|diversao|shopping)\b/]
  ];
- const intendedType=types.find(([,rx])=>rx.test(n))?.[0]||null;
- if(add){
-  if(stops.length>=8)return {kind:'limit',stops};
-  const used=new Set(stops.map(r=>String(r.store?.id)));
-  const eligible=pool.filter(r=>r.store?.id&&r.store?.name&&r.store?.address&&!used.has(String(r.store.id)));
-  // Nomes explícitos só são aceitos se o estabelecimento estiver no conjunto verificado.
-  const requested=eligible.find(r=>outingNormalize(r.store.name).length>3&&n.includes(outingNormalize(r.store.name)));
-  const candidates=requested?[requested]:intendedType?eligible.filter(r=>outingStopType(r.store)===intendedType):eligible;
-  if(!candidates.length)return {kind:'unavailable_add',stops,requestedType:intendedType};
-  const scored=[...candidates].sort((a,b)=>{
-   const distance=r=>stops.length?outingStraightKm(stops[stops.length-1].store,r.store):null;
-   const value=r=>(Number(r.outingScore)||0)+Math.max(0,12-(distance(r)??12));
-   return value(b)-value(a);
-  });
+ const targetType=types.find(([,rx])=>rx.test(n))?.[0]||null;
+ const used=new Set(stops.map(r=>String(r.store?.id)));
+ // Candidatos marcados manualOnly só aparecem quando o usuário pede a loja pelo nome.
+ const choices=pool.filter(r=>r.store?.id&&r.store?.name&&r.store?.address&&!used.has(String(r.store.id)));
+ const named=choices.filter(r=>{const name=outingNormalize(r.store.name);return name.length>=5&&n.includes(name)});
+ const eligible=named.length?named:choices.filter(r=>!r.manualOnly&&(!targetType||outingStopType(r.store)===targetType));
+ const rank=(list)=>[...list].sort((a,b)=>{
+  const distance=r=>stops.length?outingStraightKm(stops[stops.length-1].store,r.store):null;
+  const value=r=>(Number(r.outingScore)||0)+Math.max(0,12-(distance(r)??12));
+  return value(b)-value(a);
+ });
+ if(add||legacyReplace){
+  const isReplace=legacyReplace&&!add;
+  if(!isReplace&&stops.length>=8)return {kind:'limit',stops};
+  if(isReplace&&(!stops.length||index==null||index<0||index>=stops.length))return {kind:'choose_action',stops};
+  if(!eligible.length)return {kind:'unavailable_add',stops,requestedType:targetType};
+  const pick=rank(eligible)[0];
   const next=[...stops];
-  // "Depois da segunda parada" insere na posição 3; sem posição adiciona ao final.
-  const insertAfter=/\b(depois|apos|em seguida)\b/.test(n)&&position!=null;
-  const insertBefore=/\b(antes)\b/.test(n)&&position!=null;
-  const at=insertAfter?Math.min(position+1,next.length):insertBefore?Math.min(position,next.length):next.length;
-  next.splice(at,0,scored[0]);
-  return {kind:'add',stops:next,added:scored[0],index:at};
+  if(isReplace){
+   next.splice(index,1,pick);
+   return {kind:'replace_legacy',stops:next,added:pick,index};
+  }
+  const after=/\b(depois|apos|em seguida)\b/.test(n)&&index!=null;
+  const before=/\b(antes)\b/.test(n)&&index!=null;
+  const at=after?Math.min(index+1,next.length):before?Math.min(index,next.length):next.length;
+  next.splice(at,0,pick);
+  return {kind:'add',stops:next,added:pick,index:at};
  }
  if(!stops.length)return {kind:'empty',stops};
  if(remove){
-  let index=position;
-  if(index==null){
-   const matches=stops.map((row,i)=>({i,kind:outingStopType(row.store),name:outingNormalize(row.store?.name)}));
-   const found=types.find(([,rx])=>rx.test(n));
-   if(found)index=matches.find(x=>x.kind===found[0])?.i??null;
-   if(index==null)index=matches.find(x=>x.name&&n.includes(x.name))?.i??null;
+  let which=index;
+  if(which==null){
+   const candidates=stops.map((r,i)=>({i,type:outingStopType(r.store),name:outingNormalize(r.store?.name)}));
+   const matchingType=types.find(([,rx])=>rx.test(n));
+   if(matchingType)which=candidates.find(c=>c.type===matchingType[0])?.i??null;
+   if(which==null)which=candidates.find(c=>c.name&&n.includes(c.name))?.i??null;
   }
-  if(index==null||index<0||index>=stops.length)return {kind:'clarify',stops};
-  return {kind:'remove',stops:stops.filter((_,i)=>i!==index),index};
+  if(which==null||which<0||which>=stops.length)return {kind:'clarify',stops};
+  return {kind:'remove',stops:stops.filter((_,i)=>i!==which),index:which};
  }
  return null;
 }

@@ -86,26 +86,72 @@ function renderOverview(){const active=stores.filter(x=>x.status==='active'&&x.a
  const repeated=Object.entries(recurring).filter(([,count])=>count>=2).sort((a,b)=>b[1]-a[1]).slice(0,3);
  const insight=(failures.length?'<div class="item"><b>Principais motivos de buscas sem resultado</b>'+failures.map(([reason,count])=>'<div class="meta">'+esc(reason.replace(/_/g,' '))+' · '+count+' busca(s)</div>').join('')+'</div>':'')+(repeated.length?'<div class="item"><b>Pesquisas recorrentes para revisão</b>'+repeated.map(([q,count])=>'<div class="meta">'+esc(q)+' · '+count+' vezes</div>').join('')+'<div class="meta">As sugestões exigem revisão do administrador.</div></div>':'');
  $('recentSearches').innerHTML=insight+events.filter(x=>x.query).slice(0,8).map(e=>`<div class="item"><div class="row"><span>${esc(e.query)}</span><span class="badge ${e.matched?'good':'warn'}">${e.matched?'Encontrou':'Sem resultado'}</span></div><div class="meta">${fmtDate(e.created_at)}</div></div>`).join('')||'<div class="empty-state">Sem buscas registradas.</div>'}
+// Taxonomia única do filtro administrativo. Preserva categorias legadas no banco.
+const GURU_MAIN_CATEGORIES=['Comida','Roupas','Farmácia','Mercado','Beleza','Tecnologia','Serviços','Varejo','Agropecuária','Pet shop','Automóveis','Construção'];
+const GURU_LEGACY_MAIN={
+ 'moda e acessorios':'Roupas','mercados e alimentos':'Mercado',
+ 'padarias e doces':'Comida','beleza e estetica':'Beleza',
+ 'papelarias e variedades':'Varejo','saude e farmacias':'Farmácia',
+ 'tecnologia e eletronicos':'Tecnologia','automoveis':'Automóveis',
+ 'construcao e casa':'Construção','servicos especializados':'Serviços',
+ 'esportes e atividades fisicas':'Serviços',
+ 'restaurantes e lanchonetes':'Comida','sorvetes e acai':'Comida',
+ 'eventos e festas':'Varejo'
+};
+function guruCategoryOf(s){
+ const old=norm(s.category||''),main=norm(s.main_category||'');
+ const canonical=GURU_MAIN_CATEGORIES.find(c=>norm(c)===main);
+ if(canonical)return canonical;
+ if(main==='animais e agropecuaria'){
+  return /agro|rural|agric|sement|fertiliz|pecuaria/.test(old)?'Agropecuária':'Pet shop';
+ }
+ if(GURU_LEGACY_MAIN[main])return GURU_LEGACY_MAIN[main];
+ const direct=GURU_MAIN_CATEGORIES.find(c=>norm(c)===old);
+ if(direct)return direct;
+ const groups=classificationTaxonomy?.groups||[];
+ const matched=groups.find(g=>norm(g.name)===old);
+ if(matched){
+  const parent=classificationTaxonomy.categories.find(c=>c.id===matched.category_id);
+  if(parent)return parent.name;
+ }
+ return '';
+}
+function guruGroupOf(s){
+ const canon=guruCategoryOf(s);
+ const groups=classificationTaxonomy?.groups||[];
+ const allowed=groups.filter(g=>classificationTaxonomy.categories.some(c=>c.id===g.category_id&&c.name===canon));
+ const candidates=[s.group,s.category,...(s.groups||[])].filter(Boolean);
+ const found=allowed.find(g=>candidates.some(n=>norm(n)===norm(g.name)));
+ return found?.name||'';
+}
+let guruFilterTaxonomyRequested=false;
 function renderSpecialtyFilter(){
  const el=$('storeSpecialty');if(!el)return;
- const selected=el.value,primary=norm($('storeCategory').value);
- const names=[...new Set(stores.filter(s=>!primary||norm(s.category)===primary).map(s=>s.group).filter(Boolean).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
- el.innerHTML='<option value="">Todos os grupos</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
- el.value=names.includes(selected)?selected:'';
+ const selected=el.value,primary=$('storeCategory').value;
+ const names=classificationTaxonomy?.groups?.filter(g=>!primary||classificationTaxonomy.categories.some(c=>c.id===g.category_id&&c.name===primary)).map(g=>g.name)||[];
+ const unique=[...new Set(names)].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+ el.innerHTML='<option value="">Todas as subcategorias</option>'+unique.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ el.value=unique.includes(selected)?selected:'';
 }
 function renderStoreFilters(){
- const cats=[...new Set(stores.map(x=>x.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
  const states=[...new Set(stores.map(x=>stateFromAddress(x.address)).filter(Boolean))].sort();
  const selected=$('storeCategory').value,st=$('storeState').value;
- $('storeCategory').innerHTML='<option value="">Categoria principal</option>'+cats.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
- $('storeCategory').value=cats.includes(selected)?selected:'';
+ $('storeCategory').innerHTML='<option value="">Categoria principal</option>'+GURU_MAIN_CATEGORIES.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ $('storeCategory').value=GURU_MAIN_CATEGORIES.includes(selected)?selected:'';
  $('storeState').innerHTML='<option value="">Estado</option>'+states.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
  $('storeState').value=states.includes(st)?st:'';
  renderSpecialtyFilter();
+ if(!classificationTaxonomy&&!guruFilterTaxonomyRequested){
+  guruFilterTaxonomyRequested=true;
+  loadClassificationTaxonomy().then(()=>{renderSpecialtyFilter();renderStores()}).catch(error=>{
+   guruFilterTaxonomyRequested=false;
+   console.warn('GURU: taxonomia de subcategorias indisponível',error);
+  });
+ }
 }
 function filteredStores(){
  const q=norm($('storeSearch').value),status=$('storeStatus').value,state=$('storeState').value,city=norm($('storeCity').value),cat=norm($('storeCategory').value),specialty=norm($('storeSpecialty')?.value),verified=$('storeVerified').value,highlight=$('storeHighlight').value,quality=$('storeQuality').value,source=$('storeSource').value;
- return stores.filter(s=>(!q||norm([s.name,s.category,s.group,...(s.specialties||[]),s.address].join(' ')).includes(q))&&(!status||s.status===status)&&(!state||stateFromAddress(s.address)===state)&&(!city||norm(cityFromAddress(s.address)).includes(city))&&(!cat||norm(s.category)===cat)&&(!specialty||norm(s.group)===specialty)&&(!verified||(verified==='yes'?highlightType(s.id)==='verified':highlightType(s.id)!=='verified'))&&(!highlight||highlightType(s.id)===highlight)&&(!quality||qualityLevel(s)===quality)&&(!source||source==='core')).sort((a,b)=>(rankingByStore.get(b.id)?.total||0)-(rankingByStore.get(a.id)?.total||0)||String(a.name||'').localeCompare(String(b.name||''),'pt-BR'));
+ return stores.filter(s=>(!q||norm([s.name,s.category,s.main_category,s.group,...(s.specialties||[]),s.address].join(' ')).includes(q))&&(!status||s.status===status)&&(!state||stateFromAddress(s.address)===state)&&(!city||norm(cityFromAddress(s.address)).includes(city))&&(!cat||norm(guruCategoryOf(s))===cat)&&(!specialty||norm(guruGroupOf(s))===specialty)&&(!verified||(verified==='yes'?highlightType(s.id)==='verified':highlightType(s.id)!=='verified'))&&(!highlight||highlightType(s.id)===highlight)&&(!quality||qualityLevel(s)===quality)&&(!source||source==='core')).sort((a,b)=>(rankingByStore.get(b.id)?.total||0)-(rankingByStore.get(a.id)?.total||0)||String(a.name||'').localeCompare(String(b.name||''),'pt-BR'));
 }
 function renderStores(){const list=filteredStores();$('adminStores').innerHTML=list.map(s=>{const issues=storeQuality(s),account=getAccount(s.owner_id),level=qualityLevel(s),rank=rankingByStore.get(s.id)||{total:0,tierName:'Normal',details:[]};return `<div class="item store-admin-item" data-ranking-score="${rank.total}" data-ranking-tier="${esc(rank.tierName)}" data-ranking-detail="${esc(rank.details.map(d=>`${d.label}: ${d.earned}/${d.max}`).join(' • '))}"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot ${esc(s.status||'pending')}"></span>${highlightBadge(s.id)}<span class="badge">Core DB</span></div><div class="meta">${esc(s.category||'Sem categoria')} · ${esc(s.group||'Grupo não definido')} · ${esc(cityFromAddress(s.address)||'Cidade não identificada')} ${stateFromAddress(s.address)?'· '+esc(stateFromAddress(s.address)):''}</div><div class="meta">Qualidade: <b>${level==='good'?'Boa':level==='attention'?'Atenção':'Crítica'}</b>${account?.email?' · '+esc(account.email):''}</div>${issues.length?`<div class="quality-line">${issues.slice(0,4).map(i=>`<span class="badge warn">${esc(i)}</span>`).join('')}</div>`:''}</div><div class="actions-wrap"><button class="btn sm" data-open-store="${s.id}">Detalhes</button><button class="btn sm" data-change-category="${s.id}">Alterar categoria</button>${s.status!=='active'?`<button class="btn sm dark" data-status="active" data-store="${s.id}">Aprovar</button>`:''}${s.status!=='suspended'?`<button class="btn sm" data-status="suspended" data-store="${s.id}">Suspender</button>`:''}</div></div></div>`}).join('')||'<div class="empty-state">Nenhuma loja corresponde aos filtros.</div>';bindStoreActions()}
 function bindStoreActions(){document.querySelectorAll('[data-open-store]').forEach(b=>b.onclick=()=>openStore(b.dataset.openStore));document.querySelectorAll('[data-change-category]').forEach(b=>b.onclick=()=>openCategoryEditor(b.dataset.changeCategory));document.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>openStatusModal(b.dataset.store,b.dataset.status))}

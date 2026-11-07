@@ -1,5 +1,5 @@
-/* GURU PWA v1 — offline shell only; Supabase and APIs remain network-only. */
-const CACHE='guru-shell-v1';
+/* GOOY PWA v1 — offline shell only; Supabase and APIs remain network-only. */
+const CACHE='guru-shell-v2';
 const SHELL=['/ia/','/ia/index.html','/ia/guru-pwa-icon.svg'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));

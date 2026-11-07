@@ -366,8 +366,8 @@ function renderCategoryBrowser(stores=[]){
  const host=document.getElementById('guruCategoryList');if(!host)return;
  const groups=new Map();
  for(const s of stores){
-  if(s.active!==true||s.status!=='active'||!s.main_category)continue;
-  const main=s.main_category,sub=s.category||'Outras especialidades';
+  if(s.active!==true||s.status!=='active'||!s.category)continue;
+  const main=s.category,sub=s.group||'Outros estabelecimentos';
   if(!groups.has(main))groups.set(main,{count:0,children:new Map()});
   const bucket=groups.get(main);bucket.count++;
   bucket.children.set(sub,(bucket.children.get(sub)||0)+1);
@@ -385,19 +385,13 @@ function renderCategoryBrowser(stores=[]){
  }
 }
 function extendCanonicalTaxonomy(stores=[]){
- const legacyNames=new Map();
- for(const s of stores){
-  const primary=String(s.main_category||'').trim(),specialty=String(s.category||'').trim();
-  if(!primary)continue;
-  if(!legacyNames.has(primary))legacyNames.set(primary,new Set());
-  // Categorias amplas já existem como raízes legadas; não viram subgrupos restritivos.
-  if(specialty&&!['comida','roupas','mercado','farmacia','beleza','tecnologia','servicos','construcao','automoveis','varejo','pet shop','agropecuaria'].includes(norm(specialty)))legacyNames.get(primary).add(specialty);
- }
- for(const [primary,children] of legacyNames){
-  const groups=taxonomy[primary]||{};
-  for(const label of children)if(!groups[label])groups[label]=[label];
-  taxonomy[primary]=groups;
-  if(!aliases[primary])aliases[primary]=[primary];
+ // Usa somente a taxonomia vigente; não recria categorias legadas.
+ for(const store of stores){
+  if(store.active!==true||store.status!=='active')continue;
+  const category=String(store.category||'').trim();
+  const group=String(store.group||'').trim();
+  if(!category||!group||!taxonomy[category])continue;
+  if(!taxonomy[category][group])taxonomy[category][group]=[group];
  }
 }
 // Converte os horários publicados no COREDB para o formato semanal usado pelo filtro.
@@ -606,7 +600,7 @@ function chooseStore(row){
  identity.appendChild(el('div','selected-store-eyebrow','LOJA SELECIONADA'));
  identity.appendChild(el('h3','selected-store-title',s.name||'Estabelecimento'));
  const tags=el('div','selected-store-tags');
- for(const label of [...new Set([s.main_category,s.category,s.group].filter(Boolean))])tags.appendChild(el('span','selected-store-tag',label));
+ for(const label of [...new Set([s.category,s.group].filter(Boolean))])tags.appendChild(el('span','selected-store-tag',label));
  const selectedDistance=position&&Number.isFinite(row.distance)&&row.distance>=0;
  const distanceChip=el('span','selected-store-tag store-chip-distance',selectedDistance?'A '+row.distance.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' km de você':!position?'Distância: ativar localização':'Distância não disponível');
  distanceChip.title=selectedDistance?'Distância aproximada em linha reta.':!position?'Use a localização para consultar a distância.':'Loja sem coordenadas disponíveis.';
@@ -694,7 +688,7 @@ function makeCard(row,index){
  const title=el('h3','',s.name||'Estabelecimento');identity.appendChild(title);
  if(s.address){const city=getCityFromAddress(s.address);if(city)identity.appendChild(el('div','smart-location',city))}
  const tags=el('div','store-card-meta');
- for(const label of [...new Set([s.main_category,s.category,s.group].filter(Boolean))])tags.appendChild(el('span','store-chip',label));
+ for(const label of [...new Set([s.category,s.group].filter(Boolean))])tags.appendChild(el('span','store-chip',label));
  const validDistance=position&&Number.isFinite(row.distance)&&row.distance>=0;
  const distanceText=validDistance
   ?'A '+row.distance.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' km de você'

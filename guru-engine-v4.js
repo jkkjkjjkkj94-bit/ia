@@ -657,8 +657,7 @@ function chooseStore(row){
    b.classList.add('active');
    state.selectedStore=s;state.selectedProduct=null;
    renderContext();save();
-   if(label==='Horário')submitSelectedStoreHours(s);
-   else submitText(q);
+   submitSelectedStoreAction(s,label,q);
   };
   if(!actions.childElementCount)b.classList.add('active');
   actions.appendChild(b);
@@ -1267,16 +1266,28 @@ async function run(text){
  hybridResponse(text,rows.slice(0,RESULT_PAGE_SIZE)).then(natural=>{if(natural && !searchBusy)add(natural)}).catch(()=>{});
  save();
 }
-async function submitSelectedStoreHours(store){
+async // Atalhos do card usam a loja selecionada, sem passar por interpretação de busca.
+async function submitSelectedStoreAction(store,label,question){
  if(!store||searchBusy)return;
+ const actionByLabel={ 'Horário':'hours','Entrega':'delivery','Produtos':'products','Pagamento':'payment','Contato':'contact' };
+ const ask=actionByLabel[label];if(!ask)return;
  searchBusy=true;input.disabled=true;
- add('Qual o horário?',true);
+ add(question,true);
  const typing=showTypingIndicator();
  replyBuffer=document.createDocumentFragment();
  try{
   await loadData();
-  state.selectedStore=store;
-  replyAboutStore('Qual o horário?','hours',{});
+  const current=(db?.stores||[]).find(s=>s.id===store.id&&s.active===true&&s.status==='active');
+  if(!current){add('Este estabelecimento não está disponível no cadastro atual.');return}
+  state.selectedStore=current;
+  state.selectedProduct=null;
+  if(ask==='products'){
+   const products=(db?.products||[]).filter(p=>p.store_id===current.id&&eligibleProduct(p));
+   if(!products.length)add('Esta loja não possui produtos ativos e disponíveis cadastrados.');
+   else add('Produtos cadastrados de '+current.name+':\n'+products.slice(0,8).map(p=>'• '+p.name+' — '+money(priceOf(p))+' · estoque informado: '+p.stock).join('\n')+'\nConfirme preços e estoque com a loja.');
+  }else{
+   replyAboutStore(question,ask,{});
+  }
   renderContext();save();
  }catch(err){msgError(err)}finally{
   const fragment=replyBuffer;replyBuffer=null;typing.remove();

@@ -385,3 +385,158 @@ body:has(.msgs .hashtag-result-msg) .msgs{height:calc(100% - 122px);padding-top:
 @media(prefers-reduced-motion:reduce){
  .chat .ctx button{transition:none!important}
 }
+
+
+/* GURU PREMIUM v24 — hierarquia editorial, cards elegantes e dock sem sobreposição.
+   Apenas apresentação: nenhuma alteração na lógica da IA ou no catálogo. */
+:root{
+ --guru-premium-width:860px;
+ --guru-premium-card:#fff;
+ --guru-premium-stroke:#e9eaed;
+ --guru-premium-muted:#777d87;
+ --guru-premium-shadow:0 3px 18px rgba(16,24,40,.035);
+}
+body:not(.sidebar-collapsed) .app-sidebar{
+ background:#fafafa;border-right:1px solid #ebebed;
+}
+.app-sidebar .sidebar-nav button{min-height:44px;border-radius:12px;font-size:12.5px}
+.app-sidebar .sidebar-nav button.active{background:#ebedef;color:#141517}
+.app-sidebar .sidebar-cta{border-radius:18px;box-shadow:none}
+.app-sidebar .sidebar-brand{border-bottom-color:#ededf0}
+.chat{isolation:isolate}
+/* Desktop: região de mensagens e barra inferior em áreas separadas. */
+@media(min-width:681px){
+ .chat>.guru-messages-region{
+  display:block;position:absolute;inset:0;min-width:0;min-height:0;
+  pointer-events:none;
+ }
+ .chat .guru-messages-region>.msgs,
+ body.chat-started .chat .guru-messages-region>.msgs,
+ body:has(.msgs .guru-city-choice) .chat .guru-messages-region>.msgs,
+ body:has(.msgs .hashtag-result-msg) .chat .guru-messages-region>.msgs{
+  position:absolute;left:50%;top:0;bottom:164px;
+  height:auto;transform:translateX(-50%);
+  width:min(var(--guru-premium-width),calc(100% - 52px));
+  padding:26px 6px 36px;
+  overflow-x:hidden;overflow-y:auto;
+  pointer-events:auto;
+  scrollbar-gutter:stable;
+ }
+ .chat>.guru-chat-dock{
+  position:absolute;left:50%;bottom:19px;
+  transform:translateX(-50%);display:flex;flex-direction:column;
+  gap:7px;align-items:stretch;width:min(var(--guru-premium-width),calc(100% - 52px));
+  max-width:100%;min-width:0;padding:9px 0 0;
+  background:var(--bg,#fff);z-index:12;
+ }
+ .chat .guru-chat-dock>.ctx,
+ body.chat-started .chat .guru-chat-dock>.ctx{
+  position:static;inset:auto;left:auto;bottom:auto;top:auto;
+  transform:none;width:100%;max-height:74px;overflow-y:auto;
+  margin:0;padding:3px 2px 7px!important;
+ }
+ .chat .guru-chat-dock>.ctx:empty,.chat .guru-chat-dock>.ctx[hidden]{display:none!important}
+ .chat .guru-chat-dock>.send,
+ body.chat-started .chat .guru-chat-dock>.send{
+  position:relative;inset:auto;left:auto;top:auto;bottom:auto;
+  transform:none;width:100%;min-width:0;max-width:100%;margin:0;
+ }
+ .chat .guru-chat-dock>.guru-voice-status{position:static;margin:0 6px}
+ .chat .guru-chat-dock>.guru-voice-status:empty{display:none}
+ .chat .guru-chat-dock>.guru-suggestions,
+ body:has(.ctx:not([hidden])) .chat .guru-chat-dock>.guru-suggestions,
+ body.chat-started:has(.ctx:not([hidden])) .chat .guru-chat-dock>.guru-suggestions{
+  position:absolute;left:0;right:0;top:auto;bottom:calc(100% + 7px);
+  transform:none;width:100%;max-height:min(280px,38dvh);z-index:20;
+ }
+ .app-footer-note{bottom:3px;pointer-events:none}
+}
+/* Acesso fácil à conversa, com contraste contido e ritmo consistente. */
+.chat .msgs>.msg{font-size:14px;line-height:1.7;letter-spacing:-.006em}
+.chat .msgs>.msg.user{border-radius:18px 18px 5px 18px;background:#f3f3f4;padding:11px 16px}
+.chat .msgs>.msg.bot{max-width:100%;overflow-wrap:anywhere}
+.chat .msgs .store-results-grid{grid-template-columns:minmax(0,1fr);justify-items:stretch;gap:13px;min-width:0;max-width:100%}
+.chat .msgs .store-result-card.smart-card,
+.chat .msgs .normal-result-card{
+ width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+ background:var(--guru-premium-card);border:1px solid var(--guru-premium-stroke);
+ border-radius:19px;padding:17px 19px;box-shadow:var(--guru-premium-shadow);
+ transition:border-color .18s ease,box-shadow .18s ease;
+ overflow-wrap:anywhere;
+}
+.chat .msgs .store-result-card.smart-card:hover,
+.chat .msgs .normal-result-card:hover{
+ border-color:#d2d5d9;box-shadow:0 7px 25px rgba(16,24,40,.055)
+}
+.chat .msgs .store-result-card .store-chip,
+.chat .msgs .smart-specialty{
+ max-width:100%;overflow-wrap:anywhere;white-space:normal;
+}
+.chat .msgs .store-result-card button,.chat .msgs .normal-result-card button{
+ border-radius:11px;min-height:36px;font-weight:550;
+}
+.chat .msgs .store-card-title,.chat .msgs .store-name{letter-spacing:-.025em}
+.chat .ctx{min-width:0;scrollbar-width:thin}
+.chat .ctx .guru-filter-chip,.chat .ctx .guru-filter-more{max-width:min(100%,240px)!important}
+.chat .send{
+ border:1px solid #dadde1;border-radius:21px;
+ background:var(--bg,#fff);min-height:60px;
+ padding:7px 9px 7px 18px;
+ box-shadow:0 9px 28px rgba(20,25,35,.075);
+}
+.chat .send:focus-within{border-color:#9ca0a8;box-shadow:0 9px 28px rgba(20,25,35,.075),0 0 0 3px rgba(125,130,140,.08)}
+.chat .send #q{min-width:0;font-size:14px}
+.chat .send button:not(.guru-voice-btn){border-radius:14px}
+.chat .send .guru-voice-btn{border-radius:14px}
+.chat .msgs button:focus-visible,.chat .send button:focus-visible,
+.app-sidebar button:focus-visible{outline:2px solid #6b7280;outline-offset:2px}
+@media(max-width:680px){
+ body .chat{padding-inline:12px;padding-bottom:calc(9px + env(safe-area-inset-bottom,0px));}
+ body .chat>.guru-messages-region{min-height:0;overflow:hidden}
+ body .chat .guru-messages-region>.msgs,
+ body.chat-started .chat .guru-messages-region>.msgs{
+  padding:17px 1px 22px;scrollbar-gutter:auto;
+ }
+ body .chat>.guru-chat-dock{
+  position:relative;left:auto;bottom:auto;transform:none;
+  background:var(--bg,#fff);border-top:1px solid var(--guru-premium-stroke);
+  padding:9px 0 0;gap:6px;isolation:isolate;
+ }
+ body .chat .guru-chat-dock>.ctx,
+ body.chat-started .chat .guru-chat-dock>.ctx{
+  position:static;transform:none;max-height:min(92px,18dvh);
+  overflow-y:auto;min-width:0;width:100%;margin:0;
+ }
+ body .chat .guru-chat-dock>.ctx:empty,
+ body .chat .guru-chat-dock>.ctx[hidden]{display:none!important}
+ body .chat .guru-chat-dock>.send,
+ body.chat-started .chat .guru-chat-dock>.send{
+  position:relative;transform:none;width:100%;min-height:54px;
+  padding:6px 7px 6px 13px;border-radius:18px;
+ }
+ body .chat .guru-chat-dock>.send #q{font-size:16px}
+ body .chat .msgs .store-result-card.smart-card,
+ body .chat .msgs .normal-result-card{padding:14px 13px;border-radius:16px}
+ body .chat .msgs .store-results-grid{gap:10px}
+ body .chat .msgs .msg{max-width:100%;overflow-wrap:anywhere}
+ body .chat .guru-chat-dock>.guru-suggestions{
+  bottom:calc(100% + 6px);max-height:min(210px,34dvh)
+ }
+}
+/* Tema escuro mantém separação, legibilidade e estado ativo. */
+html[data-theme="dark"]{
+ --guru-premium-card:#1c1e22;
+ --guru-premium-stroke:#35373d;
+ --guru-premium-muted:#acafb6;
+ --guru-premium-shadow:none;
+}
+html[data-theme="dark"] .app-sidebar{background:#17191c;border-right-color:#31343a}
+html[data-theme="dark"] .app-sidebar .sidebar-nav button.active{background:#292c32;color:#f5f5f5}
+html[data-theme="dark"] .chat .msgs>.msg.user{background:#292c31}
+html[data-theme="dark"] .chat .send{border-color:#41454c;box-shadow:none}
+html[data-theme="dark"] .chat .send:focus-within{border-color:#858b94;box-shadow:0 0 0 3px rgba(210,215,225,.08)}
+html[data-theme="dark"] .chat .msgs .store-result-card.smart-card:hover,
+html[data-theme="dark"] .chat .msgs .normal-result-card:hover{border-color:#656972;box-shadow:none}
+@media(prefers-reduced-motion:reduce){
+ .chat .msgs .store-result-card.smart-card,.chat .msgs .normal-result-card{transition:none}
+}

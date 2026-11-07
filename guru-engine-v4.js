@@ -3,7 +3,7 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=2';
-import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents} from './gooy-outings-v1.mjs?v=6';
+import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents,buildOutingItinerary} from './gooy-outings-v1.mjs?v=7';
 
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
@@ -845,7 +845,7 @@ function makeCard(row,index){
  card.appendChild(actions);return card;
 }
 function renderNextQuestions(host,rows,offset=0){
- const questions=followupPrompts(rows,state);
+ const questions=lastOuting?[]:followupPrompts(rows,state);
  const total=(state.lastResults||[]).length;
  const remaining=Math.max(0,total-offset-rows.length);
  if(!questions.length&&!remaining)return;
@@ -934,10 +934,10 @@ function displayResults(rows,offset=0){
  const m=add('',false);m.classList.add('hashtag-result-msg');
  const end=offset+rows.length,total=(state.lastResults||[]).length;
  const intro=regionalSearchInfo?(offset===0?'Encontrei opções em outras cidades da região de '+regionalSearchInfo.origin+':':'Mais opções em cidades próximas de '+regionalSearchInfo.origin+':'):(offset===0?'Encontrei estas opções em '+userCity+':':'Outras opções em '+userCity+':');
- m.appendChild(el('div','hashtag-intro',intro));
+ if(!lastOuting)m.appendChild(el('div','hashtag-intro',intro));
  if(position){
-  m.appendChild(el('div','guru-city-distance-note','Distâncias aproximadas em linha reta. A classificação continua sendo por relevância, não por proximidade.'));
- }else{
+  if(!lastOuting)m.appendChild(el('div','guru-city-distance-note','Distâncias aproximadas em linha reta. A classificação continua sendo por relevância, não por proximidade.'));
+ }else if(!lastOuting){
   const button=el('button','guru-next-button','Mostrar distância em km');
   button.type='button';
   button.onclick=async()=>{if(await locate(true)){
@@ -949,7 +949,7 @@ function displayResults(rows,offset=0){
   m.appendChild(button);
  }
  // A explicação textual fica sempre acima dos cards, dentro do mesmo resultado.
- if(offset===0 && rows.length){
+ if(!lastOuting&&offset===0 && rows.length){
   const summary=el('div','guru-result-summary',
    regionalSearchInfo?'Resultados de outras cidades, exibidos com sua autorização. Confira a cidade e o endereço de cada estabelecimento antes de ir.':(rows.length===1
     ? 'Encontrei '+rows[0].store.name+', que combina com o que você procura. A opção está logo abaixo.'
@@ -1135,6 +1135,29 @@ function showOutingExtras(places,events){
   if(e.official_url)try{const u=new URL(e.official_url);if(['https:','http:'].includes(u.protocol)){const a=el('a','gooy-outing-link','Página do evento');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';card.appendChild(a)}}catch{}
  });
 }
+function showDiscoveryItinerary(rows,outing){
+ const stops=buildOutingItinerary(rows,outing);
+ if(stops.length<2)return;
+ const message=add('',false);message.classList.add('gooy-discoveries');
+ message.appendChild(el('h3','gooy-discoveries-title','Sugestão de roteiro'));
+ message.appendChild(el('p','gooy-discoveries-subtitle',stops.length+' paradas diferentes para aproveitar seu passeio. A ordem é uma sugestão, não um percurso otimizado.'));
+ const steps=el('ol','gooy-discoveries-steps');
+ for(const row of stops){
+  const item=el('li','gooy-discoveries-stop');
+  item.appendChild(el('strong','',row.store.name));
+  item.appendChild(el('span','',row.store.address));
+  steps.appendChild(item);
+ }
+ message.appendChild(steps);
+ const locations=stops.map(r=>[r.store.name,r.store.address].filter(Boolean).join(', '));
+ const params=new URLSearchParams({api:'1',origin:locations[0],destination:locations[locations.length-1],travelmode:'driving'});
+ if(locations.length>2)params.set('waypoints',locations.slice(1,-1).join('|'));
+ const a=el('a','gooy-discoveries-map','Ver percurso no mapa');
+ a.href='https://www.google.com/maps/dir/?'+params.toString();
+ a.target='_blank';a.rel='noopener noreferrer';message.appendChild(a);
+ message.appendChild(el('p','gooy-discoveries-note','Confira os horários de cada parada antes de sair.'));
+}
+
 async function searchOuting(outing){
  if(!userCity){askForCity(outing.original);return}
  await loadData();
@@ -1158,15 +1181,9 @@ async function searchOuting(outing){
   if(!outing.eventsOnly)askRegionalSearchPermission(outing.original,draft,city=>outingRankRows(searchStores(db,{...draft,location:{city,uf:null,neighborhood:null}},position,{limit:db.stores.length}),outing,db.trophies||[]));
  }else{
   showOutingExtras(places,events);
-  if(rows.length){add('Estabelecimentos relacionados ao seu passeio:');showNextResultPage()}
+  if(rows.length){showDiscoveryItinerary(rows,outing);showNextResultPage()}
  }
- const panel=el('div','guru-next-buttons gooy-outing-actions');
- const company=outing.pet?'com meu pet':({casal:'com minha namorada',amigos:'com meus amigos',familia:'com minha família',geral:''}[outing.companion]||'');
- for(const [label,term] of [['Mais tranquilo','tranquilo'],['Ao ar livre','na natureza'],['Para comer','para comer'],['Eventos','eventos'],['Com meu pet','para passear com meu pet']]){
-  const button=el('button','guru-next-button',label);button.type='button';
-  button.onclick=()=>submitText(label==='Com meu pet'?'Quero um rolê para passear com meu pet':('Quero um rolê '+term+' '+company).trim());panel.appendChild(button);
- }
- intro.appendChild(panel);
+
 }
 
 async function run(text){

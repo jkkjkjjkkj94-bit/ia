@@ -845,7 +845,9 @@ function makeCard(row,index){
  card.appendChild(actions);return card;
 }
 function renderNextQuestions(host,rows,offset=0){
- const questions=lastOuting?[]:followupPrompts(rows,state);
+ // Pesquisas de passeio ficam sem botões extras sob os cards; refinamento via chat.
+ if(lastOuting)return;
+ const questions=followupPrompts(rows,state);
  const total=(state.lastResults||[]).length;
  const remaining=Math.max(0,total-offset-rows.length);
  if(!questions.length&&!remaining)return;
@@ -962,7 +964,7 @@ function displayResults(rows,offset=0){
 function showNextResultPage(){
  const all=state.lastResults||[];
  const offset=Math.min(Math.max(0,Number(state.resultOffset)||0),all.length);
- if(offset>=all.length){add('Não há mais opções nesta pesquisa. Você pode procurar outra categoria ou produto.');return false}
+ if(offset>=all.length){add(lastOuting?'Essas são todas as opções cadastradas que encontrei para este passeio.':'Não há mais opções nesta pesquisa. Você pode procurar outra categoria ou produto.');return false}
  const page=all.slice(offset,offset+RESULT_PAGE_SIZE);
  state.resultOffset=offset+page.length;
  save();const message=displayResults(page,offset);
@@ -1139,8 +1141,8 @@ function showDiscoveryItinerary(rows,outing){
  const stops=buildOutingItinerary(rows,outing);
  if(stops.length<2)return;
  const message=add('',false);message.classList.add('gooy-discoveries');
- message.appendChild(el('h3','gooy-discoveries-title','Sugestão de roteiro'));
- message.appendChild(el('p','gooy-discoveries-subtitle',stops.length+' paradas diferentes para aproveitar seu passeio. A ordem é uma sugestão, não um percurso otimizado.'));
+ message.appendChild(el('h3','gooy-discoveries-title','GOOY Descobertas · roteiro sugerido'));
+ message.appendChild(el('p','gooy-discoveries-subtitle',stops.length+' paradas de experiências diferentes para aproveitar seu passeio. A ordem é sugerida e o percurso não foi calculado por distância.'));
  const steps=el('ol','gooy-discoveries-steps');
  for(const row of stops){
   const item=el('li','gooy-discoveries-stop');

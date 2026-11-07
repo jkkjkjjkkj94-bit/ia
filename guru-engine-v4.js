@@ -640,7 +640,7 @@ function chooseStore(row){
  const hasDelivery=s.delivery===true;
  const hasProducts=(db?.products||[]).some(p=>p.store_id===s.id&&eligibleProduct(p));
  const hasPayment=Array.isArray(s.payment_methods)?s.payment_methods.some(v=>String(v||'').trim()):Boolean(String(s.payment_methods||'').trim());
- const hasContact=Boolean(String(s.whatsapp||s.phone||'').trim());
+ const hasContact=[s.whatsapp,s.phone].some(value=>Boolean(String(value||'').trim()));
  const availableActions=[
   [hasHours,'clock','Horário','Qual o horário?'],
   [hasDelivery,'truck','Entrega','Ela entrega?'],

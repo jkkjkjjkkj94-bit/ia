@@ -3,7 +3,7 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=2';
-import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents,buildOutingItinerary,editOutingStops,outingStraightKm} from './gooy-outings-v1.mjs?v=12';
+import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents,buildOutingItinerary,editOutingStops,outingStraightKm} from './gooy-outings-v1.mjs?v=13';
 
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
@@ -1160,7 +1160,7 @@ function renderDiscoveryItinerary(stops,outing,updated=false){
  if(!stops.length){add('O roteiro ficou sem paradas. Faça uma nova busca para encontrar outros lugares.');lastDiscovery=null;return null}
  const message=add('',false);message.classList.add('gooy-discoveries');
  message.appendChild(el('h3','gooy-discoveries-title',updated?'GOOY Descobertas · roteiro atualizado':'GOOY Descobertas · roteiro sugerido'));
- message.appendChild(el('p','gooy-discoveries-subtitle',stops.length+' '+(stops.length===1?'parada':'paradas')+' para o passeio. Você pode pedir no chat para adicionar ou remover paradas.'));
+ message.appendChild(el('p','gooy-discoveries-subtitle',stops.length+' '+(stops.length===1?'parada':'paradas')+' para o passeio. Você pode adicionar, remover ou escolher um estabelecimento específico para uma parada.'));
  const steps=el('ol','gooy-discoveries-steps');
  let unknownHours=false;
  for(const row of stops){
@@ -1195,14 +1195,23 @@ function renderDiscoveryItinerary(stops,outing,updated=false){
 function showDiscoveryItinerary(rows,outing){
  const stops=buildOutingItinerary(rows,outing);
  if(stops.length<2){lastDiscovery=null;return}
- lastDiscovery={stops,pool:[...rows],outing};
+ // Inclui no conjunto de edição lojas da mesma cidade, mesmo que não tenham
+ // troféu para o passeio inicial. Só são usadas mediante pedido explícito.
+ const ids=new Set(rows.map(r=>String(r.store?.id)));
+ const city=String(userCity||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().trim();
+ const additional=(db?.stores||[]).filter(store=>{
+  const address=String(store.address||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
+  return store.id&&store.name&&store.address&&city&&address.includes(city)&&!ids.has(String(store.id));
+ }).map(store=>({store,outingScore:0}));
+ lastDiscovery={stops,pool:[...rows,...additional],outing};
  renderDiscoveryItinerary(stops,outing);
 }
 function refineDiscovery(text){
  if(!lastDiscovery||!lastOuting)return false;
  const edit=editOutingStops(text,lastDiscovery.stops,lastDiscovery.pool);
  if(!edit)return false;
- if(edit.kind==='clarify'){add('Qual parada você quer remover? Diga, por exemplo, “remova a segunda parada” ou “tire o parque”.');return true}
+ if(edit.kind==='clarify'){add('Qual parada você quer alterar? Diga, por exemplo, “remova a segunda parada” ou “troque a primeira pela Padaria Manu”.');return true}
+ if(edit.kind==='unavailable_replace'){add('Não localizei esse estabelecimento nos cadastros da cidade selecionada. Informe o nome completo ou peça para adicionar outro lugar.');return true}
  if(edit.kind==='unavailable_add'){add('Não encontrei outra parada cadastrada que combine com esse pedido. Mantive o roteiro atual.');return true}
  if(edit.kind==='limit'){add('Este roteiro já tem oito paradas. Remova alguma para adicionar outra.');return true}
  if(edit.kind==='choose_action'){add('Você pode adicionar uma parada nova ou remover uma das existentes. Por exemplo: “adicione uma cafeteria” ou “remova a segunda parada”.');return true}
@@ -1213,6 +1222,7 @@ function refineDiscovery(text){
  lastDiscovery.stops=edit.stops;
  if(edit.kind==='remove')add('Retirei a parada solicitada e mantive as demais.');
  else if(edit.kind==='add')add('Adicionei '+edit.added.store.name+' ao seu roteiro, mantendo as demais paradas.');
+ else if(edit.kind==='replace')add('Atualizei a parada solicitada para '+edit.added.store.name+'.');
  else add('Reorganizei as paradas usando as coordenadas cadastradas. Confira o trajeto no mapa.');
  renderDiscoveryItinerary(lastDiscovery.stops,lastDiscovery.outing,true);
  return true;

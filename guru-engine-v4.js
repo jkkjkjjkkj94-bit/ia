@@ -3,7 +3,7 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=2';
-import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents,buildOutingItinerary,editOutingStops,outingStraightKm} from './gooy-outings-v1.mjs?v=13';
+import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents,buildOutingItinerary,editOutingStops,outingStraightKm} from './gooy-outings-v1.mjs?v=14';
 
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
@@ -1222,7 +1222,7 @@ function refineDiscovery(text){
  lastDiscovery.stops=edit.stops;
  if(edit.kind==='remove')add('Retirei a parada solicitada e mantive as demais.');
  else if(edit.kind==='add')add('Adicionei '+edit.added.store.name+' ao seu roteiro, mantendo as demais paradas.');
- else if(edit.kind==='replace')add('Atualizei a parada solicitada para '+edit.added.store.name+'.');
+ else if(edit.kind==='replace'||edit.kind==='replace_legacy')add('Atualizei a parada solicitada para '+edit.added.store.name+'.');
  else add('Reorganizei as paradas usando as coordenadas cadastradas. Confira o trajeto no mapa.');
  renderDiscoveryItinerary(lastDiscovery.stops,lastDiscovery.outing,true);
  return true;

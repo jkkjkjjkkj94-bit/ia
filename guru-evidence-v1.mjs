@@ -1,17 +1,17 @@
-// GURU 5.3 — transparência de evidências do catálogo.
+// GOOY 5.3 — transparência de evidências do catálogo.
 // Descreve apenas o que o sistema tem registrado; não valida disponibilidade em tempo real.
 export function evidenceForStore(row={},data={}){
  const store=row.store||{};
  const products=Array.isArray(row.products)?row.products:[];
  const out=[];
- if(store.active===true&&store.status==='active')out.push('Estabelecimento ativo no cadastro da GURU.');
+ if(store.active===true&&store.status==='active')out.push('Estabelecimento ativo no cadastro da GOOY.');
  if(store.delivery===true)out.push('Entrega informada no cadastro; condições devem ser confirmadas com a loja.');
  else out.push('Entrega não consta como disponível no cadastro.');
  if(Number.isFinite(row.distance)&&row.distance>=0)
   out.push('Distância aproximada em linha reta, calculada com coordenadas cadastradas.');
  else out.push('Distância não calculada para esta consulta.');
  if(Number.isFinite(row.reviewCount)&&row.reviewCount>0)
-  out.push('Nota calculada a partir das avaliações registradas na GURU.');
+  out.push('Nota calculada a partir das avaliações registradas na GOOY.');
  else out.push('Sem avaliações registradas para esta consulta.');
  if(products.length){
   out.push('Produtos listados no catálogo com estoque informado; disponibilidade pode mudar.');

@@ -1,8 +1,8 @@
 {
   "id": "/ia/",
-  "name": "GURU — Assistente Local",
-  "short_name": "GURU",
-  "description": "Encontre estabelecimentos, produtos e serviços com a GURU.",
+  "name": "GOOY — Assistente Local",
+  "short_name": "GOOY",
+  "description": "Encontre estabelecimentos, produtos e serviços com a GOOY.",
   "lang": "pt-BR",
   "start_url": "/ia/?source=pwa",
   "scope": "/ia/",

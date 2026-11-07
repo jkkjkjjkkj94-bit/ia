@@ -3,7 +3,7 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=2';
-import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents,buildOutingItinerary,editOutingStops,outingStraightKm} from './gooy-outings-v1.mjs?v=11';
+import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents,buildOutingItinerary,editOutingStops,outingStraightKm} from './gooy-outings-v1.mjs?v=12';
 
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
@@ -1160,7 +1160,7 @@ function renderDiscoveryItinerary(stops,outing,updated=false){
  if(!stops.length){add('O roteiro ficou sem paradas. Faça uma nova busca para encontrar outros lugares.');lastDiscovery=null;return null}
  const message=add('',false);message.classList.add('gooy-discoveries');
  message.appendChild(el('h3','gooy-discoveries-title',updated?'GOOY Descobertas · roteiro atualizado':'GOOY Descobertas · roteiro sugerido'));
- message.appendChild(el('p','gooy-discoveries-subtitle',stops.length+' '+(stops.length===1?'parada':'paradas')+' para o passeio. Você pode pedir no chat para trocar ou remover uma parada.'));
+ message.appendChild(el('p','gooy-discoveries-subtitle',stops.length+' '+(stops.length===1?'parada':'paradas')+' para o passeio. Você pode pedir no chat para adicionar ou remover paradas.'));
  const steps=el('ol','gooy-discoveries-steps');
  let unknownHours=false;
  for(const row of stops){
@@ -1202,15 +1202,17 @@ function refineDiscovery(text){
  if(!lastDiscovery||!lastOuting)return false;
  const edit=editOutingStops(text,lastDiscovery.stops,lastDiscovery.pool);
  if(!edit)return false;
- if(edit.kind==='clarify'){add('Qual parada você quer alterar? Pode dizer, por exemplo, “troque a segunda parada” ou “tire o parque”.');return true}
- if(edit.kind==='unavailable'){add('Não encontrei outro local do mesmo tipo, com as características necessárias, para substituir essa parada. Mantive seu roteiro.');return true}
+ if(edit.kind==='clarify'){add('Qual parada você quer remover? Diga, por exemplo, “remova a segunda parada” ou “tire o parque”.');return true}
+ if(edit.kind==='unavailable_add'){add('Não encontrei outra parada cadastrada que combine com esse pedido. Mantive o roteiro atual.');return true}
+ if(edit.kind==='limit'){add('Este roteiro já tem oito paradas. Remova alguma para adicionar outra.');return true}
+ if(edit.kind==='choose_action'){add('Você pode adicionar uma parada nova ou remover uma das existentes. Por exemplo: “adicione uma cafeteria” ou “remova a segunda parada”.');return true}
  if(edit.kind==='empty'){add('Não há paradas para alterar. Faça outra busca de passeio.');return true}
  if(edit.kind==='reorder'&&edit.needsCoordinates){add('Alguns locais não têm coordenadas cadastradas para comparar a proximidade. Mantive a ordem sugerida e você pode conferir o trajeto no mapa.');return true}
  const old=document.querySelectorAll('.gooy-discoveries');
  old.forEach(node=>node.remove());
  lastDiscovery.stops=edit.stops;
  if(edit.kind==='remove')add('Retirei a parada solicitada e mantive as demais.');
- else if(edit.kind==='replace')add('Troquei a parada solicitada e mantive o restante do passeio.');
+ else if(edit.kind==='add')add('Adicionei '+edit.added.store.name+' ao seu roteiro, mantendo as demais paradas.');
  else add('Reorganizei as paradas usando as coordenadas cadastradas. Confira o trajeto no mapa.');
  renderDiscoveryItinerary(lastDiscovery.stops,lastDiscovery.outing,true);
  return true;

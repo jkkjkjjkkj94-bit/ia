@@ -19,8 +19,8 @@ export function detectOuting(raw,previous=null) {
  const normalized=outingNormalize(raw);
  const companion=COMPANIONS.find(([,regex])=>regex.test(normalized))?.[0]||null;
  const mood=MOODS.find(([,regex])=>regex.test(normalized))?.[0]||null;
- const explicit=OUTING.test(normalized)&&(!!companion||/\b(role|roles|rolinho|passeio|passear|date|encontro|o que fazer|lugares para ir|lugar para ir|onde ir|programacao)\b/.test(normalized));
- const followup=!!previous&&normalized.length<85&&REFINEMENT.test(normalized)&&!(/\b(comprar|preco de|produto|loja de|entrega)\b/.test(normalized));
+ const explicit=(OUTING.test(normalized)&&(!!companion||/\b(role|roles|rolinho|passeio|passear|date|o que fazer|lugares para ir|lugar para ir|onde ir|programacao)\b/.test(normalized)))||(/\b(evento|eventos|festival|feira|exposicao)\b/.test(normalized)&&/\b(quero|tem|buscar|procuro|hoje|amanha|final de semana|fim de semana|programacao)\b/.test(normalized));
+ const followup=!!previous&&normalized.length<85&&/^(mais |algo |opcoes |lugares |eventos?\b|hoje\b|amanha\b|sabado\b|domingo\b|barat|gratuit|tranquil|animad|natureza|cultura|cinema|comida|jantar)/.test(normalized)&&REFINEMENT.test(normalized)&&!(/\b(comprar|preco de|produto|loja de|entrega)\b/.test(normalized));
  if(!explicit&&!followup)return null;
  const budget=/\b(gratis|gratuito|gratuita|de graca|sem gastar)\b/.test(normalized)?'gratis':/\b(barat[oa]|economico|economica|baixo custo|pouco dinheiro)\b/.test(normalized)?'economico':previous?.budget||null;
  return {companion:companion||previous?.companion||'geral',mood:mood||previous?.mood||null,budget,

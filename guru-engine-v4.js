@@ -713,6 +713,12 @@ function chooseStore(row){
  if(s.pickup)tags.appendChild(el('span','selected-store-tag','Retirada'));
  if(s.sponsored)tags.appendChild(el('span','selected-store-tag','Patrocinada'));
  identity.appendChild(tags);header.appendChild(identity);shell.appendChild(header);
+ const selectedTrophies=activeStoreTrophies(db?.trophies||[],s.id);
+ if(selectedTrophies.length){
+  const trophyList=el('div','gooy-trophy-group');
+  selectedTrophies.forEach(code=>{const t=trophyInfo(code);if(t)trophyList.appendChild(el('span','gooy-trophy',t.icon+' '+t.label))});
+  shell.appendChild(trophyList);
+ }
  const details=el('div','selected-store-details');
  const appendDetail=(iconKey,label,value)=>{
   const line=el('div','selected-store-detail-row');

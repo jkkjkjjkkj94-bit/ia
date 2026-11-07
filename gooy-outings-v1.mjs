@@ -143,32 +143,60 @@ export function reorderOutingStops(stops=[]){
 }
 export function editOutingStops(text,stops=[],pool=[]){
  const n=outingNormalize(text);
- const orderWords={primeiro:0,primeira:0,segundo:1,segunda:1,terceiro:2,terceira:2};
- const indexByWord=Object.entries(orderWords).find(([word])=>new RegExp('\\b'+word+'\\b').test(n))?.[1];
- const numeric=/\b([123])\s*(?:a|o)?\s*(?:parada|lugar|local)\b/.exec(n);
- const position=indexByWord??(numeric?Number(numeric[1])-1:null);
+ const add=/\b(adicione|adicionar|adiciona|acrescente|acrescentar|acrescenta|inclua|incluir|coloque|colocar|ponha|por|mais uma parada|mais um lugar|outra parada|outro lugar)\b/.test(n);
  const remove=/\b(tira|tire|tirar|remova|remove|remover|exclua|excluir|retira|retire|retirar)\b/.test(n);
- const change=/\b(troca|troque|trocar|substitua|substituir|muda|mude|mudar|altera|altere|alterar)\b/.test(n);
  const reroute=/\b(refaca|refazer|reorganize|reorganizar|reordene|reordenar|mais perto|menos deslocamento|rota mais curta)\b/.test(n);
- if(!remove&&!change&&!reroute)return null;
- if(reroute&&!remove&&!change)return {kind:'reorder',stops:reorderOutingStops(stops),needsCoordinates:stops.some(r=>r.store?.latitude==null||r.store?.longitude==null)};
- if(!stops.length)return {kind:'empty',stops};
- let index=position;
- if(index==null){
-  const candidates=stops.map((row,i)=>({i,kind:outingStopType(row.store),name:outingNormalize(row.store?.name)}));
-  const terms=[['ar_livre',/\b(parque|praca|jardim|natureza|ar livre)\b/],['cultura',/\b(cinema|museu|teatro|cultura)\b/],['refeicao',/\b(restaurante|jantar|almoco|pizzaria)\b/],['cafe',/\b(cafe|cafeteria)\b/],['sobremesa',/\b(sorvete|sorveteria|acai|doce)\b/]];
-  const found=terms.find(([,rx])=>rx.test(n));
-  if(found)index=candidates.find(x=>x.kind===found[0])?.i??null;
-  if(index==null)index=candidates.find(x=>x.name&&n.includes(x.name))?.i??null;
+ const legacyReplace=/\b(troca|troque|trocar|substitua|substituir|muda|mude|mudar|altera|altere|alterar)\b/.test(n);
+ if(!add&&!remove&&!reroute&&!legacyReplace)return null;
+ if(legacyReplace&&!add&&!remove)return {kind:'choose_action',stops};
+ if(reroute&&!add&&!remove)return {kind:'reorder',stops:reorderOutingStops(stops),needsCoordinates:stops.some(r=>r.store?.latitude==null||r.store?.longitude==null)};
+ const orderWords={primeiro:0,primeira:0,segundo:1,segunda:1,terceiro:2,terceira:2,quarto:3,quarta:3,quinto:4,quinta:4,sexto:5,sexta:5,setimo:6,setima:6,oitavo:7,oitava:7};
+ const positions=Object.entries(orderWords).find(([word])=>new RegExp('\\b'+word+'\\b').test(n))?.[1];
+ const numeric=/\b([1-8])\s*(?:a|o)?\s*(?:parada|lugar|local)\b/.exec(n);
+ const position=positions??(numeric?Number(numeric[1])-1:null);
+ const types=[
+  ['ar_livre',/\b(parque|praca|jardim|natureza|ar livre|trilha)\b/],
+  ['cultura',/\b(cinema|museu|teatro|cultura|livraria)\b/],
+  ['refeicao',/\b(restaurante|jantar|almoco|pizzaria|hamburgueria|comer)\b/],
+  ['cafe',/\b(cafe|cafeteria|padaria)\b/],
+  ['sobremesa',/\b(sorvete|sorveteria|acai|doce|sobremesa)\b/],
+  ['diversao',/\b(boliche|jogos|karaoke|diversao|shopping)\b/]
+ ];
+ const intendedType=types.find(([,rx])=>rx.test(n))?.[0]||null;
+ if(add){
+  if(stops.length>=8)return {kind:'limit',stops};
+  const used=new Set(stops.map(r=>String(r.store?.id)));
+  const eligible=pool.filter(r=>r.store?.id&&r.store?.name&&r.store?.address&&!used.has(String(r.store.id)));
+  // Nomes explícitos só são aceitos se o estabelecimento estiver no conjunto verificado.
+  const requested=eligible.find(r=>outingNormalize(r.store.name).length>3&&n.includes(outingNormalize(r.store.name)));
+  const candidates=requested?[requested]:intendedType?eligible.filter(r=>outingStopType(r.store)===intendedType):eligible;
+  if(!candidates.length)return {kind:'unavailable_add',stops,requestedType:intendedType};
+  const scored=[...candidates].sort((a,b)=>{
+   const distance=r=>stops.length?outingStraightKm(stops[stops.length-1].store,r.store):null;
+   const value=r=>(Number(r.outingScore)||0)+Math.max(0,12-(distance(r)??12));
+   return value(b)-value(a);
+  });
+  const next=[...stops];
+  // "Depois da segunda parada" insere na posição 3; sem posição adiciona ao final.
+  const insertAfter=/\b(depois|apos|em seguida)\b/.test(n)&&position!=null;
+  const insertBefore=/\b(antes)\b/.test(n)&&position!=null;
+  const at=insertAfter?Math.min(position+1,next.length):insertBefore?Math.min(position,next.length):next.length;
+  next.splice(at,0,scored[0]);
+  return {kind:'add',stops:next,added:scored[0],index:at};
  }
- if(index==null||index<0||index>=stops.length)return {kind:'clarify',stops};
- if(remove)return {kind:'remove',stops:stops.filter((_,i)=>i!==index),index};
- const used=new Set(stops.map(r=>r.store?.id));
- const target=stops[index];
- const alternatives=pool.filter(row=>row.store?.id&&!used.has(row.store.id)&&row.store.address&&outingStopType(row.store)===outingStopType(target.store));
- if(!alternatives.length)return {kind:'unavailable',stops,index};
- const next=[...stops];next[index]=alternatives[0];
- return {kind:'replace',stops:next,index};
+ if(!stops.length)return {kind:'empty',stops};
+ if(remove){
+  let index=position;
+  if(index==null){
+   const matches=stops.map((row,i)=>({i,kind:outingStopType(row.store),name:outingNormalize(row.store?.name)}));
+   const found=types.find(([,rx])=>rx.test(n));
+   if(found)index=matches.find(x=>x.kind===found[0])?.i??null;
+   if(index==null)index=matches.find(x=>x.name&&n.includes(x.name))?.i??null;
+  }
+  if(index==null||index<0||index>=stops.length)return {kind:'clarify',stops};
+  return {kind:'remove',stops:stops.filter((_,i)=>i!==index),index};
+ }
+ return null;
 }
 export function buildOutingItinerary(rows=[],outing={},maxStops=3){
  const candidates=rows.filter(r=>r?.store?.id&&r.store?.name&&String(r.store.address||'').trim()&&!/^\s*[^,]+\s*-\s*[a-z]{2}\s*$/i.test(String(r.store.address||'')));

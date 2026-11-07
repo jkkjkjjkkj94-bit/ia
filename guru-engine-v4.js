@@ -1,9 +1,9 @@
-// GURU v4 - um único responsável por eventos, contexto, busca e resultados.
+// GOOY v4 - um único responsável por eventos, contexto, busca e resultados.
 import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,diagnosisForNoResults} from './guru-intelligence-v14.mjs?v=3';
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
-import {routeConversation} from './guru-smalltalk.mjs?v=1';
-import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=3';
+import {routeConversation} from './guru-smalltalk.mjs?v=2';
+import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
 import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
 import {guidedSearchAlternatives,rerankSearchResults,noResultGuidance} from './guru-search-v7.mjs?v=2';
@@ -12,7 +12,7 @@ import {rankV9,rememberSelection,learningStats} from './guru-ranking-v9.mjs?v=2'
 import {sharedAlternatives} from './guru-context-v10.mjs?v=1';
 import {semanticNeedAlternatives} from './guru-semantic-v12.mjs?v=2';
 import {followupRefinement} from './guru-followup-v13.mjs?v=1';
-import {evidenceForStore,evidenceForField} from './guru-evidence-v1.mjs?v=1';
+import {evidenceForStore,evidenceForField} from './guru-evidence-v1.mjs?v=2';
 import {approvedAnswerFor,approvedStoreContextFor} from './guru-knowledge-v11.mjs?v=2';
 import {norm,normalizeQuery,buildLexicon,interpret,emptyState,nextState,searchStores,explainEmptySearch,applyStoreHighlight,priceOf,eligibleProduct,ratingsMap,distanceKm,scheduleMatches} from './guru-engine-v4-core.mjs?v=28';
 
@@ -170,7 +170,7 @@ const add=(text,user=false)=>{
 function showTypingIndicator(){
  const message=el('div','msg bot guru-typing');
  message.setAttribute('role','status');
- message.setAttribute('aria-label','GURU está digitando');
+ message.setAttribute('aria-label','GOOY está digitando');
  const dots=el('span','guru-typing-dots');
  dots.setAttribute('aria-hidden','true');
  for(let i=0;i<3;i++)dots.appendChild(el('span','guru-typing-dot'));
@@ -236,7 +236,7 @@ async function showAssistantReply(fragment){
 }
 const notice=t=>{if(toast){toast.textContent=t;toast.classList.add('on');setTimeout(()=>toast.classList.remove('on'),3200)}};
 const msgError=err=>{
- console.error('[GURU v4]',err);
+ console.error('[GOOY v4]',err);
  const message=String(err?.message||'');
  if(/fetch|network|failed to fetch|abort|timeout|HTTP (?:429|5\\d\\d)/i.test(message)){
   add('Não foi possível acessar o catálogo agora. Verifique a conexão e tente novamente.');
@@ -532,7 +532,7 @@ async function loadData(force=false){
   if(all[0].status==='rejected')throw all[0].reason;
   if(all[1].status==='rejected')throw all[1].reason;
   const failures=all.map((x,i)=>x.status==='rejected'?i:null).filter(x=>x!==null);
-  if(failures.length)console.warn('[GURU v4] Dados complementares indisponíveis',failures);
+  if(failures.length)console.warn('[GOOY v4] Dados complementares indisponíveis',failures);
   mergeTaxonomy(get(5),get(6),get(7));
   extendCanonicalTaxonomy(get(0));
   const highlightsByStore=new Map(get(8).map(h=>[h.store_id,h]));
@@ -592,7 +592,7 @@ function askForCity(query=''){
  if(query)pendingCityQuery=query;
  const m=add('',false);m.classList.add('guru-city-choice');
  m.appendChild(el('div','guru-city-choice-title','Qual é sua cidade?'));
- m.appendChild(el('div','guru-city-distance-note','A GURU pesquisará apenas lojas dessa cidade. Digite o município ou autorize a localização.'));
+ m.appendChild(el('div','guru-city-distance-note','A GOOY pesquisará apenas lojas dessa cidade. Digite o município ou autorize a localização.'));
  const controls=el('div','guru-city-choice-controls');
  const inputCity=el('input','');inputCity.type='text';inputCity.placeholder='Ex.: Salto de Pirapora';
  inputCity.maxLength=90;inputCity.autocomplete='address-level2';inputCity.setAttribute('aria-label','Cidade onde você está');
@@ -822,7 +822,7 @@ function makeCard(row,index){
   }else if(proof.catalogCount){
    audit.appendChild(el('span','guru-need-proof-muted','Há produtos cadastrados, mas os itens desta lista não foram confirmados.'));
   }else{
-   audit.appendChild(el('span','guru-need-proof-muted','Sem catálogo de produtos disponível na GURU.'));
+   audit.appendChild(el('span','guru-need-proof-muted','Sem catálogo de produtos disponível na GOOY.'));
   }
   card.appendChild(audit);
  }
@@ -867,10 +867,10 @@ function renderComparison(indices,question){
  const wrap=el('section','guru-compare-experience');
  wrap.appendChild(el('div','guru-compare-kicker','COMPARAR LOJAS'));
  wrap.appendChild(el('h3','guru-compare-title','Comparação entre estabelecimentos'));
- wrap.appendChild(el('p','guru-compare-intro','Informações disponíveis nos cadastros da GURU.'));
+ wrap.appendChild(el('p','guru-compare-intro','Informações disponíveis nos cadastros da GOOY.'));
  const available=value=>typeof value==='number'&&Number.isFinite(value);
  const metrics=[
-  {label:'Pontuação GURU',detail:'Relevância interna',format:x=>available(x.score)?Math.round(x.score)+' pontos':'Não informada',measure:x=>available(x.score)?x.score:null,better:'max',badge:'Maior pontuação'},
+  {label:'Pontuação GOOY',detail:'Relevância interna',format:x=>available(x.score)?Math.round(x.score)+' pontos':'Não informada',measure:x=>available(x.score)?x.score:null,better:'max',badge:'Maior pontuação'},
   {label:'Entrega',detail:'Serviço cadastrado',format:x=>x.delivery?'Disponível':'Não cadastrada',measure:x=>x.delivery?1:null,better:'max',badge:'Entrega disponível'},
   {label:'Taxa de entrega',detail:'Valor cadastrado',format:x=>x.delivery&&available(x.deliveryFee)?money(x.deliveryFee):'Não informada',measure:x=>x.delivery&&available(x.deliveryFee)?x.deliveryFee:null,better:'min',badge:'Menor taxa'},
   {label:'Preço cadastrado',detail:'Produtos podem ser diferentes',format:x=>available(x.price)?money(x.price):'Sem preço',measure:x=>null,better:null},
@@ -918,7 +918,7 @@ function renderComparison(indices,question){
   cards.appendChild(card);
  });
  wrap.appendChild(cards);
- wrap.appendChild(el('p','guru-compare-disclaimer','Destaques aparecem somente quando há dados comparáveis. Pontuação GURU não é avaliação de clientes; preços de produtos diferentes não indicam a loja mais barata.'));
+ wrap.appendChild(el('p','guru-compare-disclaimer','Destaques aparecem somente quando há dados comparáveis. Pontuação GOOY não é avaliação de clientes; preços de produtos diferentes não indicam a loja mais barata.'));
  section.appendChild(wrap);
 }
 function citySearchState(source=state){
@@ -966,7 +966,7 @@ function renderNeedQuestion(need){
  const info=describeNeed(need);if(!info)return;
  const host=add('',false);host.classList.add('guru-need-message');
  const card=el('section','guru-need-card');
- card.appendChild(el('div','guru-need-eyebrow','GURU · ASSISTENTE DE COMPRAS'));
+ card.appendChild(el('div','guru-need-eyebrow','GOOY · ASSISTENTE DE COMPRAS'));
  card.appendChild(el('h3','guru-need-heading',info.title));
  card.appendChild(el('p','guru-need-description','Posso montar uma lista inicial de materiais e procurar lojas cadastradas na sua cidade, sem presumir que têm tudo em estoque.'));
  card.appendChild(el('p','guru-need-question',info.question));
@@ -1050,7 +1050,7 @@ function replyAboutStore(text,ask,filter={}){
  if(ask==='payment'){add(evidenceForField('payment',s));return}
  if(ask==='address'){add(s.address||'Essa loja ainda não informou o endereço.');return}
  if(ask==='contact'){add(s.whatsapp?'WhatsApp: '+s.whatsapp:s.phone?'Telefone: '+s.phone:'Essa loja ainda não informou um contato.');return}
- if(ask==='rating'){if(db.unavailable.reviews){add('Não consegui consultar as avaliações dessa loja agora. Tente novamente.');return}const rv=ratingsMap(db.reviews).get(s.id);add(rv?'Média das avaliações cadastradas na GURU: '+(rv.sum/rv.count).toFixed(1)+'/5 em '+rv.count+' avaliação(ões).':'Essa loja ainda não possui avaliações cadastradas.');return}
+ if(ask==='rating'){if(db.unavailable.reviews){add('Não consegui consultar as avaliações dessa loja agora. Tente novamente.');return}const rv=ratingsMap(db.reviews).get(s.id);add(rv?'Média das avaliações cadastradas na GOOY: '+(rv.sum/rv.count).toFixed(1)+'/5 em '+rv.count+' avaliação(ões).':'Essa loja ainda não possui avaliações cadastradas.');return}
  const ps=productListFor(s,text);
  if(!ps.length){add('Não encontrei produto ativo e disponível em estoque que corresponda a essa pergunta.');return}
  if(ps.length===1)state.selectedProduct=ps[0];
@@ -1401,13 +1401,13 @@ async function submitText(raw){
  const typing=showTypingIndicator();
  const start=performance.now();
  replyBuffer=document.createDocumentFragment();
- try{await Promise.race([run(t),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Tempo limite da pesquisa')),15000))])}catch(err){console.error('[GURU] Falha na pesquisa',err);try{msgError(err)}catch{add('Não foi possível concluir esta pesquisa. Tente novamente em instantes.')}}finally{
+ try{await Promise.race([run(t),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Tempo limite da pesquisa')),15000))])}catch(err){console.error('[GOOY] Falha na pesquisa',err);try{msgError(err)}catch{add('Não foi possível concluir esta pesquisa. Tente novamente em instantes.')}}finally{
   const remaining=Math.max(0,minTypingMs-(performance.now()-start));
   if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining));
   const completed=replyBuffer;
   replyBuffer=null;
   typing.remove();
-  try{await showAssistantReply(completed)}catch(err){console.error('[GURU] Falha ao mostrar resposta',err);add('Não consegui exibir o resultado. Tente outra pesquisa.');}
+  try{await showAssistantReply(completed)}catch(err){console.error('[GOOY] Falha ao mostrar resposta',err);add('Não consegui exibir o resultado. Tente outra pesquisa.');}
   finally{
    input.disabled=false;input.focus();searchBusy=false;
   }
@@ -1451,7 +1451,7 @@ function initShell(){
  const hero=document.querySelector('.hero h1');
  const subtitle=document.querySelector('.hero p');
  const welcomeSlides=[
-  ['O que você quer encontrar?','Encontre lojas, produtos e serviços conversando com a GURU.'],
+  ['O que você quer encontrar?','Encontre lojas, produtos e serviços conversando com a GOOY.'],
   ['Procurando uma loja?','Descubra estabelecimentos cadastrados na sua cidade.'],
   ['Precisa encontrar um produto?','Descreva o que procura e veja as opções disponíveis.'],
   ['Quer comparar estabelecimentos?','Conheça as diferenças entre as opções cadastradas.']
@@ -1498,8 +1498,8 @@ if(form&&input&&msgs){
   renderContext();
  }
  loadData().catch(err=>{
-  console.warn('[GURU v4] Carregamento inicial não concluído:',err);
+  console.warn('[GOOY v4] Carregamento inicial não concluído:',err);
   add('Não consegui carregar o catálogo agora. Você ainda pode escrever sua pergunta e tentar novamente.');
  });
  window.GuruEngineV4={interpret:q=>interpret(q,taxonomy,aliases,state,{products:db?.products||[]}),submitText,reset:resetConversation,refresh:()=>loadData(true),getState:()=>state,learningStats};
-}else console.error('[GURU v4] Formulário ausente.');
+}else console.error('[GOOY v4] Formulário ausente.');

@@ -710,3 +710,17 @@ html[data-theme="dark"] .gooy-discoveries{background:#1e2024;border-color:#37393
 html[data-theme="dark"] .gooy-discoveries-stop span,html[data-theme="dark"] .gooy-discoveries-subtitle,html[data-theme="dark"] .gooy-discoveries-note{color:#b5b9c3}
 html[data-theme="dark"] .gooy-discoveries-stop::before,html[data-theme="dark"] .gooy-discoveries-map{background:#f0f1f3;color:#17181b}
 @media(max-width:680px){body .gooy-discoveries{padding:14px!important;border-radius:15px!important}body .gooy-discoveries-map{width:100%;min-height:42px}}
+
+/* GOOY Descobertas 2.0 — roteiro legível e refinamentos feitos pelo chat. */
+.gooy-discoveries-stop .gooy-discoveries-hours{
+ grid-column:2;grid-row:auto;display:block;margin-top:3px;color:#647067;
+ font-size:11px;line-height:1.45;font-weight:550;overflow-wrap:anywhere
+}
+html[data-theme="dark"] .gooy-discoveries-stop .gooy-discoveries-hours{color:#b5c3b7}
+.gooy-discoveries-stop span,.gooy-discoveries-stop small{min-width:0}
+@media(max-width:680px){
+ body .gooy-discoveries{margin:9px 0 8px!important;padding:14px!important}
+ body .gooy-discoveries-subtitle,body .gooy-discoveries-note{font-size:12px!important;line-height:1.55!important}
+ body .gooy-discoveries-steps{gap:12px!important}
+ body .gooy-discoveries-map{font-size:13px!important}
+}

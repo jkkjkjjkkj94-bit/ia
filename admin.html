@@ -270,7 +270,15 @@ input::placeholder,textarea::placeholder{color:#a1aab8}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 </style>
-</head>
+<style id="gooy-trophy-admin-css">
+.gooy-trophy-editor{width:min(540px,calc(100vw - 24px));max-height:min(86dvh,750px);overflow-y:auto;padding:24px}
+.gooy-trophy-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:17px 0}
+.gooy-trophy-option{display:flex;align-items:center;gap:10px;min-height:48px;padding:10px;border-radius:12px;border:1px solid #e7e9ed;background:#fafafa;font-size:13px;font-weight:600;cursor:pointer}
+.gooy-trophy-option input{width:17px;height:17px;accent-color:#181818;flex-shrink:0}
+.gooy-trophy-option:has(input:checked){border-color:#a4a9b3;background:#f1f2f4}
+.gooy-trophy-tag{display:inline-flex;gap:4px;align-items:center;padding:4px 8px;border-radius:99px;background:#f8f8f9;border:1px solid #e7e7eb;font-size:11px;font-weight:600;color:#444}
+@media(max-width:680px){.gooy-trophy-editor{padding:17px!important}.gooy-trophy-options{grid-template-columns:minmax(0,1fr)}}
+</style></head>
 <body>
 <div id="loginView" class="login-wrap">
  <section class="login-story" aria-label="Apresentação GOOY"><div class="login-logo"><span class="login-logo-mark">G</span> GOOY <span style="font-size:10px;color:#92a0b4;font-weight:600;letter-spacing:.14em;margin-left:6px">ADMIN</span></div><div class="login-story-copy"><span class="section-kicker" style="color:#91a1b8">INTELIGÊNCIA PARA OPERAÇÕES</span><h2>Visão clara.<br>Gestão completa.</h2><p>Uma central organizada para administrar o ecossistema GOOY: estabelecimentos, cobertura, dados, lojistas e inteligência.</p></div><div class="login-story-foot">GOOY CONSOLE / ACESSO RESTRITO</div></section>
@@ -347,7 +355,8 @@ input::placeholder,textarea::placeholder{color:#a1aab8}
 
 <div id="storeDrawer" class="drawer hidden"><div class="drawer-backdrop" data-close-drawer></div><aside class="drawer-panel"><div class="drawer-head"><div><div class="eyebrow">DETALHES DA LOJA</div><h2 id="drawerTitle">Loja</h2></div><button class="btn" data-close-drawer>Fechar</button></div><div id="drawerContent"></div></aside></div>
 <div id="statusModal" class="modal-lite hidden"><div class="modal-lite-card"><h3 id="statusModalTitle">Atualizar loja</h3><p class="meta" id="statusModalHint"></p><div class="field"><label>Motivo / observação</label><textarea id="statusReason" placeholder="Explique o motivo da alteração"></textarea></div><div class="row"><button id="statusCancel" class="btn">Cancelar</button><button id="statusConfirm" class="btn dark">Confirmar</button></div></div></div>
-<div id="toast" class="toast"></div><script type="module" src="core-data-router.js?v=4"></script><script type="module" src="admin.js?v=19"></script><script type="module" src="admin-post-login-loader.js?v=21"></script>
+<div id="trophyModal" class="modal-lite hidden" role="dialog" aria-modal="true" aria-labelledby="trophyModalTitle"><div class="modal-lite-card gooy-trophy-editor"><div class="row" style="align-items:center;gap:12px"><div><div class="eyebrow">GOOY · EXPERIÊNCIAS</div><h3 id="trophyModalTitle">Troféus do estabelecimento</h3></div><button class="btn" id="trophyCancel" type="button">Fechar</button></div><p class="meta" id="trophyModalStore" style="margin:12px 0">Selecione as características comprovadas do estabelecimento.</p><div class="gooy-trophy-options" id="trophyOptions"></div><p class="meta">Os troféus aparecem no site e funcionam como requisitos das recomendações de rolês. Não atribua características sem confirmação.</p><div class="row" style="justify-content:flex-end"><button class="btn dark" id="trophySave" type="button">Salvar troféus</button></div></div></div>
+<div id="toast" class="toast"></div><script type="module" src="core-data-router.js?v=4"></script><script type="module" src="admin.js?v=20"></script><script type="module" src="admin-post-login-loader.js?v=21"></script>
 <script>
 /* Comportamento visual não interfere na autenticação nem nas ações do painel. */
 (function(){

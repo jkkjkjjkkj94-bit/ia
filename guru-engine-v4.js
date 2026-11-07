@@ -93,7 +93,7 @@ function askRegionalSearchPermission(query,searchState,findRowsForCity=null){
   const found=[];
   const seen=new Set();
   for(const city of cities){
-   const regionalState={...searchState,location:{...(searchState.location||{}),city,uf:null,neighborhood:null}};
+   const regionalState={...searchState,location:{...(searchState.location||{}),city,uf:'SP',neighborhood:null}};
    for(const row of (findRowsForCity?findRowsForCity(city):searchStores(db,regionalState,position,{limit:25}))){
     if(seen.has(row.store.id))continue;
     seen.add(row.store.id);

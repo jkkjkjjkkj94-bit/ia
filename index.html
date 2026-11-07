@@ -41,8 +41,9 @@ window.GuruBoot={status:'loading',error:null};
  };
  window.GuruBoot.report=function(error){
   const detail=String(error?.message||error||'Falha desconhecida').slice(0,220);
+  const origin=String(error?.stack||'').slice(0,1000);
   window.GuruBoot.status='error';window.GuruBoot.error=detail;
-  console.error('[GURU] Falha na inicialização do chat:',error);
+  console.error('[GURU] Falha na inicialização do chat:',error,origin);
   notify('Não foi possível iniciar o chat. Detalhe: '+detail);
   const status=document.getElementById('guruVoiceStatus');
   if(status){status.textContent='Falha na inicialização: '+detail;status.setAttribute('role','alert')}
@@ -74,7 +75,7 @@ window.GuruBoot={status:'loading',error:null};
  },true);
 })();
 </script><script type="module">
-import('./guru-engine-v4.js?v=103').then(()=>{
+import('./guru-engine-v4.js?v=106').then(()=>{
  window.GuruBoot.status=window.GuruEngineV4?'ready':'error';
  if(!window.GuruEngineV4)window.GuruBoot.report(new Error('Módulo carregado, mas o mecanismo de chat não foi inicializado.'));
 }).catch(error=>window.GuruBoot.report(error));

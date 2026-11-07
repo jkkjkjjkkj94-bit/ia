@@ -1181,7 +1181,7 @@ async function searchOuting(outing){
   if(!outing.eventsOnly)askRegionalSearchPermission(outing.original,draft,city=>outingRankRows(searchStores(db,{...draft,location:{city,uf:null,neighborhood:null}},position,{limit:db.stores.length}),outing,db.trophies||[]));
  }else{
   showOutingExtras(places,events);
-  if(rows.length){showDiscoveryItinerary(rows,outing);showNextResultPage()}
+  if(rows.length){showNextResultPage();showDiscoveryItinerary(rows,outing)}
  }
 
 }

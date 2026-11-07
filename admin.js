@@ -1,5 +1,6 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
 import{storeRankingPoints}from'./guru-engine-v4-core.mjs?v=20';
+import{GOOY_TROPHIES,trophyInfo,activeStoreTrophies}from'./gooy-trophies-v1.mjs?v=1';
 const SUPABASE_URL='https://innziuzgtpfsiywqmies.supabase.co';
 const SUPABASE_KEY='sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1';
 const sb=createClient(SUPABASE_URL,SUPABASE_KEY);
@@ -22,7 +23,7 @@ const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u03
 const fmtDate=v=>v?new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(v)):'—';
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 let session=null,profile=null,stores=[],products=[],profiles=[],accounts=[],questions=[],events=[],qualityEvents=[],reviews=[],knowledge=[],hours=[],audit=[],dataSources=[],highlights=[],aiConfigs=[];
-let pendingStatus=null;
+let pendingStatus=null,pendingTrophyStore=null,storeTrophies=[];
 let rankingByStore=new Map();
 let sourceHealth={core:true,ai:true};
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(window.__t);window.__t=setTimeout(()=>e.classList.remove('on'),3200)}
@@ -65,12 +66,13 @@ async function loadData(){const results=await Promise.all([
  sb.from('local_ai_admin_audit').select('*').order('created_at',{ascending:false}).limit(300),
  sb.from('local_ai_data_sources').select('*').order('priority'),
  sb.from('local_ai_store_highlights').select('*').order('updated_at',{ascending:false}),
- sb.from('local_ai_ai_config').select('*').order('config_key')
+ sb.from('local_ai_ai_config').select('*').order('config_key'),
+ sb.from('local_ai_store_trophies').select('*').order('granted_at',{ascending:false})
 ]);
- const names=['stores','products','profiles','accounts','questions','events','qualityEvents','reviews','knowledge','hours','audit','sources','highlights','config'];
+ const names=['stores','products','profiles','accounts','questions','events','qualityEvents','reviews','knowledge','hours','audit','sources','highlights','config','trophies'];
  results.forEach((r,i)=>{if(r.error)console.warn('[Admin]',names[i],r.error.message)});
  sourceHealth.core=!results[0].error&&!results[1].error;sourceHealth.ai=results.slice(2).filter((_,index)=>index!==4).every(r=>!r.error);
- stores=results[0].data||[];products=results[1].data||[];profiles=results[2].data||[];accounts=results[3].data||[];questions=results[4].data||[];events=results[5].data||[];qualityEvents=results[6].data||[];reviews=results[7].data||[];knowledge=results[8].data||[];hours=results[9].data||[];audit=results[10].data||[];dataSources=results[11].data||[];highlights=results[12].data||[];aiConfigs=results[13].data||[];rebuildStoreRankings();renderAll()}
+ stores=results[0].data||[];products=results[1].data||[];profiles=results[2].data||[];accounts=results[3].data||[];questions=results[4].data||[];events=results[5].data||[];qualityEvents=results[6].data||[];reviews=results[7].data||[];knowledge=results[8].data||[];hours=results[9].data||[];audit=results[10].data||[];dataSources=results[11].data||[];highlights=results[12].data||[];aiConfigs=results[13].data||[];storeTrophies=results[14].data||[];rebuildStoreRankings();renderAll()}
 function renderAll(){renderOverview();renderStoreFilters();renderStores();renderMerchants();renderAI();renderSources();renderHighlights();renderCoverage();renderAIConfig();renderReviews();renderAudit();$('adminUser').textContent=profile?.display_name||session?.user?.email||''}
 function barRows(obj,limit=10){const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,limit),max=arr[0]?.[1]||1;return arr.map(([k,v])=>`<div class="bar-row"><div class="row"><span>${esc(k)}</span><b>${v}</b></div><div class="bar-track"><span style="width:${Math.max(6,v/max*100)}%"></span></div></div>`).join('')||'<div class="empty-state">Sem dados.</div>'}
 function renderOverview(){const active=stores.filter(x=>x.status==='active'&&x.active).length,pending=stores.filter(x=>x.status==='pending').length,merchants=profiles.filter(x=>x.role==='lojista').length,searches=events.filter(x=>x.event_type==='search').length,successful=events.filter(x=>x.event_type==='search'&&x.matched).length;$('aActive').textContent=active;$('aPending').textContent=pending;$('aMerchants').textContent=merchants;$('aProducts').textContent=products.length;$('aSearches').textContent=searches;$('aSuccess').textContent=searches?Math.round(successful/searches*100)+'%':'—';
@@ -153,8 +155,47 @@ function filteredStores(){
  const q=norm($('storeSearch').value),status=$('storeStatus').value,state=$('storeState').value,city=norm($('storeCity').value),cat=norm($('storeCategory').value),specialty=norm($('storeSpecialty')?.value),verified=$('storeVerified').value,highlight=$('storeHighlight').value,quality=$('storeQuality').value,source=$('storeSource').value;
  return stores.filter(s=>(!q||norm([s.name,s.category,s.main_category,s.group,...(s.specialties||[]),s.address].join(' ')).includes(q))&&(!status||s.status===status)&&(!state||stateFromAddress(s.address)===state)&&(!city||norm(cityFromAddress(s.address)).includes(city))&&(!cat||norm(guruCategoryOf(s))===cat)&&(!specialty||norm(guruGroupOf(s))===specialty)&&(!verified||(verified==='yes'?highlightType(s.id)==='verified':highlightType(s.id)!=='verified'))&&(!highlight||highlightType(s.id)===highlight)&&(!quality||qualityLevel(s)===quality)&&(!source||source==='core')).sort((a,b)=>(rankingByStore.get(b.id)?.total||0)-(rankingByStore.get(a.id)?.total||0)||String(a.name||'').localeCompare(String(b.name||''),'pt-BR'));
 }
-function renderStores(){const list=filteredStores();$('adminStores').innerHTML=list.map(s=>{const issues=storeQuality(s),account=getAccount(s.owner_id),level=qualityLevel(s),rank=rankingByStore.get(s.id)||{total:0,tierName:'Normal',details:[]};return `<div class="item store-admin-item" data-ranking-score="${rank.total}" data-ranking-tier="${esc(rank.tierName)}" data-ranking-detail="${esc(rank.details.map(d=>`${d.label}: ${d.earned}/${d.max}`).join(' • '))}"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot ${esc(s.status||'pending')}"></span>${highlightBadge(s.id)}<span class="badge">Core DB</span></div><div class="meta">${esc(s.category||'Sem categoria')} · ${esc(s.group||'Grupo não definido')} · ${esc(cityFromAddress(s.address)||'Cidade não identificada')} ${stateFromAddress(s.address)?'· '+esc(stateFromAddress(s.address)):''}</div><div class="meta">Qualidade: <b>${level==='good'?'Boa':level==='attention'?'Atenção':'Crítica'}</b>${account?.email?' · '+esc(account.email):''}</div>${issues.length?`<div class="quality-line">${issues.slice(0,4).map(i=>`<span class="badge warn">${esc(i)}</span>`).join('')}</div>`:''}</div><div class="actions-wrap"><button class="btn sm" data-open-store="${s.id}">Detalhes</button><button class="btn sm" data-change-category="${s.id}">Alterar categoria</button>${s.status!=='active'?`<button class="btn sm dark" data-status="active" data-store="${s.id}">Aprovar</button>`:''}${s.status!=='suspended'?`<button class="btn sm" data-status="suspended" data-store="${s.id}">Suspender</button>`:''}</div></div></div>`}).join('')||'<div class="empty-state">Nenhuma loja corresponde aos filtros.</div>';bindStoreActions()}
-function bindStoreActions(){document.querySelectorAll('[data-open-store]').forEach(b=>b.onclick=()=>openStore(b.dataset.openStore));document.querySelectorAll('[data-change-category]').forEach(b=>b.onclick=()=>openCategoryEditor(b.dataset.changeCategory));document.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>openStatusModal(b.dataset.store,b.dataset.status))}
+function renderStores(){const list=filteredStores();$('adminStores').innerHTML=list.map(s=>{const issues=storeQuality(s),account=getAccount(s.owner_id),level=qualityLevel(s),rank=rankingByStore.get(s.id)||{total:0,tierName:'Normal',details:[]};return `<div class="item store-admin-item" data-ranking-score="${rank.total}" data-ranking-tier="${esc(rank.tierName)}" data-ranking-detail="${esc(rank.details.map(d=>`${d.label}: ${d.earned}/${d.max}`).join(' • '))}"><div class="row store-row"><div class="store-main"><div class="title-line"><b>${esc(s.name||'Loja sem nome')}</b><span class="status-dot ${esc(s.status||'pending')}"></span>${highlightBadge(s.id)}<span class="badge">Core DB</span></div><div class="meta">${esc(s.category||'Sem categoria')} · ${esc(s.group||'Grupo não definido')} · ${esc(cityFromAddress(s.address)||'Cidade não identificada')} ${stateFromAddress(s.address)?'· '+esc(stateFromAddress(s.address)):''}</div><div class="meta">Qualidade: <b>${level==='good'?'Boa':level==='attention'?'Atenção':'Crítica'}</b>${account?.email?' · '+esc(account.email):''}</div>${activeStoreTrophies(storeTrophies,s.id).length?`<div class="quality-line">${activeStoreTrophies(storeTrophies,s.id).map(code=>`<span class="gooy-trophy-tag">🏆 ${esc(trophyInfo(code)?.label||code)}</span>`).join('')}</div>`:''}${issues.length?`<div class="quality-line">${issues.slice(0,4).map(i=>`<span class="badge warn">${esc(i)}</span>`).join('')}</div>`:''}</div><div class="actions-wrap"><button class="btn sm" data-open-store="${s.id}">Detalhes</button><button class="btn sm" data-trophy-store="${s.id}">🏆 Troféus</button><button class="btn sm" data-change-category="${s.id}">Alterar categoria</button>${s.status!=='active'?`<button class="btn sm dark" data-status="active" data-store="${s.id}">Aprovar</button>`:''}${s.status!=='suspended'?`<button class="btn sm" data-status="suspended" data-store="${s.id}">Suspender</button>`:''}</div></div></div>`}).join('')||'<div class="empty-state">Nenhuma loja corresponde aos filtros.</div>';bindStoreActions()}
+function bindStoreActions(){document.querySelectorAll('[data-open-store]').forEach(b=>b.onclick=()=>openStore(b.dataset.openStore));document.querySelectorAll('[data-change-category]').forEach(b=>b.onclick=()=>openCategoryEditor(b.dataset.changeCategory));document.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>openStatusModal(b.dataset.store,b.dataset.status));document.querySelectorAll('[data-trophy-store]').forEach(b=>b.onclick=()=>openTrophyEditor(b.dataset.trophyStore))}
+
+function openTrophyEditor(id){
+ if(!session||profile?.role!=='admin')return toast('Acesso exclusivo do administrador.');
+ const store=stores.find(s=>s.id===id);
+ if(!store)return toast('Estabelecimento não encontrado.');
+ pendingTrophyStore=id;
+ $('trophyModalStore').textContent='Estabelecimento: '+store.name+' — marque somente características confirmadas.';
+ const codes=new Set(activeStoreTrophies(storeTrophies,id));
+ $('trophyOptions').replaceChildren();
+ for(const t of GOOY_TROPHIES){
+  const label=document.createElement('label');label.className='gooy-trophy-option';
+  const check=document.createElement('input');check.type='checkbox';check.value=t.code;check.checked=codes.has(t.code);
+  const span=document.createElement('span');span.textContent=t.icon+' '+t.label;
+  label.append(check,span);$('trophyOptions').appendChild(label);
+ }
+ $('trophyModal').classList.remove('hidden');$('trophySave').focus();
+}
+function closeTrophyEditor(){pendingTrophyStore=null;$('trophyModal').classList.add('hidden')}
+$('trophyCancel').onclick=closeTrophyEditor;
+$('trophyModal').addEventListener('click',event=>{if(event.target===$('trophyModal'))closeTrophyEditor()});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&pendingTrophyStore)closeTrophyEditor()});
+$('trophySave').onclick=async()=>{
+ if(!pendingTrophyStore||!session||profile?.role!=='admin')return;
+ const id=pendingTrophyStore,button=$('trophySave');
+ const selected=new Set([...$('trophyOptions').querySelectorAll('input:checked')].map(x=>x.value));
+ const existing=storeTrophies.filter(x=>x.store_id===id);
+ const desired=GOOY_TROPHIES.map(t=>({store_id:id,trophy_code:t.code,active:selected.has(t.code),granted_by:session.user.id}));
+ const changed=desired.filter(t=>{const old=existing.find(r=>r.trophy_code===t.trophy_code);return old?old.active!==t.active:t.active===true});
+ if(!changed.length){closeTrophyEditor();return toast('Sem alterações nos troféus.')}
+ button.disabled=true;button.textContent='Salvando...';
+ try{
+  const {error}=await sb.from('local_ai_store_trophies').upsert(changed,{onConflict:'store_id,trophy_code'});
+  if(error)throw error;
+  await logAction('store_trophies_updated','store',id,{codes:[...selected],changed:changed.map(x=>x.trophy_code)});
+  closeTrophyEditor();await loadData();toast('Troféus atualizados com sucesso.');
+ }catch(error){toast('Não foi possível salvar troféus: '+error.message)}
+ finally{button.disabled=false;button.textContent='Salvar troféus'}
+};
+
 const CATEGORY_EDGE='https://ccsypggvelcxsqszepfs.supabase.co/functions/v1/admin-pending-stores';
 const CATEGORY_CORE_KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
 let classificationTaxonomy=null;

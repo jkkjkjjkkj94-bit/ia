@@ -136,8 +136,8 @@ export function editOutingStops(text,stops=[],pool=[]){
  const indexByWord=Object.entries(orderWords).find(([word])=>new RegExp('\\b'+word+'\\b').test(n))?.[1];
  const numeric=/\b([123])\s*(?:a|o)?\s*(?:parada|lugar|local)\b/.exec(n);
  const position=indexByWord??(numeric?Number(numeric[1])-1:null);
- const remove=/\b(tira|tirar|remova|remover|exclua|excluir|sem|retira|retirar)\b/.test(n);
- const change=/\b(troca|trocar|substitua|substituir|muda|mudar|altera|alterar)\b/.test(n);
+ const remove=/\b(tira|tire|tirar|remova|remove|remover|exclua|excluir|retira|retire|retirar)\b/.test(n);
+ const change=/\b(troca|troque|trocar|substitua|substituir|muda|mude|mudar|altera|altere|alterar)\b/.test(n);
  const reroute=/\b(refaca|refazer|reorganize|reorganizar|reordene|reordenar)\b/.test(n);
  if(!remove&&!change&&!reroute)return null;
  if(reroute&&!remove&&!change)return {kind:'reorder',stops:reorderOutingStops(stops)};

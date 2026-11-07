@@ -692,3 +692,9 @@ html[data-theme="dark"] .gooy-outing-place strong{color:#f3f3f4}
 html[data-theme="dark"] .gooy-outing-detail{color:#b0b4bd}
 html[data-theme="dark"] .gooy-outing-link{background:#292c31;border-color:#3e4249;color:#f3f3f4}
 @media(max-width:680px){body .gooy-outing-list{gap:9px!important}body .gooy-outing-heading{font-size:14px!important;margin-top:4px!important}body .gooy-outing-place{padding:13px!important;border-radius:14px!important}body .gooy-outing-link{min-height:38px}}
+
+/* GOOY TROPHIES · características editoriais, diferentes dos selos de verificação */
+.gooy-trophy-group{display:flex;flex-wrap:wrap;gap:6px 7px;width:100%;min-width:0;margin:12px 0 8px}
+.gooy-trophy{display:inline-flex;align-items:center;max-width:100%;min-height:27px;padding:5px 9px;border-radius:99px;border:1px solid #eee1bb;background:#fff9e8;color:#795b16;font-size:11px;font-weight:650;line-height:1.25;white-space:normal;overflow-wrap:anywhere}
+html[data-theme="dark"] .gooy-trophy{border-color:#665329;background:#312b1d;color:#f7dc9e}
+@media(max-width:680px){body .gooy-trophy-group{margin:9px 0 6px;gap:6px}body .gooy-trophy{min-height:28px;padding:6px 9px;font-size:10.5px}}

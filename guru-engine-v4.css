@@ -464,3 +464,21 @@
 /* Card selecionado: atalhos condicionados aos dados cadastrados. */
 .selected-store-no-actions{font-size:11px;color:#888;padding:12px 0 2px;line-height:1.5}
 html[data-theme="dark"] .selected-store-no-actions{color:#a4a7ae}
+
+/* GURU — resumo antes dos cartões, sem controles de justificativa. */
+.hashtag-result-msg .guru-result-summary{
+ margin:14px 0 17px;
+ font-size:14px;
+ line-height:1.65;
+ font-weight:400;
+ color:var(--text,#202123);
+ overflow-wrap:anywhere;
+}
+.hashtag-result-msg .guru-result-summary + .store-results-grid{margin-top:0}
+@media(max-width:680px){
+ .hashtag-result-msg .guru-result-summary{
+  margin:12px 0 15px;
+  font-size:14px;
+  line-height:1.6;
+ }
+}

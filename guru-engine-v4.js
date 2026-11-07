@@ -1,7 +1,7 @@
 // GURU v4 - um único responsável por eventos, contexto, busca e resultados.
 import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,diagnosisForNoResults} from './guru-intelligence-v14.mjs?v=3';
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
-import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=6';
+import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=1';
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=3';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';

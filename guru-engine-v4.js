@@ -74,12 +74,12 @@ function availableNearbyCities(city){
   .filter(c=>norm(c)!==norm(city)&&known.has(norm(c)))
   .map(c=>known.get(norm(c))).slice(0,7);
 }
-function askRegionalSearchPermission(query,searchState){
+function askRegionalSearchPermission(query,searchState,findRowsForCity=null){
  const origin=userCity;
  const cities=availableNearbyCities(origin);
  if(!cities.length)return;
  const version=++regionalConsentVersion;
- const prompt=add('Não encontrei opções que atendam à sua busca em '+origin+'. Você autoriza pesquisar também em cidades próximas da região? Só ampliarei a busca se você permitir.');
+ const prompt=add('Não encontrei opções que atendam à sua busca em '+origin+'. Posso procurar em cidades próximas, como '+cities.slice(0,3).join(', ')+'? Só ampliarei a busca com sua autorização.');
  const actions=el('div','guru-next-buttons');
  const yes=el('button','guru-next-button','Sim, buscar na região');
  const no=el('button','guru-next-button','Não, somente '+origin);
@@ -94,7 +94,7 @@ function askRegionalSearchPermission(query,searchState){
   const seen=new Set();
   for(const city of cities){
    const regionalState={...searchState,location:{...(searchState.location||{}),city,uf:null,neighborhood:null}};
-   for(const row of searchStores(db,regionalState,position,{limit:25})){
+   for(const row of (findRowsForCity?findRowsForCity(city):searchStores(db,regionalState,position,{limit:25}))){
     if(seen.has(row.store.id))continue;
     seen.add(row.store.id);
     found.push({...row,regionalCity:city});
@@ -300,6 +300,8 @@ async function refreshFilteredResults(){
   await loadData();
   if(!userCity){askForCity();return}
   state.location=citySearchState().location;
+  regionalSearchInfo=null;
+  regionalConsentVersion++;
   const current=citySearchState();
   let rows=searchStores(db,current,position,{limit:60}),unconfirmed=false;
   const f=current.filters||{};
@@ -310,7 +312,10 @@ async function refreshFilteredResults(){
   state.lastResults=rows;state.resultOffset=0;save();
   if(unconfirmed)add('Não há horários confirmados para esse dia entre as opções encontradas. Essas lojas podem ser relevantes, mas confirme o funcionamento diretamente antes de ir.');
   if(rows.length)showNextResultPage();
-  else add(explainEmptySearch(db,state,position));
+  else{
+   add(explainEmptySearch(db,state,position));
+   askRegionalSearchPermission(state.query||'lojas',current);
+  }
  }catch(err){msgError(err)}
 }
 function renderContext(){
@@ -554,6 +559,7 @@ function setUserCity(city){
  const value=String(city||'').trim().replace(/\s+/g,' ').slice(0,90);
  if(value.length<2)return false;
  userCity=value;
+ regionalSearchInfo=null;regionalConsentVersion++;
  try{sessionStorage.setItem(userCityKey,value)}catch{}
  state.location={...(state.location||{}),city:value,uf:null,neighborhood:null};
  state.selectedStore=null;state.selectedProduct=null;state.lastResults=[];state.resultOffset=0;
@@ -984,6 +990,7 @@ function renderNeedPlan(need){
 }
 function showNeedStores(need){
  if(!userCity){askForCity();return}
+ regionalSearchInfo=null;regionalConsentVersion++;
  const rows=contextualRank(findStoresForNeed(db,need,userCity,position,searchStores,emptyState,60),describeNeed(need)?.title||'',null);
  state=emptyState();
  state.location={city:userCity,uf:null,neighborhood:null};
@@ -994,7 +1001,8 @@ function showNeedStores(need){
  lastSearchText=state.query;
  renderContext();save();
  if(!rows.length){
-  add('Não encontrei lojas ativas relacionadas a essa necessidade em '+userCity+'. Não vou indicar lojas de outras cidades nem afirmar disponibilidade sem confirmação.');
+  add('Não encontrei lojas cadastradas que atendam a essa necessidade em '+userCity+'. Não vou afirmar disponibilidade sem confirmação.');
+  askRegionalSearchPermission(state.query,state,city=>findStoresForNeed(db,need,city,position,searchStores,emptyState,25));
   return;
  }
  add('Encontrei estabelecimentos relacionados à sua necessidade em '+userCity+'. A correspondência vem da categoria e das especialidades; confirme produtos, preços e disponibilidade com cada loja.');

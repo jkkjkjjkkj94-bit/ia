@@ -30,7 +30,9 @@ export function detectOuting(raw,previous=null) {
  const mood=MOODS.find(([,regex])=>regex.test(normalized))?.[0]||null;
  const explicit=(OUTING.test(normalized)&&(!!companion||pet||/\b(role|roles|rolinho|passeio|passear|date|o que fazer|lugares para ir|lugar para ir|onde ir|programacao)\b/.test(normalized)))||(/\b(evento|eventos|festival|feira|exposicao)\b/.test(normalized)&&/\b(quero|tem|buscar|procuro|hoje|amanha|final de semana|fim de semana|programacao)\b/.test(normalized));
  const followup=!!previous&&normalized.length<85&&/^(mais |algo |opcoes |lugares |eventos?\b|hoje\b|amanha\b|sabado\b|domingo\b|barat|gratuit|tranquil|animad|natureza|cultura|cinema|comida|jantar|pet|cachorr|gat|musica|aventura|aconchegante|educativ|acessibil)/.test(normalized)&&REFINEMENT.test(normalized)&&!(/\b(comprar|preco de|produto|loja de|entrega)\b/.test(normalized));
- if(!explicit&&!followup)return null;
+ const experienceSearch=/\b(quero|procuro|busco|buscando|indique|recomende|encontre|me indica|tem)\b.*\b(lugar|lugares|local|locais)\b.*\b(tranquilo|calmo|romantico|familia|ao ar livre|natureza|musica ao vivo|pet|pets|cachorro|gato|aconchegante|aventura|educativo|acessivel)\b/.test(normalized)
+  &&!/\b(comprar|vender|produto|racao|preco de|consertar)\b/.test(normalized);
+ if(!explicit&&!followup&&!experienceSearch)return null;
  const budget=/\b(gratis|gratuito|gratuita|de graca|sem gastar)\b/.test(normalized)?'gratis':/\b(barat[oa]|economico|economica|baixo custo|pouco dinheiro)\b/.test(normalized)?'economico':followup?previous?.budget||null:null;
  return {companion:companion||(followup?previous?.companion:null)||'geral',mood:mood||(followup?previous?.mood:null)||null,budget,
   pet:pet||(followup&&previous?.pet===true),withChildren:children||(followup&&previous?.withChildren===true),

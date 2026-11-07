@@ -113,7 +113,7 @@ export function outingStraightKm(a,b){
  const pts=[a?.latitude,a?.longitude,b?.latitude,b?.longitude];
  if(pts.some(v=>v===null||v===undefined||String(v).trim()===''))return null;
  const nums=pts.map(Number);
- if(nums.some(v=>!Number.isFinite(v))||Math.abs(nums[0])>90||Math.abs(nums[2])>90||Math.abs(nums[1])>180||Math.abs(nums[3])>180)return null;
+ if(nums.some(v=>!Number.isFinite(v))||Math.abs(nums[0])>90||Math.abs(nums[2])>90||Math.abs(nums[1])>180||Math.abs(nums[3])>180||(nums[0]===0&&nums[1]===0)||(nums[2]===0&&nums[3]===0))return null;
  const [la1,lo1,la2,lo2]=nums.map(v=>v*Math.PI/180);
  const x=Math.sin((la2-la1)/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)**2;
  return 6371*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
@@ -164,10 +164,22 @@ export function buildOutingItinerary(rows=[],outing={},maxStops=3){
  const types=new Set(),seen=new Set(),selected=[];
  // Preserva a qualidade das recomendações, mas privilegia experiências diferentes.
  const ordered=[...candidates].sort((a,b)=>(b.outingScore||0)-(a.outingScore||0));
- for(const row of ordered){
+ for(let step=0;step<Math.min(3,maxStops);step++){
+  // Após a primeira parada, prioriza lugares próximos com uma experiência diferente.
+  const options=ordered.filter(r=>!seen.has(r.store.id)&&!types.has(outingStopType(r.store)));
+  if(!options.length)break;
+  if(selected.length){
+   const previous=selected[selected.length-1].store;
+   options.sort((a,b)=>{
+    const score=row=>Number(row.outingScore)||0;
+    const km=row=>outingStraightKm(previous,row.store);
+    const benefit=row=>{const d=km(row);return score(row)+(d==null?0:Math.max(-20,15-d*2))};
+    return benefit(b)-benefit(a);
+   });
+  }
+  const row=options[0];
   const type=outingStopType(row.store);
-  if(seen.has(row.store.id)||types.has(type))continue;
-  if(type==='outro'&&selected.length)continue;
+  if(type==='outro'&&selected.length)break;
   selected.push({...row,outingStopType:type});types.add(type);seen.add(row.store.id);
   if(selected.length>=Math.min(3,maxStops))break;
  }

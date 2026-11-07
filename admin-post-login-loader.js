@@ -13,6 +13,7 @@ await load('./admin-delete-controls.js?v=1','Delete Controls');
 await load('./admin-merchant-enhancements.js?v=3','Merchant Management');
 await load('./admin-taxonomy-db.js?v=2','Taxonomy');
 await load('./admin-ui.js?v=3','Admin Interface');
+await load('./admin-product-tags.js?v=1','Product Tags');
 window.GuruAdminRuntimeV2={ready:true};
 }
 async function boot(sessionOverride=null){

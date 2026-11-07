@@ -99,16 +99,20 @@ export function outingUpcomingEvents(events,outing,city,now=new Date()){
 /* GOOY Descobertas: roteiro editorial sem inventar horários, distâncias ou atrações.
    Usa apenas estabelecimentos com troféus já compatíveis com a ocasião. */
 const outingStopType=store=>{
- const n=outingNormalize([store.name,store.category,store.main_category,store.group,...(store.groups||[]),...(store.specialties||[])].join(' '));
- if(/parque|praca|jardim|natureza|trilha|ecologico|area verde|ar livre/.test(n))return 'ar_livre';
- if(/cinema|teatro|museu|centro cultural|galeria|exposicao|livraria|planetario/.test(n))return 'cultura';
- if(/sorvet|acai|doceria|confeitaria|chocolat|sobremesa/.test(n))return 'sobremesa';
- if(/cafeteria|cafe|padaria/.test(n))return 'cafe';
- if(/restaurante|pizzaria|hamburgueria|lanchonete|sushi|temakeria|pastelaria|gastronomia/.test(n))return 'refeicao';
- if(/boliche|arcade|jogos|karaoke|lazer|entretenimento|shopping/.test(n))return 'diversao';
- return 'outro';
+ const taxon=outingNormalize([store.category,store.main_category,store.group,...(store.groups||[]),...(store.specialties||[])].join(' '));
+ const name=outingNormalize(store.name);
+ const classify=n=>{
+  if(/\b(cafeteria|cafe|padaria)\b/.test(n))return 'cafe';
+  if(/\b(sorveteria|sorvete|acai|doceria|confeitaria|chocolateria|sobremesa)\b/.test(n))return 'sobremesa';
+  if(/\b(restaurante|pizzaria|hamburgueria|lanchonete|sushi|temakeria|pastelaria|gastronomia)\b/.test(n))return 'refeicao';
+  if(/\b(cinema|teatro|museu|centro cultural|galeria|exposicao|livraria|planetario)\b/.test(n))return 'cultura';
+  if(/\b(parque|praca|jardim|natureza|trilha|ecologico|area verde|ar livre)\b/.test(n))return 'ar_livre';
+  if(/\b(boliche|arcade|jogos|karaoke|lazer|entretenimento|shopping)\b/.test(n))return 'diversao';
+  return null;
+ };
+ // Categoria declarada tem prioridade: "Café Jardim" não vira parque por causa do nome.
+ return classify(taxon)||classify(name)||'outro';
 };
-// Coordenadas geográficas são usadas apenas como aproximação de distância em linha reta.
 export function outingStraightKm(a,b){
  const pts=[a?.latitude,a?.longitude,b?.latitude,b?.longitude];
  if(pts.some(v=>v===null||v===undefined||String(v).trim()===''))return null;

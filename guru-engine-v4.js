@@ -1147,8 +1147,8 @@ async function searchOuting(outing){
   :({casal:'um rolê a dois',amigos:'um rolê com amigos',familia:'um passeio em família',geral:'seu próximo passeio'}[outing.companion]||'seu próximo passeio');
  const count=rows.length+places.length+events.length;
  const intro=add(count
-  ?'Encontrei '+count+' '+(count===1?'lugar ou evento':'lugares e eventos')+' para '+label+' em '+userCity+'. Veja as opções e confirme os detalhes antes de ir.'
-  :'Busquei opções para '+label+' em '+userCity+', mas ainda não encontrei resultados compatíveis nos cadastros.');
+  ?'Encontrei '+(outing.eventsOnly?(count===1?'um evento':'eventos'):(count===1?'um lugar':'lugares'))+' para '+label+' em '+userCity+'. Confira as opções e confirme horários e demais detalhes antes de ir.'
+  :'Busquei lugares para '+label+' em '+userCity+', mas ainda não encontrei opções compatíveis nos cadastros.');
  if(outing.budget==='economico')add('Não há preços de passeio confirmados para classificar quais locais são mais baratos.');
  if(!rows.length&&!places.length&&!events.length){
   add(outing.eventsOnly?'Não há eventos futuros ativos cadastrados nesta cidade.':outing.budget==='gratis'?'Não encontrei passeios explicitamente cadastrados como gratuitos.':'Ainda não há lugares com as características cadastradas para esse tipo de passeio nesta cidade.');

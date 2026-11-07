@@ -1152,7 +1152,7 @@ function verifiedOutingHours(store,outing){
  const entries=(db?.hours||[]).filter(h=>h.store_id===store.id&&Number(h.weekday)===day);
  if(!entries.length)return {label:'',known:false,closed:false};
  const active=entries.filter(h=>h.closed!==true&&h.opens_at&&h.closes_at);
- if(!active.length)return {label:'',known:true,closed:true};
+ if(!active.length)return {label:'',known:entries.every(h=>h.closed===true),closed:entries.every(h=>h.closed===true)};
  const ranges=active.map(h=>String(h.opens_at).slice(0,5)+'–'+String(h.closes_at).slice(0,5));
  return {label:ranges.join(', '),known:true,closed:false};
 }

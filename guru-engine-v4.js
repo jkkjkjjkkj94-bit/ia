@@ -3,8 +3,8 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=2';
-import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents} from './gooy-outings-v1.mjs?v=3';
-import {trophyInfo,activeStoreTrophies} from './gooy-trophies-v1.mjs?v=1';
+import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents} from './gooy-outings-v1.mjs?v=4';
+
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
 import {preserveMandatoryFilters} from './guru-search-v6.mjs?v=1';
@@ -713,12 +713,6 @@ function chooseStore(row){
  if(s.pickup)tags.appendChild(el('span','selected-store-tag','Retirada'));
  if(s.sponsored)tags.appendChild(el('span','selected-store-tag','Patrocinada'));
  identity.appendChild(tags);header.appendChild(identity);shell.appendChild(header);
- const selectedTrophies=activeStoreTrophies(db?.trophies||[],s.id);
- if(selectedTrophies.length){
-  const trophyList=el('div','gooy-trophy-group');
-  selectedTrophies.forEach(code=>{const t=trophyInfo(code);if(t)trophyList.appendChild(el('span','gooy-trophy',t.icon+' '+t.label))});
-  shell.appendChild(trophyList);
- }
  const details=el('div','selected-store-details');
  const appendDetail=(iconKey,label,value)=>{
   const line=el('div','selected-store-detail-row');
@@ -809,17 +803,6 @@ function makeCard(row,index){
  if(s.verified)tags.appendChild(el('span','store-chip','Verificada'));
  if(s.sponsored)tags.appendChild(el('span','store-chip','Patrocinada'));
  identity.appendChild(tags);top.appendChild(identity);card.appendChild(top);
- const trophyCodes=activeStoreTrophies(db?.trophies||[],s.id);
- if(trophyCodes.length){
-  const group=el('div','gooy-trophy-group');group.setAttribute('aria-label','Troféus GOOY do estabelecimento');
-  trophyCodes.forEach(code=>{
-   const t=trophyInfo(code);if(!t)return;
-   const badge=el('span','gooy-trophy',t.icon+' '+t.label);
-   badge.title='Troféu GOOY: característica atribuída pela administração';
-   group.appendChild(badge);
-  });
-  card.appendChild(group);
- }
  if(s.address)card.appendChild(el('div','store-address',s.address));
  if(row.hoursUnknown)card.appendChild(el('div','guru-hours-unconfirmed','Horário neste dia não confirmado — consulte a loja'));
  if(Array.isArray(s.specialties)&&s.specialties.length){
@@ -1159,21 +1142,26 @@ async function searchOuting(outing){
  const places=[]; // Lugares sem troféu de estabelecimento não entram como sugestão de rolê.
  const events=outingUpcomingEvents(db.events||[],outing,userCity);
  state=draft;state.lastResults=rows;state.resultOffset=0;lastOuting=outing;lastSearchText=outing.original;renderContext();save();
- const who={casal:'a dois',amigos:'com amigos',familia:'em família',geral:'para sair'}[outing.companion]||'para sair';
- const intro=add('Separei opções de rolê '+who+' em '+userCity+'. Os estabelecimentos sugeridos possuem troféus compatíveis. Confirme horários, preços e programação antes de ir.');
+ const label=outing.pet
+  ?(outing.companion==='casal'?'um rolê a dois com seu pet':outing.companion==='familia'?'um passeio em família com seu pet':'um passeio com seu pet')
+  :({casal:'um rolê a dois',amigos:'um rolê com amigos',familia:'um passeio em família',geral:'seu próximo passeio'}[outing.companion]||'seu próximo passeio');
+ const count=rows.length+places.length+events.length;
+ const intro=add(count
+  ?'Encontrei '+count+' '+(count===1?'lugar ou evento':'lugares e eventos')+' para '+label+' em '+userCity+'. Veja as opções e confirme os detalhes antes de ir.'
+  :'Busquei opções para '+label+' em '+userCity+', mas ainda não encontrei resultados compatíveis nos cadastros.');
  if(outing.budget==='economico')add('Não há preços de passeio confirmados para classificar quais locais são mais baratos.');
  if(!rows.length&&!places.length&&!events.length){
-  add(outing.eventsOnly?'Não há eventos futuros ativos cadastrados nesta cidade.':outing.budget==='gratis'?'Não encontrei passeios explicitamente cadastrados como gratuitos.':'Não encontrei estabelecimentos com os Troféus GOOY necessários nesta cidade. Os troféus são atribuídos pela administração.');
+  add(outing.eventsOnly?'Não há eventos futuros ativos cadastrados nesta cidade.':outing.budget==='gratis'?'Não encontrei passeios explicitamente cadastrados como gratuitos.':'Ainda não há lugares com as características cadastradas para esse tipo de passeio nesta cidade.');
   if(!outing.eventsOnly)askRegionalSearchPermission(outing.original,draft,city=>outingRankRows(searchStores(db,{...draft,location:{city,uf:null,neighborhood:null}},position,{limit:db.stores.length}),outing,db.trophies||[]));
  }else{
   showOutingExtras(places,events);
   if(rows.length){add('Estabelecimentos relacionados ao seu passeio:');showNextResultPage()}
  }
- const panel=el('div','guru-next-buttons');
- const company={casal:'com minha namorada',amigos:'com meus amigos',familia:'com minha família',geral:''}[outing.companion]||'';
- for(const [label,term] of [['Mais tranquilo','tranquilo'],['Ao ar livre','na natureza'],['Para comer','para comer'],['Eventos','eventos']]){
+ const panel=el('div','guru-next-buttons gooy-outing-actions');
+ const company=outing.pet?'com meu pet':({casal:'com minha namorada',amigos:'com meus amigos',familia:'com minha família',geral:''}[outing.companion]||'');
+ for(const [label,term] of [['Mais tranquilo','tranquilo'],['Ao ar livre','na natureza'],['Para comer','para comer'],['Eventos','eventos'],['Com meu pet','para passear com meu pet']]){
   const button=el('button','guru-next-button',label);button.type='button';
-  button.onclick=()=>submitText(('Quero um rolê '+term+' '+company).trim());panel.appendChild(button);
+  button.onclick=()=>submitText(label==='Com meu pet'?'Quero um rolê para passear com meu pet':('Quero um rolê '+term+' '+company).trim());panel.appendChild(button);
  }
  intro.appendChild(panel);
 }

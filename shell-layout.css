@@ -678,3 +678,17 @@ html[data-theme="dark"] .chat .ctx .guru-filter-more{
 @media(prefers-reduced-motion:reduce){
   .chat .guru-chat-dock>.send{transition:none}
 }
+
+/* GOOY Rolês — cartões simples e responsivos de passeios e eventos. */
+.gooy-outing-list{width:100%;max-width:100%;min-width:0;display:grid;gap:10px}
+.gooy-outing-heading{font-size:15px;font-weight:750;line-height:1.35;letter-spacing:-.02em;margin:8px 0 2px;color:inherit}
+.gooy-outing-place{width:100%;min-width:0;padding:14px 16px;border:1px solid #e8e9ed;border-radius:15px;background:#fff;display:flex;flex-direction:column;align-items:flex-start;gap:6px;overflow-wrap:anywhere}
+.gooy-outing-place strong{font-size:14px;line-height:1.4;color:#202124}
+.gooy-outing-detail{font-size:12px;line-height:1.5;color:#707580;margin:0;overflow-wrap:anywhere}
+.gooy-outing-link{display:inline-flex;align-items:center;justify-content:center;min-height:33px;margin-top:3px;padding:6px 11px;border:1px solid #e2e3e6;border-radius:9px;color:#24272c;text-decoration:none;font-size:12px;font-weight:600;background:#fafafa}
+.gooy-outing-link:hover{background:#f0f1f3}
+html[data-theme="dark"] .gooy-outing-place{background:#1d1f23;border-color:#383b40}
+html[data-theme="dark"] .gooy-outing-place strong{color:#f3f3f4}
+html[data-theme="dark"] .gooy-outing-detail{color:#b0b4bd}
+html[data-theme="dark"] .gooy-outing-link{background:#292c31;border-color:#3e4249;color:#f3f3f4}
+@media(max-width:680px){body .gooy-outing-list{gap:9px!important}body .gooy-outing-heading{font-size:14px!important;margin-top:4px!important}body .gooy-outing-place{padding:13px!important;border-radius:14px!important}body .gooy-outing-link{min-height:38px}}

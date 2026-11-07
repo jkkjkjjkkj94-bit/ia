@@ -541,7 +541,7 @@ async function loadData(force=false){
   const highlightsByStore=new Map(get(8).map(h=>[h.store_id,h]));
   const now=Date.now();
   // A flag COREDB `verified` pode refletir apenas aprovação antiga; não é fonte do selo.
-  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:[...get(2),...coreStoreHours(get(0)).filter(h=>!get(2).some(a=>a.store_id===h.store_id&&Number(a.weekday)===h.weekday))],reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),places:get(11),events:get(12),trophies:get(13),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8)}};
+  db={stores:get(0).map(s=>applyStoreHighlight(s,highlightsByStore.get(s.id),now)),products:get(1),hours:[...get(2),...coreStoreHours(get(0)).filter(h=>!get(2).some(a=>a.store_id===h.store_id&&Number(a.weekday)===h.weekday))],reviews:get(3),knowledge:get(4),sharedAliases:get(9),approvedAnswers:get(10),places:get(11),events:get(12),trophies:get(13),unavailable:{hours:failures.includes(2),reviews:failures.includes(3),knowledge:failures.includes(4),taxonomy:failures.includes(5)||failures.includes(6)||failures.includes(7),highlights:failures.includes(8),trophies:failures.includes(13)}};
   renderCategoryBrowser(db.stores);lastLoad=Date.now();rehydrate();if(input?.value)updateSuggestions();return db;
  })().finally(()=>{loadPromise=null});
  return loadPromise;
@@ -1146,6 +1146,7 @@ function showOutingExtras(places,events){
 async function searchOuting(outing){
  if(!userCity){askForCity(outing.original);return}
  await loadData();
+ if(db.unavailable?.trophies){add('Não consegui consultar os Troféus GOOY agora. Tente novamente; não vou sugerir passeios sem confirmar as características cadastradas.');return}
  regionalSearchInfo=null;regionalConsentVersion++;
  const draft=emptyState();draft.location={city:userCity,uf:null,neighborhood:null};draft.query='lugares';
  const rows=outing.eventsOnly?[]:outingRankRows(searchStores(db,draft,position,{limit:db.stores.length}),outing,db.trophies||[]);

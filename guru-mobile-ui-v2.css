@@ -381,3 +381,28 @@
  body .chat .msgs .hashtag-result-msg .store-result-card.smart-card{padding:10px 8px!important}
  body .chat .msgs .hashtag-result-msg .store-card-top h3{font-size:12px!important}
 }
+
+/* GOOY · paginação de resultados mobile: duas opções e continuação discreta. */
+@media(max-width:680px){
+ body .chat .msgs .hashtag-result-msg .guru-next-questions:has(.gooy-more-options){
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  margin:14px 0 5px!important;padding:0!important;border:0!important;
+ }
+ body .chat .msgs .hashtag-result-msg .guru-next-buttons:has(.gooy-more-options){
+  display:flex!important;flex-wrap:nowrap!important;overflow:visible!important;
+  width:100%!important;min-width:0!important;margin:0!important;
+ }
+ body .chat .msgs .hashtag-result-msg .gooy-more-options{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:100%!important;min-width:0!important;min-height:44px!important;
+  flex:1 1 auto!important;padding:11px 16px!important;
+  background:var(--bg,#fff)!important;color:inherit!important;
+  border:1px solid #dedfe3!important;border-radius:13px!important;
+  font-size:13px!important;font-weight:650!important;text-align:center!important;
+  box-shadow:none!important;cursor:pointer!important;
+ }
+ html[data-theme="dark"] body .chat .msgs .hashtag-result-msg .gooy-more-options{
+  background:#25272c!important;border-color:#444750!important;color:#f4f4f6!important;
+ }
+}

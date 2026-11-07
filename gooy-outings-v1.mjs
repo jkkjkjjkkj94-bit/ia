@@ -88,3 +88,33 @@ export function outingUpcomingEvents(events,outing,city,now=new Date()){
   return true;
  }).sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at)).slice(0,6);
 }
+
+/* GOOY Descobertas: roteiro editorial sem inventar horários, distâncias ou atrações.
+   Usa apenas estabelecimentos com troféus já compatíveis com a ocasião. */
+const outingStopType=store=>{
+ const n=outingNormalize([store.name,store.category,store.main_category,store.group,...(store.groups||[]),...(store.specialties||[])].join(' '));
+ if(/parque|praca|jardim|natureza|trilha|ecologico|area verde|ar livre/.test(n))return 'ar_livre';
+ if(/cinema|teatro|museu|centro cultural|galeria|exposicao|livraria|planetario/.test(n))return 'cultura';
+ if(/sorvet|acai|doceria|confeitaria|chocolat|sobremesa/.test(n))return 'sobremesa';
+ if(/cafeteria|cafe|padaria/.test(n))return 'cafe';
+ if(/restaurante|pizzaria|hamburgueria|lanchonete|sushi|temakeria|pastelaria|gastronomia/.test(n))return 'refeicao';
+ if(/boliche|arcade|jogos|karaoke|lazer|entretenimento|shopping/.test(n))return 'diversao';
+ return 'outro';
+};
+export function buildOutingItinerary(rows=[],outing={},maxStops=3){
+ const candidates=rows.filter(r=>r?.store?.id&&r.store?.name&&String(r.store.address||'').trim()&&!/^\s*[^,]+\s*-\s*[a-z]{2}\s*$/i.test(String(r.store.address||'')));
+ const types=new Set(),seen=new Set(),selected=[];
+ // Preserva a qualidade das recomendações, mas privilegia experiências diferentes.
+ const ordered=[...candidates].sort((a,b)=>(b.outingScore||0)-(a.outingScore||0));
+ for(const row of ordered){
+  const type=outingStopType(row.store);
+  if(seen.has(row.store.id)||types.has(type))continue;
+  if(type==='outro'&&selected.length)continue;
+  selected.push({...row,outingStopType:type});types.add(type);seen.add(row.store.id);
+  if(selected.length>=Math.min(3,maxStops))break;
+ }
+ if(selected.length<2)return [];
+ // Ordem sugerida de experiência, não rota otimizada por distância.
+ const order={ar_livre:1,cultura:2,diversao:3,refeicao:4,cafe:5,sobremesa:6,outro:7};
+ return selected.sort((a,b)=>(order[a.outingStopType]||7)-(order[b.outingStopType]||7));
+}

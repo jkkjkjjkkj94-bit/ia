@@ -134,18 +134,18 @@ export function editOutingStops(text,stops=[],pool=[]){
  const n=outingNormalize(text);
  const orderWords={primeiro:0,primeira:0,segundo:1,segunda:1,terceiro:2,terceira:2};
  const indexByWord=Object.entries(orderWords).find(([word])=>new RegExp('\\b'+word+'\\b').test(n))?.[1];
- const numeric=/\\b([123])\\s*(?:a|o)?\\s*(?:parada|lugar|local)\\b/.exec(n);
+ const numeric=/\b([123])\s*(?:a|o)?\s*(?:parada|lugar|local)\b/.exec(n);
  const position=indexByWord??(numeric?Number(numeric[1])-1:null);
- const remove=/\\b(tira|tirar|remova|remover|exclua|excluir|sem|retira|retirar)\\b/.test(n);
- const change=/\\b(troca|trocar|substitua|substituir|muda|mudar|altera|alterar)\\b/.test(n);
- const reroute=/\\b(refaca|refazer|reorganize|reorganizar|reordene|reordenar)\\b/.test(n);
+ const remove=/\b(tira|tirar|remova|remover|exclua|excluir|sem|retira|retirar)\b/.test(n);
+ const change=/\b(troca|trocar|substitua|substituir|muda|mudar|altera|alterar)\b/.test(n);
+ const reroute=/\b(refaca|refazer|reorganize|reorganizar|reordene|reordenar)\b/.test(n);
  if(!remove&&!change&&!reroute)return null;
  if(reroute&&!remove&&!change)return {kind:'reorder',stops:reorderOutingStops(stops)};
  if(!stops.length)return {kind:'empty',stops};
  let index=position;
  if(index==null){
   const candidates=stops.map((row,i)=>({i,kind:outingStopType(row.store),name:outingNormalize(row.store?.name)}));
-  const terms=[['ar_livre',/\\b(parque|praca|jardim|natureza|ar livre)\\b/],['cultura',/\\b(cinema|museu|teatro|cultura)\\b/],['refeicao',/\\b(restaurante|jantar|almoco|pizzaria)\\b/],['cafe',/\\b(cafe|cafeteria)\\b/],['sobremesa',/\\b(sorvete|sorveteria|acai|doce)\\b/]];
+  const terms=[['ar_livre',/\b(parque|praca|jardim|natureza|ar livre)\b/],['cultura',/\b(cinema|museu|teatro|cultura)\b/],['refeicao',/\b(restaurante|jantar|almoco|pizzaria)\b/],['cafe',/\b(cafe|cafeteria)\b/],['sobremesa',/\b(sorvete|sorveteria|acai|doce)\b/]];
   const found=terms.find(([,rx])=>rx.test(n));
   if(found)index=candidates.find(x=>x.kind===found[0])?.i??null;
   if(index==null)index=candidates.find(x=>x.name&&n.includes(x.name))?.i??null;

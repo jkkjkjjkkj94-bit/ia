@@ -1,6 +1,6 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.95.0';
 import{storeRankingPoints}from'./guru-engine-v4-core.mjs?v=20';
-import{GOOY_TROPHIES,trophyInfo,activeStoreTrophies}from'./gooy-trophies-v1.mjs?v=1';
+import{GOOY_TROPHIES,trophyInfo,activeStoreTrophies}from'./gooy-trophies-v1.mjs?v=2';
 const SUPABASE_URL='https://innziuzgtpfsiywqmies.supabase.co';
 const SUPABASE_KEY='sb_publishable_'+'fJB7zijdznI9ob9l9jSGlQ_6oU_J-d1';
 const sb=createClient(SUPABASE_URL,SUPABASE_KEY);

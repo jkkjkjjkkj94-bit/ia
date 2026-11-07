@@ -3,7 +3,7 @@ import {semanticAlternatives,contextualRank,explainMatch,clarifyShoppingQuery,di
 import {detectNeed,describeNeed,choiceForNeed,isFindStoresForNeed,findStoresForNeed,catalogVerification} from './guru-needs-v1.mjs?v=3';
 import {taxonomy as fallbackTaxonomy,categoryAliases as fallbackAliases} from './ai-taxonomy.js?v=7';
 import {routeConversation} from './guru-smalltalk.mjs?v=2';
-import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents,buildOutingItinerary} from './gooy-outings-v1.mjs?v=7';
+import {detectOuting,outingRankRows,outingRankPlaces,outingUpcomingEvents,buildOutingItinerary,editOutingStops,outingStraightKm} from './gooy-outings-v1.mjs?v=8';
 
 import {contextualIntent,compareStores,comparisonSummary,followupPrompts,storeDataQuality,suggestBroadConversation} from './guru-conversation-v5.mjs?v=4';
 import {recordSearch,recordSelection,recordUnansweredKnowledge} from './guru-telemetry-v5.mjs?v=3';
@@ -24,6 +24,7 @@ const form=document.getElementById('chatForm'),input=document.getElementById('q'
 let state=emptyState(),db=null,loadPromise=null,lastLoad=0,position=null,searchBusy=false;
 let locationAttempted=false;
 let lastOuting=null;
+let lastDiscovery=null;
 let userCity='';
 let pendingCityQuery='';
 const userCityKey='guru_city_v1';
@@ -1137,36 +1138,94 @@ function showOutingExtras(places,events){
   if(e.official_url)try{const u=new URL(e.official_url);if(['https:','http:'].includes(u.protocol)){const a=el('a','gooy-outing-link','Página do evento');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';card.appendChild(a)}}catch{}
  });
 }
-function showDiscoveryItinerary(rows,outing){
- const stops=buildOutingItinerary(rows,outing);
- if(stops.length<2)return;
+function outingDayIndex(outing){
+ const today=new Date().getDay();
+ if(outing.date==='hoje')return today;
+ if(outing.date==='amanha')return (today+1)%7;
+ if(outing.date==='sabado')return 6;
+ if(outing.date==='domingo')return 0;
+ return null;
+}
+function verifiedOutingHours(store,outing){
+ const day=outingDayIndex(outing);
+ if(day==null)return {label:'',known:false,closed:false};
+ const entries=(db?.hours||[]).filter(h=>h.store_id===store.id&&Number(h.weekday)===day);
+ if(!entries.length)return {label:'',known:false,closed:false};
+ const active=entries.filter(h=>h.closed!==true&&h.opens_at&&h.closes_at);
+ if(!active.length)return {label:'',known:true,closed:true};
+ const ranges=active.map(h=>String(h.opens_at).slice(0,5)+'–'+String(h.closes_at).slice(0,5));
+ return {label:ranges.join(', '),known:true,closed:false};
+}
+function renderDiscoveryItinerary(stops,outing,updated=false){
+ if(!stops.length){add('O roteiro ficou sem paradas. Faça uma nova busca para encontrar outros lugares.');lastDiscovery=null;return null}
  const message=add('',false);message.classList.add('gooy-discoveries');
- message.appendChild(el('h3','gooy-discoveries-title','GOOY Descobertas · roteiro sugerido'));
- message.appendChild(el('p','gooy-discoveries-subtitle',stops.length+' paradas de experiências diferentes para aproveitar seu passeio. A ordem é sugerida e o percurso não foi calculado por distância.'));
+ message.appendChild(el('h3','gooy-discoveries-title',updated?'GOOY Descobertas · roteiro atualizado':'GOOY Descobertas · roteiro sugerido'));
+ message.appendChild(el('p','gooy-discoveries-subtitle',stops.length+' '+(stops.length===1?'parada':'paradas')+' para o passeio. Você pode pedir no chat para trocar ou remover uma parada.'));
  const steps=el('ol','gooy-discoveries-steps');
+ let unknownHours=false;
  for(const row of stops){
   const item=el('li','gooy-discoveries-stop');
   item.appendChild(el('strong','',row.store.name));
-  item.appendChild(el('span','',row.store.address));
+  item.appendChild(el('span','',[row.store.address].filter(Boolean).join('')));
+  const hours=verifiedOutingHours(row.store,outing);
+  if(hours.known&&hours.label)item.appendChild(el('small','gooy-discoveries-hours','Horário cadastrado: '+hours.label));
+  else if(!hours.known)unknownHours=true;
   steps.appendChild(item);
  }
  message.appendChild(steps);
- const locations=stops.map(r=>[r.store.name,r.store.address].filter(Boolean).join(', '));
- const params=new URLSearchParams({api:'1',origin:locations[0],destination:locations[locations.length-1],travelmode:'driving'});
- if(locations.length>2)params.set('waypoints',locations.slice(1,-1).join('|'));
- const a=el('a','gooy-discoveries-map','Ver percurso no mapa');
- a.href='https://www.google.com/maps/dir/?'+params.toString();
- a.target='_blank';a.rel='noopener noreferrer';message.appendChild(a);
- message.appendChild(el('p','gooy-discoveries-note','Confira os horários de cada parada antes de sair.'));
+ const validCoordinates=stops.every(r=>r.store.latitude!=null&&r.store.longitude!=null&&Number.isFinite(Number(r.store.latitude))&&Number.isFinite(Number(r.store.longitude)));
+ if(validCoordinates&&stops.length>1){
+  const kms=stops.slice(1).map((r,i)=>outingStraightKm(stops[i].store,r.store));
+  if(kms.every(Number.isFinite)){
+   const total=kms.reduce((a,b)=>a+b,0);
+   message.appendChild(el('p','gooy-discoveries-subtitle','Distância aproximada em linha reta entre as paradas: '+total.toFixed(1).replace('.',',')+' km. Não representa o trajeto por ruas.'));
+  }
+ }
+ if(stops.length>1){
+  const locations=stops.map(r=>[r.store.name,r.store.address].filter(Boolean).join(', '));
+  const params=new URLSearchParams({api:'1',origin:locations[0],destination:locations[locations.length-1],travelmode:'driving'});
+  if(locations.length>2)params.set('waypoints',locations.slice(1,-1).join('|'));
+  const a=el('a','gooy-discoveries-map','Abrir roteiro no mapa');
+  a.href='https://www.google.com/maps/dir/?'+params.toString();
+  a.target='_blank';a.rel='noopener noreferrer';message.appendChild(a);
+ }
+ message.appendChild(el('p','gooy-discoveries-note',unknownHours?'Alguns locais não têm horários confirmados para o dia pedido. Confirme antes de sair.':'Verifique horários, deslocamento e disponibilidade antes de sair.'));
+ return message;
 }
-
+function showDiscoveryItinerary(rows,outing){
+ const stops=buildOutingItinerary(rows,outing);
+ if(stops.length<2){lastDiscovery=null;return}
+ lastDiscovery={stops,pool:[...rows],outing};
+ renderDiscoveryItinerary(stops,outing);
+}
+function refineDiscovery(text){
+ if(!lastDiscovery||!lastOuting)return false;
+ const edit=editOutingStops(text,lastDiscovery.stops,lastDiscovery.pool);
+ if(!edit)return false;
+ if(edit.kind==='clarify'){add('Qual parada você quer alterar? Pode dizer, por exemplo, “troque a segunda parada” ou “tire o parque”.');return true}
+ if(edit.kind==='unavailable'){add('Não encontrei outro local do mesmo tipo, com as características necessárias, para substituir essa parada. Mantive seu roteiro.');return true}
+ if(edit.kind==='empty'){add('Não há paradas para alterar. Faça outra busca de passeio.');return true}
+ if(edit.kind==='reorder'&&edit.needsCoordinates){add('Alguns locais não têm coordenadas cadastradas para comparar a proximidade. Mantive a ordem sugerida e você pode conferir o trajeto no mapa.');return true}
+ const old=document.querySelectorAll('.gooy-discoveries');
+ old.forEach(node=>node.remove());
+ lastDiscovery.stops=edit.stops;
+ if(edit.kind==='remove')add('Retirei a parada solicitada e mantive as demais.');
+ else if(edit.kind==='replace')add('Troquei a parada solicitada e mantive o restante do passeio.');
+ else add('Reorganizei as paradas usando as coordenadas cadastradas. Confira o trajeto no mapa.');
+ renderDiscoveryItinerary(lastDiscovery.stops,lastDiscovery.outing,true);
+ return true;
+}
 async function searchOuting(outing){
+ lastDiscovery=null;
  if(!userCity){askForCity(outing.original);return}
  await loadData();
  if(db.unavailable?.trophies){add('Não consegui consultar os Troféus GOOY agora. Tente novamente; não vou sugerir passeios sem confirmar as características cadastradas.');return}
  regionalSearchInfo=null;regionalConsentVersion++;
  const draft=emptyState();draft.location={city:userCity,uf:null,neighborhood:null};draft.query='lugares';
- const rows=outing.eventsOnly?[]:outingRankRows(searchStores(db,draft,position,{limit:db.stores.length}),outing,db.trophies||[]);
+ let rows=outing.eventsOnly?[]:outingRankRows(searchStores(db,draft,position,{limit:db.stores.length}),outing,db.trophies||[]);
+ // Ao pedir dia específico, locais explicitamente fechados não são apresentados como disponíveis.
+ const askedDay=outingDayIndex(outing);
+ if(askedDay!=null)rows=rows.filter(r=>!verifiedOutingHours(r.store,outing).closed);
  const places=[]; // Lugares sem troféu de estabelecimento não entram como sugestão de rolê.
  const events=outingUpcomingEvents(db.events||[],outing,userCity);
  state=draft;state.lastResults=rows;state.resultOffset=0;lastOuting=outing;lastSearchText=outing.original;renderContext();save();
@@ -1189,6 +1248,7 @@ async function searchOuting(outing){
 }
 
 async function run(text){
+ if(refineDiscovery(text))return;
  if(isMoreResultsRequest(text)){
   if(!(state.lastResults||[]).length){add('Ainda não tenho resultados para continuar. Faça uma pesquisa primeiro.');return}
   showNextResultPage();return;
@@ -1198,7 +1258,7 @@ async function run(text){
  text=routed.query;
  const outing=detectOuting(text,lastOuting);
  if(outing){await searchOuting(outing);return}
- lastOuting=null;
+ lastOuting=null;lastDiscovery=null;
  // Pergunta curta sobre horário nunca deve iniciar uma busca de estabelecimentos.
  // Sem loja selecionada, solicitar escolha explícita para evitar horários de terceiros.
  if(/^(?:qual(?: e| eh)? o horario\??|que horas (?:abre|fecha)\??|horario\??)$/i.test(norm(text).trim())){
@@ -1496,7 +1556,7 @@ async function submitText(raw){
  }
 }
 function resetConversation(){
- lastOuting=null;
+ lastOuting=null;lastDiscovery=null;
  regionalSearchInfo=null;regionalConsentVersion++;
  state=emptyState();try{sessionStorage.removeItem(memoryKey)}catch{};
  msgs.replaceChildren(el('div','msg bot','Olá! Diga o que você procura.'));

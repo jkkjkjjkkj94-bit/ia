@@ -87,8 +87,8 @@ window.GuruBoot={status:'loading',error:null};
  },true);
 })();
 </script><script type="module">
-import('./guru-engine-v4.js?v=123').then(()=>{
+import('./guru-engine-v4.js?v=124').then(()=>{
  window.GuruBoot.status=window.GuruEngineV4?'ready':'error';
  if(!window.GuruEngineV4)window.GuruBoot.report(new Error('Módulo carregado, mas o mecanismo de chat não foi inicializado.'));
 }).catch(error=>window.GuruBoot.report(error));
-</script><script type="module" src="guru-theme.js?v=2"></script><script defer src="guru-voice.js?v=6"></script><script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(error=>console.warn('[GOOY PWA]',error)));}</script></body></html>
+</script><script type="module" src="guru-theme.js?v=2"></script><script defer src="guru-voice.js?v=6"></script><script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('[GOOY PWA]',error)));}</script></body></html>

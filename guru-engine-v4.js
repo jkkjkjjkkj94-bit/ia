@@ -1664,6 +1664,27 @@ function initShell(){
  document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>submitText(b.dataset.q||'')));
 }
 if(form&&input&&msgs){
+ const plus=document.getElementById('gooyComposerPlus');
+ const menu=document.getElementById('gooyComposerMenu');
+ const closeQuickMenu=()=>{if(!menu)return;menu.hidden=true;plus?.setAttribute('aria-expanded','false')};
+ if(plus&&menu){
+  plus.addEventListener('click',()=>{
+   const open=menu.hidden;
+   menu.hidden=!open;
+   plus.setAttribute('aria-expanded',String(open));
+  });
+  menu.querySelectorAll('[data-gooy-quick]').forEach(button=>button.addEventListener('click',()=>{
+   const query=button.dataset.gooyQuick||'';
+   closeQuickMenu();
+   if(query)submitText(query);
+  }));
+  document.addEventListener('click',event=>{
+   if(!menu.hidden&&!menu.contains(event.target)&&!plus.contains(event.target))closeQuickMenu();
+  });
+  document.addEventListener('keydown',event=>{
+   if(event.key==='Escape'&&!menu.hidden){closeQuickMenu();plus.focus()}
+  });
+ }
  form.addEventListener('submit',e=>{e.preventDefault();const q=input.value.trim();if(q){input.value='';setSuggestions();submitText(q)}});
  input.addEventListener('input',updateSuggestions);
  input.addEventListener('keydown',e=>{if(e.key==='Escape')setSuggestions();if(e.key==='ArrowDown'&&visibleSuggestions.length){e.preventDefault();suggestions?.querySelector('button')?.focus()}});

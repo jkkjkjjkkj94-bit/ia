@@ -21,3 +21,20 @@
 .guru-voice-status[data-state="ready"]{color:var(--text,#30343b)}
 .guru-voice-status[data-state="hint"]{color:var(--muted,#777)}
 @media(max-width:480px){.guru-voice-status{font-size:11px;line-height:1.45;margin:4px 7px 0}}
+
+/* GOOY: painel de voz no próprio campo de mensagem */
+#chatForm.gooy-composer{position:relative}
+#chatForm .gooy-voice-panel{display:none;flex:1 1 auto;min-width:0;flex-direction:column;justify-content:center;gap:3px;overflow:hidden;padding:3px 4px}
+#chatForm.gooy-is-recording #q{display:none!important}
+#chatForm.gooy-is-recording .gooy-voice-panel{display:flex}
+.gooy-voice-wave{height:34px;display:flex;align-items:center;justify-content:center;gap:3px;overflow:hidden}
+.gooy-voice-wave i{width:3px;flex:1 1 3px;max-width:4px;min-width:2px;height:5px;border-radius:8px;background:#ef333b;transition:height 90ms ease}
+.gooy-voice-meta{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text,#333);white-space:nowrap}
+.gooy-record-dot{width:8px;height:8px;border-radius:50%;background:#f21f32;animation:gooy-record-blink 1.15s infinite}
+.gooy-voice-clock{font-variant-numeric:tabular-nums;margin-left:5px;color:var(--muted,#777)}
+#chatForm.gooy-is-recording #guruVoiceMic{background:#ffe5e7!important;border-color:#ffc3c8!important;color:#ef2334!important;animation:none!important;border-radius:50%}
+#chatForm.gooy-is-recording #guruVoiceMic svg{display:none}
+#chatForm.gooy-is-recording #guruVoiceMic:after{content:"";width:13px;height:13px;background:#ed2334;border-radius:3px}
+@keyframes gooy-record-blink{50%{opacity:.3}}
+@media(max-width:480px){.gooy-voice-wave{gap:2px}.gooy-voice-wave i{min-width:2px}.gooy-voice-meta{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.gooy-record-dot{animation:none}.gooy-voice-wave i{transition:none}}

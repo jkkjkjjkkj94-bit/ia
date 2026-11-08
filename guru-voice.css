@@ -38,3 +38,10 @@
 @keyframes gooy-record-blink{50%{opacity:.3}}
 @media(max-width:480px){.gooy-voice-wave{gap:2px}.gooy-voice-wave i{min-width:2px}.gooy-voice-meta{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.gooy-record-dot{animation:none}.gooy-voice-wave i{transition:none}}
+
+/* GOOY Voice: waveform compacta e discreta */
+#chatForm .gooy-voice-wave{height:20px;gap:2px;justify-content:flex-start}
+#chatForm .gooy-voice-wave i{max-width:2px;min-width:2px;flex:0 0 2px;border-radius:3px;background:#e93c48;opacity:.88}
+#chatForm .gooy-voice-panel{gap:2px;padding:2px 3px}
+#chatForm .gooy-voice-meta{font-size:10px;gap:6px}
+#guruVoiceStatus[data-state="listening"],#guruVoiceStatus[data-state="starting"]{display:none!important}

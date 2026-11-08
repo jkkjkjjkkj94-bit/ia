@@ -678,3 +678,30 @@
  body .top.gooy-header-v2 .gooy-header-popover:not([hidden]){left:10px!important}
  body .top.gooy-header-v2 .gooy-header-popover.gooy-header-more:not([hidden]){right:10px!important;left:auto!important}
 }
+
+/* GOOY Mobile 2.0 — refinamento visual exclusivo para celular */
+@media(max-width:680px){
+ body .main{padding-left:15px!important;padding-right:15px!important}
+ body .hero{padding:24px 5px 13px!important;margin:0!important;text-align:center!important}
+ body .hero h1{font-size:clamp(23px,6vw,29px)!important;line-height:1.2!important;letter-spacing:-.045em!important;font-weight:720!important;margin:0 0 8px!important}
+ body .hero p{font-size:12px!important;line-height:1.55!important;max-width:310px!important;margin:0 auto!important;color:#85868c!important}
+ body .quick{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;padding:8px 0 12px!important;margin:0!important}
+ body .quick button{width:100%!important;min-width:0!important;max-width:none!important;min-height:44px!important;padding:10px 9px!important;border:1px solid #e8e8eb!important;border-radius:13px!important;background:#fff!important;color:#222!important;font-size:12px!important;font-weight:560!important;line-height:1.3!important;box-shadow:none!important;white-space:normal!important}
+ body .quick button:nth-child(n+5){display:none!important}
+ body .quick.gooy-more-open button:nth-child(n+5){display:flex!important;align-items:center!important;justify-content:center!important}
+ body .gooy-more-suggestions{display:block;width:100%;border:0;background:transparent;color:#6f7077;font-size:12px;font-weight:600;padding:5px 8px 12px;cursor:pointer}
+ body .guru-category-browser{margin:0 auto 8px!important}
+ body .guru-category-browser>details{border-color:#ececef!important;border-radius:12px!important}
+ body .guru-category-browser>details>summary{font-size:12px!important;font-weight:550!important}
+ body .chat .guru-chat-dock{padding:7px 0 max(7px,env(safe-area-inset-bottom))!important}
+ body .chat .guru-chat-dock>.send{border-radius:25px!important;min-height:51px!important;box-shadow:0 2px 12px rgba(0,0,0,.035)!important}
+ body .chat .guru-chat-dock>.send #q{font-size:14px!important}
+ body .chat .guru-chat-dock .gooy-composer-plus svg{width:18px!important;height:18px!important}
+ body .chat .guru-chat-dock .gooy-composer-send{background:#111!important;color:white!important}
+ body .chat .guru-chat-dock .guru-voice-btn{width:35px!important;height:35px!important;flex-basis:35px!important}
+ body .chat .guru-chat-dock>.ctx{flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;max-height:48px!important;scrollbar-width:none}
+ body .chat .guru-chat-dock>.ctx::-webkit-scrollbar{display:none}
+ body .msgs .msg{line-height:1.55!important;overflow-wrap:anywhere}
+ body .app-footer-note{font-size:10px!important;color:#92949b!important}
+}
+@media(max-width:680px){html[data-theme="dark"] body .quick button{background:#222429!important;border-color:#383a40!important;color:#f2f2f3!important}html[data-theme="dark"] body .hero p{color:#a5a7af!important}html[data-theme="dark"] body .gooy-more-suggestions{color:#b7bac2!important}}

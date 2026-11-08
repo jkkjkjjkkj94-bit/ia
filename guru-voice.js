@@ -30,7 +30,7 @@
    const elements=bars.children;
    for(let i=0;i<elements.length;i++){
     const index=Math.min(levels.length-1,Math.floor(i/elements.length*levels.length));
-    const height=Math.max(5,Math.min(33,5+levels[index]*.14));
+    const height=Math.max(3,Math.min(17,3+levels[index]*.065));
     elements[i].style.height=height+'px';
    }
   }

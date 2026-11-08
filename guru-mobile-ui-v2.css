@@ -408,120 +408,127 @@
 }
 
 
-/* GOOY Mobile Composer 4.0 — inspiração visual, controles originais funcionais. */
+/* GOOY Mobile Composer 5.0 — iPhone-inspired, monochrome and compact. */
 .gooy-composer-plus{display:none}
 .gooy-composer-menu[hidden]{display:none!important}
 @media(max-width:680px){
  body .chat .guru-chat-dock>.send.gooy-composer,
- body.chat-started .chat .guru-chat-dock>.send.gooy-composer {
+ body.chat-started .chat .guru-chat-dock>.send.gooy-composer{
   display:flex!important;align-items:center!important;justify-content:stretch!important;
-  gap:5px!important;width:100%!important;min-width:0!important;max-width:100%!important;
-  min-height:65px!important;height:65px!important;
-  padding:5px 7px 5px 8px!important;
-  border:1px solid #e8e8e9!important;border-radius:999px!important;
-  background:#fff!important;
-  box-shadow:0 3px 16px rgba(0,0,0,.035)!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  height:56px!important;min-height:56px!important;
+  gap:3px!important;padding:5px 7px 5px 8px!important;
+  border:1px solid #e5e5e7!important;border-radius:999px!important;
+  background:#fff!important;box-shadow:none!important;
  }
  body .chat .guru-chat-dock>.send.gooy-composer:focus-within{
-  border-color:#c8cbcd!important;box-shadow:0 3px 17px rgba(0,0,0,.055)!important;
+  border-color:#bfc2c7!important;box-shadow:none!important;
  }
- body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-plus {
+ body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-plus,
+ body .chat .guru-chat-dock>.send.gooy-composer .guru-voice-btn{
   display:grid!important;place-items:center!important;
-  flex:0 0 41px!important;width:41px!important;min-width:41px!important;
-  height:45px!important;min-height:45px!important;
-  margin:0!important;padding:6px!important;
-  border:0!important;border-radius:50%!important;box-shadow:none!important;
-  background:transparent!important;color:#191919!important;
+  flex:0 0 36px!important;width:36px!important;min-width:36px!important;
+  height:40px!important;min-height:40px!important;margin:0!important;
+  padding:6px!important;border:0!important;border-radius:50%!important;
+  background:transparent!important;color:#111!important;box-shadow:none!important;
  }
  body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-plus svg{
-  display:block;width:28px;height:28px;fill:none;stroke:currentColor;
-  stroke-width:2.35;stroke-linecap:round;stroke-linejoin:round;
- }
- body .chat .guru-chat-dock>.send.gooy-composer #q {
-  display:block!important;flex:1 1 0!important;width:0!important;min-width:0!important;
-  height:49px!important;min-height:49px!important;max-height:49px!important;
-  margin:0!important;padding:0 3px!important;
-  font-size:16px!important;font-weight:400!important;line-height:1.4!important;
-  border:0!important;box-shadow:none!important;background:transparent!important;
-  color:#202124!important;outline:none!important;
- }
- body .chat .guru-chat-dock>.send.gooy-composer #q::placeholder{
-  color:#93969c!important;opacity:1;
- }
- body .chat .guru-chat-dock>.send.gooy-composer .guru-voice-btn {
-  display:grid!important;place-items:center!important;
-  flex:0 0 40px!important;width:40px!important;min-width:40px!important;
-  height:46px!important;min-height:46px!important;
-  margin:0!important;padding:8px!important;
-  border:0!important;border-radius:50%!important;
-  box-shadow:none!important;background:transparent!important;color:#15171a!important;
+  width:20px!important;height:20px!important;fill:none!important;
+  stroke:currentColor!important;stroke-width:2!important;
+  stroke-linecap:round;stroke-linejoin:round;
  }
  body .chat .guru-chat-dock>.send.gooy-composer .guru-voice-btn svg{
-  width:25px!important;height:25px!important;stroke-width:1.9!important;
+  width:19px!important;height:19px!important;fill:none!important;
+  stroke:currentColor!important;stroke-width:1.8!important;
  }
  body .chat .guru-chat-dock>.send.gooy-composer .guru-voice-btn.is-listening{
-  background:#eaf8f5!important;color:#009b88!important;
-  box-shadow:0 0 0 2px #0cae9828!important;
+  background:#f1f1f2!important;color:#111!important;
+  box-shadow:inset 0 0 0 1px #d1d1d4!important;
  }
- body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send {
+ body .chat .guru-chat-dock>.send.gooy-composer #q{
+  display:block!important;flex:1 1 0!important;width:0!important;min-width:0!important;
+  height:42px!important;min-height:42px!important;max-height:42px!important;
+  margin:0!important;padding:0 3px!important;
+  font-size:15px!important;line-height:1.4!important;font-weight:400!important;
+  border:0!important;background:transparent!important;box-shadow:none!important;
+  color:#1b1b1d!important;outline:none!important;
+ }
+ body .chat .guru-chat-dock>.send.gooy-composer #q::placeholder{
+  color:#9b9ca2!important;opacity:1!important;
+ }
+ body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send{
   display:grid!important;place-items:center!important;
-  flex:0 0 49px!important;width:49px!important;min-width:49px!important;
-  height:49px!important;min-height:49px!important;
-  margin:0!important;padding:0!important;
-  border:0!important;border-radius:50%!important;
-  background:#08af9b!important;color:#fff!important;box-shadow:none!important;
+  flex:0 0 40px!important;width:40px!important;min-width:40px!important;
+  height:40px!important;min-height:40px!important;
+  padding:0!important;margin:0!important;
+  border:0!important;border-radius:13px!important;
+  background:#111!important;color:#fff!important;box-shadow:none!important;
+  cursor:pointer!important;
  }
- body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send svg {
-  display:block;width:24px;height:24px;fill:none;stroke:currentColor;
-  stroke-width:2.35;stroke-linecap:round;stroke-linejoin:round;
+ body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send svg{
+  width:18px!important;height:18px!important;
+  fill:none!important;stroke:currentColor!important;stroke-width:2!important;
+  stroke-linecap:round;stroke-linejoin:round;
  }
  body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send:active{
-  background:#079b8b!important;transform:scale(.97);
+  background:#2e2e30!important;transform:scale(.97);
  }
  body .chat .guru-chat-dock>.gooy-composer-menu:not([hidden]){
   position:absolute!important;left:0!important;right:auto!important;
-  bottom:calc(100% - 4px)!important;z-index:40!important;
+  bottom:calc(100% - 2px)!important;z-index:40!important;
   display:grid!important;grid-template-columns:minmax(0,1fr)!important;
-  width:min(290px,100%)!important;max-width:100%!important;
+  width:min(280px,100%)!important;max-width:100%!important;
   max-height:min(270px,42dvh)!important;overflow-y:auto!important;
-  gap:3px!important;padding:8px!important;
-  background:#fff!important;color:#202124!important;
-  border:1px solid #e7e8eb!important;border-radius:19px!important;
-  box-shadow:0 12px 38px rgba(0,0,0,.12)!important;
+  gap:3px!important;padding:7px!important;
+  border:1px solid #e5e5e7!important;border-radius:16px!important;
+  background:#fff!important;color:#111!important;
+  box-shadow:0 9px 26px #00000014!important;
  }
  body .chat .guru-chat-dock>.gooy-composer-menu button{
-  width:100%!important;min-height:42px!important;padding:9px 13px!important;
-  border:0!important;border-radius:11px!important;
+  width:100%!important;min-height:40px!important;
+  padding:9px 12px!important;border:0!important;border-radius:9px!important;
   background:transparent!important;color:inherit!important;
-  text-align:left!important;font-size:13px!important;font-weight:550!important;
+  text-align:left!important;font-size:12px!important;font-weight:550!important;
  }
- body .chat .guru-chat-dock>.gooy-composer-menu button:focus-visible,
- body .chat .guru-chat-dock>.gooy-composer-menu button:active{
-  background:#f1f3f3!important;
+ body .chat .guru-chat-dock>.gooy-composer-menu button:active,
+ body .chat .guru-chat-dock>.gooy-composer-menu button:focus-visible{
+  background:#f2f2f3!important;
  }
  html[data-theme="dark"] body .chat .guru-chat-dock>.send.gooy-composer{
-  background:#222428!important;border-color:#3d4146!important;box-shadow:none!important;
+  border-color:#3d3d42!important;background:#202023!important;box-shadow:none!important;
+ }
+ html[data-theme="dark"] body .chat .guru-chat-dock>.send.gooy-composer:focus-within{
+  border-color:#66676b!important;
  }
  html[data-theme="dark"] body .chat .guru-chat-dock>.send.gooy-composer #q{
-  color:#f6f6f7!important;
+  color:#f4f4f5!important;
  }
  html[data-theme="dark"] body .chat .guru-chat-dock>.send.gooy-composer #q::placeholder{
-  color:#a7aab2!important;
+  color:#a0a0a5!important;
  }
  html[data-theme="dark"] body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-plus,
  html[data-theme="dark"] body .chat .guru-chat-dock>.send.gooy-composer .guru-voice-btn{
-  color:#f2f3f5!important;
+  color:#f5f5f6!important;
+ }
+ html[data-theme="dark"] body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send{
+  background:#080808!important;color:#fff!important;
  }
  html[data-theme="dark"] body .chat .guru-chat-dock>.gooy-composer-menu:not([hidden]){
-  background:#222428!important;color:#f5f5f6!important;border-color:#3c4047!important;
+  background:#242427!important;color:#f5f5f6!important;border-color:#3d3d42!important;
  }
- html[data-theme="dark"] body .chat .guru-chat-dock>.gooy-composer-menu button:active{
-  background:#353840!important;
+ html[data-theme="dark"] body .chat .guru-chat-dock>.gooy-composer-menu button:active,
+ html[data-theme="dark"] body .chat .guru-chat-dock>.gooy-composer-menu button:focus-visible{
+  background:#38383d!important;
  }
 }
 @media(max-width:360px){
- body .chat .guru-chat-dock>.send.gooy-composer{gap:2px!important;padding-left:4px!important;padding-right:5px!important}
- body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-plus{flex-basis:36px!important;width:36px!important;min-width:36px!important}
- body .chat .guru-chat-dock>.send.gooy-composer .guru-voice-btn{flex-basis:36px!important;width:36px!important;min-width:36px!important}
- body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send{flex-basis:45px!important;width:45px!important;min-width:45px!important;height:45px!important;min-height:45px!important}
+ body .chat .guru-chat-dock>.send.gooy-composer{gap:1px!important;padding-left:5px!important;padding-right:5px!important}
+ body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-plus,
+ body .chat .guru-chat-dock>.send.gooy-composer .guru-voice-btn{
+  flex-basis:34px!important;width:34px!important;min-width:34px!important;
+ }
+ body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send{
+  flex-basis:38px!important;width:38px!important;min-width:38px!important;
+  height:38px!important;min-height:38px!important;
+ }
 }

@@ -45,3 +45,17 @@
 #chatForm .gooy-voice-panel{gap:2px;padding:2px 3px}
 #chatForm .gooy-voice-meta{font-size:10px;gap:6px}
 #guruVoiceStatus[data-state="listening"],#guruVoiceStatus[data-state="starting"]{display:none!important}
+
+/* GOOY Voice 5.2 — gravação monocromática, contraste alto. */
+#chatForm.gooy-is-recording{background:#111214!important;border-color:#111214!important;color:#fff!important;box-shadow:0 4px 16px rgba(0,0,0,.12)!important}
+#chatForm.gooy-is-recording .gooy-voice-panel{color:#fff!important}
+#chatForm.gooy-is-recording .gooy-voice-wave i{background:#f5f5f5!important;opacity:.88!important}
+#chatForm.gooy-is-recording .gooy-voice-meta{color:#f6f6f6!important}
+#chatForm.gooy-is-recording .gooy-voice-clock{color:#a9adb3!important}
+#chatForm.gooy-is-recording .gooy-record-dot{background:#fff!important}
+#chatForm.gooy-is-recording #guruVoiceMic{background:#fff!important;border:1px solid #fff!important;color:#111!important;box-shadow:none!important}
+#chatForm.gooy-is-recording #guruVoiceMic:after{background:#111!important}
+#chatForm.gooy-is-recording #gooyComposerPlus,#chatForm.gooy-is-recording .gooy-composer-plus{color:#fff!important;background:transparent!important;border-color:transparent!important}
+#chatForm.gooy-is-recording button[type="submit"]{background:#fff!important;color:#111!important;border-color:#fff!important}
+#chatForm.gooy-is-recording button[type="submit"] svg{stroke:#111!important}
+@media(max-width:680px){body .chat .guru-chat-dock>#chatForm.gooy-is-recording{background:#111214!important;border-color:#111214!important}}

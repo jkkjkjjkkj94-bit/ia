@@ -79,7 +79,7 @@
  function write(interim=''){const value=merge(merge(base,final),interim);if(value){input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}))}}
  function finish(message){pendingSend=false;requestedStop=true;active=false;starting=false;token++;clear();stopVisual();try{rec?.stop()}catch{}ui();say(message||(input.value.trim()?'Pergunta captada. Confira o texto e toque em enviar.':'Não detectei sua fala. Tente novamente.'),input.value.trim()?'ready':'hint')}
  function sendRecognized(){const text=clean(input.value);if(!text){say('Não detectei sua fala. Tente novamente.','hint');return}if(window.GuruBoot?.status!=='ready'){say('O chat ainda está iniciando. Aguarde e toque em enviar.','hint');return}say('Enviando pergunta…','ready');if(form?.requestSubmit)form.requestSubmit();else form?.querySelector('[type="submit"]')?.click()}
- function stopAndSend(){if(!active||requestedStop)return;pendingSend=true;starting=false;clearTimeout(watchdog);try{rec.stop()}catch{const shouldSend=pendingSend;finish();if(shouldSend)sendRecognized()}}
+ function stopAndSend(){if(!active||requestedStop)return;pendingSend=true;starting=false;clearTimeout(watchdog);try{rec.stop();watchdog=setTimeout(()=>{if(!pendingSend||requestedStop)return;const shouldSend=pendingSend;finish();if(shouldSend)sendRecognized()},1800)}catch{const shouldSend=pendingSend;finish();if(shouldSend)sendRecognized()}}
  if(!Speech){mic.disabled=true;mic.title='Reconhecimento de voz indisponível';say('Este navegador não oferece reconhecimento de voz. Use o teclado ou outro navegador compatível.','error');return}
  rec=new Speech();rec.lang='pt-BR';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;
  function begin(id){

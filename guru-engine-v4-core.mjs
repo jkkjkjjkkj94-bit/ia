@@ -62,8 +62,8 @@ function parseFilters(raw,prev={},options={}){
  const n=normalizeQuery(raw),f={...prev};
  if(/\b(abert[oa]s?\s+agora|funcionando agora)\b/.test(n)){f.openNow=true;f.day=null;f.days=null;f.start=null;f.end=null}
  // 'Fim de semana' significa sábado OU domingo, não a data de hoje.
- if(/\bfim de semana\b/.test(n)){f.days=[0,6];f.day=null;f.openNow=false}
- const day=dayOf(n,options.today??new Date().getDay());if(day!==null){f.day=day;f.days=null;f.openNow=false}
+ if(/\bfim de semana\b/.test(n)){f.days=[0,6];f.daysAll=null;f.day=null;f.openNow=false}
+ const day=dayOf(n,options.today??new Date().getDay());if(day!==null){f.day=day;f.days=null;f.daysAll=null;f.openNow=false}
  // Sábado OU domingo é uma alternativa; sábado E domingo exige funcionamento nos dois dias.
  if(/\b(?:sabado\s+(?:e|ou)\s+domingo|domingo\s+(?:e|ou)\s+sabado)\b/.test(n)){
   const everyDay=/\b(?:sabado\s+e\s+domingo|domingo\s+e\s+sabado)\b/.test(n);

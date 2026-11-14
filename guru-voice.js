@@ -105,7 +105,7 @@
    'network':'O reconhecimento de voz perdeu a conexão. Confira sua internet.',
    'language-not-supported':'Português não está disponível no reconhecimento deste navegador.'
   };
-  if(fatal[err])finish(fatal[err]);
+  if(fatal[err]){finish(fatal[err]);return}
   else if(err==='no-speech')say('Nenhuma fala detectada. A gravação será encerrada.','hint');
   else if(err!=='aborted')say('A gravação foi interrompida. Toque no microfone para tentar novamente.','hint');
  };
@@ -114,15 +114,15 @@
   if(requestedStop){ui();return}
   // Aguardar o evento onend permite capturar a última transcrição antes do envio.
   base=merge(base,final);final='';write();
-  const shouldSend=pendingSend;
-  finish(shouldSend?'Pergunta reconhecida. Enviando…':'Gravação encerrada. Confira a pergunta e toque em enviar.');
+  const shouldSend=pendingSend||Boolean(clean(input.value));
+  finish(shouldSend?'Pergunta reconhecida. Enviando…':'Gravação encerrada. Nenhuma fala reconhecida.');
   if(shouldSend)sendRecognized();
  };
  mic.addEventListener('click',()=>{
   if(active){stopAndSend();return}
   if(starting)return;
   clear();token++;requestedStop=false;pendingSend=false;active=true;starting=false;restarts=0;started=Date.now();base=clean(input.value);final='';
-  say('Ativando microfone…','starting');ui();startVisual(token);begin(token)
+  say('Ativando microfone…','starting');ui();begin(token)
  });
  form?.addEventListener('submit',()=>{if(active)finish('Pergunta enviada.')},{capture:true});
  document.querySelectorAll('[data-shell-action="new"]').forEach(b=>b.addEventListener('click',()=>{if(active)finish();base='';final='';say('')}));

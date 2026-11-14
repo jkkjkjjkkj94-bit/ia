@@ -5,7 +5,7 @@
  const mic=document.getElementById('guruVoiceMic'), input=document.getElementById('q'), status=document.getElementById('guruVoiceStatus');
  if(!mic||!input)return;
  const form=document.getElementById('chatForm');
- let rec,active=false,starting=false,requestedStop=false,token=0,base='',final='',restarts=0,started=0,restartTimer=null,watchdog=null;
+ let rec,active=false,starting=false,requestedStop=false,token=0,base='',final='',restarts=0,started=0,restartTimer=null,watchdog=null,pendingSend=false;
  const originalPlaceholder=input.placeholder;
  const wave=document.createElement('div');
  wave.className='gooy-voice-panel';
@@ -77,7 +77,9 @@
  function ui(){form?.classList.toggle('gooy-is-recording',active);mic.classList.toggle('is-listening',active);mic.classList.toggle('is-starting',starting);mic.setAttribute('aria-pressed',String(active));mic.setAttribute('aria-label',active?'Finalizar ditado':'Falar com a GOOY');mic.title=active?'Finalizar ditado e revisar':'Ditar pergunta';input.placeholder=active?'Sua pergunta aparece aqui enquanto você fala…':originalPlaceholder}
  function clear(){clearTimeout(restartTimer);clearTimeout(watchdog)}
  function write(interim=''){const value=merge(merge(base,final),interim);if(value){input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}))}}
- function finish(message){requestedStop=true;active=false;starting=false;token++;clear();stopVisual();try{rec?.stop()}catch{}ui();say(message||(input.value.trim()?'Pergunta captada. Confira o texto e toque em enviar.':'Não detectei sua fala. Tente novamente.'),input.value.trim()?'ready':'hint')}
+ function finish(message){pendingSend=false;requestedStop=true;active=false;starting=false;token++;clear();stopVisual();try{rec?.stop()}catch{}ui();say(message||(input.value.trim()?'Pergunta captada. Confira o texto e toque em enviar.':'Não detectei sua fala. Tente novamente.'),input.value.trim()?'ready':'hint')}
+ function sendRecognized(){const text=clean(input.value);if(!text){say('Não detectei sua fala. Tente novamente.','hint');return}if(window.GuruBoot?.status!=='ready'){say('O chat ainda está iniciando. Aguarde e toque em enviar.','hint');return}say('Enviando pergunta…','ready');if(form?.requestSubmit)form.requestSubmit();else form?.querySelector('[type="submit"]')?.click()}
+ function stopAndSend(){if(!active||requestedStop)return;pendingSend=true;starting=false;clearTimeout(watchdog);try{rec.stop()}catch{const shouldSend=pendingSend;finish();if(shouldSend)sendRecognized()}}
  if(!Speech){mic.disabled=true;mic.title='Reconhecimento de voz indisponível';say('Este navegador não oferece reconhecimento de voz. Use o teclado ou outro navegador compatível.','error');return}
  rec=new Speech();rec.lang='pt-BR';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;
  function begin(id){
@@ -89,7 +91,7 @@
  }
  rec.onstart=()=>{if(!active||requestedStop){try{rec.stop()}catch{}return}starting=false;clearTimeout(watchdog);ui();say('Ouvindo… fale naturalmente e toque no microfone quando terminar.','listening')};
  rec.onresult=event=>{
-  if(!active||requestedStop)return;
+  if((!active&&!pendingSend)||requestedStop)return;
   const parts=[];let interim='';
   for(let i=0;i<event.results.length;i++){const result=event.results[i],txt=clean(result?.[0]?.transcript);if(!txt)continue;if(result.isFinal)parts.push(txt);else interim=join(interim,txt)}
   final=fold(parts);write(interim);say(interim?'Captando sua fala…':'Fala reconhecida. Continue falando ou finalize.','listening');
@@ -109,15 +111,17 @@
  };
  rec.onend=()=>{
   starting=false;clearTimeout(watchdog);
-  if(!active||requestedStop){ui();return}
-  // Encerramento automático do navegador ou pausa na fala: nunca reiniciar sem clique.
+  if(requestedStop){ui();return}
+  // Aguardar o evento onend permite capturar a última transcrição antes do envio.
   base=merge(base,final);final='';write();
-  finish(input.value.trim()?'Gravação encerrada. Confira a pergunta e toque em enviar.':'Gravação encerrada. Toque no microfone para tentar novamente.');
+  const shouldSend=pendingSend;
+  finish(shouldSend?'Pergunta reconhecida. Enviando…':'Gravação encerrada. Confira a pergunta e toque em enviar.');
+  if(shouldSend)sendRecognized();
  };
  mic.addEventListener('click',()=>{
-  if(active){finish();input.focus();return}
+  if(active){stopAndSend();return}
   if(starting)return;
-  clear();token++;requestedStop=false;active=true;starting=false;restarts=0;started=Date.now();base=clean(input.value);final='';
+  clear();token++;requestedStop=false;pendingSend=false;active=true;starting=false;restarts=0;started=Date.now();base=clean(input.value);final='';
   say('Ativando microfone…','starting');ui();startVisual(token);begin(token)
  });
  form?.addEventListener('submit',()=>{if(active)finish('Pergunta enviada.')},{capture:true});

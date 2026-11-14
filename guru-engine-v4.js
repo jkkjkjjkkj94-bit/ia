@@ -1695,7 +1695,8 @@ function initShell(){
    resetConversation();
    askForCity();
   }
-  if(action==='explore'){
+  if(action==='map'){window.location.href='./mapa.html';return}
+   if(action==='explore'){
    resetConversation();
    const details=document.querySelector('.guru-category-browser details');
    if(details){details.open=true;details.querySelector('summary')?.focus()}

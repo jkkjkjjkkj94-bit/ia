@@ -53,3 +53,28 @@
  html[data-theme="dark"] body .chat .guru-chat-dock>.send{border-color:#41434a!important;box-shadow:none!important}
  html[data-theme="dark"] body:not(.chat-started) .hero p{color:#a4a5ab!important}
 }
+
+/* Gravação: barra totalmente preta, ícones monocromáticos e waveform clara. */
+@media(max-width:680px){
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording,
+ html[data-theme="dark"] body .chat .guru-chat-dock>#chatForm.gooy-is-recording{
+  background:#101010!important;border:1px solid #101010!important;
+  color:#fff!important;box-shadow:0 4px 18px rgba(0,0,0,.12)!important;
+ }
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-voice-wave i{background:#fff!important;opacity:.82!important}
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-voice-meta{color:#fff!important}
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-voice-clock{color:#aaa!important}
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-record-dot{background:#fff!important}
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording #guruVoiceMic{
+  background:#fff!important;border:0!important;color:#101010!important;
+  border-radius:50%!important;box-shadow:none!important;
+ }
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording #guruVoiceMic:after{background:#101010!important}
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-composer-plus{
+  background:transparent!important;color:#fff!important;border:0!important;
+ }
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-composer-send{
+  background:#fff!important;color:#101010!important;border:0!important;
+ }
+ body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-composer-send svg{stroke:#101010!important}
+}

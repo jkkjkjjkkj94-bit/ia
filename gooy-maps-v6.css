@@ -1,0 +1,55 @@
+/* GOOY Maps 6.0 — mapa-first inspirado no conceito aprovado */
+:root{--gooy-ink:#17191c}
+html,body{height:100%;overflow:hidden}
+header{height:0!important;overflow:visible!important;border:0!important;padding:0!important;position:relative!important;z-index:950!important}
+header .back,header .head-actions{display:none!important}
+header .brand{position:absolute!important;top:14px!important;left:16px!important;z-index:951!important;display:flex!important;align-items:center!important;gap:9px!important;padding:11px 15px!important;border-radius:22px!important;background:white!important;box-shadow:0 8px 28px #1d26301c!important;color:#141619!important;font-size:19px!important;text-decoration:none!important}
+header .brand img{width:28px!important;height:28px!important;filter:none!important}
+header .brand small{font-size:10px!important}
+main{height:100dvh!important;height:100svh!important}
+.map-wrap{inset:0!important;height:100%!important}
+#map{height:100%!important}
+.leaflet-tile-pane{filter:saturate(.72) brightness(1.035) contrast(.97)!important}
+aside .controls{top:83px!important;left:16px!important;right:16px!important;max-width:900px!important}
+.search-line{max-width:900px!important}
+.search-line #search{height:52px!important;min-height:52px!important;border:1px solid #edf0f2!important;border-radius:20px!important;background:#fff!important;padding-left:20px!important;box-shadow:0 8px 28px #18212b1d!important;font-size:15px!important}
+.filter-btn{height:52px!important;flex-basis:52px!important;border-radius:17px!important}
+.category-chips{padding-top:12px!important;gap:8px!important}
+.category-chips button{border-radius:999px!important;padding:11px 15px!important;min-height:42px!important;box-shadow:0 5px 19px #00000018!important}
+.category-chips button.active{background:#17191c!important}
+.map-tools{top:210px!important;right:17px!important}
+.map-tools button{border-radius:50%!important;width:46px!important;height:46px!important}
+.map-count{bottom:calc(205px + env(safe-area-inset-bottom))!important;border-radius:17px!important}
+.list{height:196px!important;border-radius:28px 28px 0 0!important;padding:22px 18px max(16px,env(safe-area-inset-bottom))!important}
+.list-title{font-size:17px!important}
+.item{border-radius:16px!important}
+.gooy-selected-card{padding:6px 4px 12px;color:#1b1d20}
+.gooy-selected-card .selected-head{display:flex;align-items:flex-start;gap:12px}
+.gooy-selected-card .selected-icon{width:58px;height:58px;flex:0 0 58px;border-radius:16px;background:#f0f1f2;display:grid;place-items:center;font-size:25px}
+.gooy-selected-card h2{font-size:19px;letter-spacing:-.04em;line-height:1.18;margin:0 0 4px}
+.gooy-selected-card .selected-category{font-size:13px;color:#727781}
+.gooy-selected-card .selected-address{font-size:12px;line-height:1.5;color:#777d85;margin:10px 0}
+.gooy-selected-card .selected-actions{display:flex;gap:9px;margin-top:14px}
+.gooy-selected-card .selected-actions a,.gooy-selected-card .selected-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #e4e6e9;border-radius:999px;background:#fff;color:#191b1e;text-decoration:none;padding:11px 15px;font-size:13px;font-weight:650}
+.gooy-selected-card .selected-actions .primary{background:#191b1e;color:#fff;border-color:#191b1e}
+.gooy-selected-card .selected-close{margin-left:auto;background:#f2f3f5;border:0;border-radius:50%;width:32px;height:32px;flex:0 0 32px;font-size:19px}
+.list.has-selection{height:238px!important}
+@media(min-width:701px){header .brand{top:20px!important;left:24px!important}aside .controls{top:88px!important;left:24px!important}.list{width:min(420px,40vw)!important;height:calc(100% - 220px)!important;max-height:calc(100% - 220px)!important;border-radius:25px 0 0 0!important}.map-count{bottom:25px!important}.list.has-selection{height:calc(100% - 220px)!important}}
+@media(max-width:700px){
+ header .brand{top:max(12px,env(safe-area-inset-top))!important;left:12px!important;padding:10px 12px!important;border-radius:18px!important;font-size:18px!important}
+ header .brand img{width:25px!important;height:25px!important}
+ aside .controls{top:75px!important;left:12px!important;right:12px!important}
+ .search-line #search{height:48px!important;min-height:48px!important;font-size:16px!important}
+ .filter-btn{height:48px!important;flex-basis:48px!important}
+ .category-chips{padding-top:10px!important}
+ .category-chips button{min-height:38px!important;padding:9px 12px!important}
+ .map-tools{top:190px!important;right:12px!important}
+ .map-tools button{width:42px!important;height:42px!important}
+ .list{height:190px!important;padding:20px 14px max(15px,env(safe-area-inset-bottom))!important}
+ .list.has-selection{height:245px!important}
+ .map-count{bottom:calc(200px + env(safe-area-inset-bottom))!important}
+ main.list-expanded .list{height:min(65dvh,560px)!important}
+ .gooy-selected-card h2{font-size:17px}
+}
+@media(max-width:380px){header .brand{font-size:16px!important}.map-tools{top:175px!important}.list{height:175px!important}.map-count{bottom:185px!important}.gooy-selected-card .selected-actions a,.gooy-selected-card .selected-actions button{padding:9px 12px;font-size:12px}}
+@media(max-height:650px) and (max-width:700px){header .brand{top:7px!important}aside .controls{top:65px!important}.map-tools{top:153px!important}.list{height:148px!important}.list.has-selection{height:205px!important}.map-count{bottom:160px!important}}

@@ -185,6 +185,48 @@ header .head-actions button{min-width:44px;min-height:44px}
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+
+/* GOOY Maps 4.2 — ergonomia responsiva e acessibilidade */
+:root{--gooy-map-safe-top:env(safe-area-inset-top,0px);--gooy-map-safe-bottom:env(safe-area-inset-bottom,0px)}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{min-height:100%;overscroll-behavior:none}
+button,input,select{touch-action:manipulation}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #111!important;outline-offset:3px}
+#map{touch-action:pan-x pan-y}
+.leaflet-container{z-index:0}
+@media(max-width:700px){
+ header{height:clamp(52px,8svh,62px)!important;min-height:52px!important}
+ main{height:calc(100dvh - clamp(52px,8svh,62px))!important}
+ aside .controls{top:clamp(8px,1.5svh,14px)!important;left:clamp(10px,3vw,16px)!important;right:clamp(10px,3vw,16px)!important}
+ .search-line{gap:7px!important}
+ .search-line #search{min-width:0!important;width:100%!important;height:clamp(42px,7svh,50px)!important;min-height:42px!important;padding:0 15px!important;font-size:16px!important}
+ .filter-btn{height:clamp(42px,7svh,50px)!important;flex:0 0 clamp(42px,7svh,50px)!important}
+ .category-chips{padding-top:9px!important;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+ .category-chips button{scroll-snap-align:start;min-height:38px!important}
+ .map-tools{top:clamp(142px,23svh,185px)!important;right:10px!important;gap:7px!important}
+ .map-tools button{width:40px!important;height:40px!important;min-width:40px!important}
+ .map-count{bottom:calc(clamp(142px,22svh,188px) + 9px)!important;max-width:calc(100vw - 85px)!important;white-space:normal!important}
+ .list{height:clamp(142px,22svh,188px)!important;padding-bottom:max(14px,var(--gooy-map-safe-bottom))!important;overscroll-behavior-y:contain}
+ main.list-expanded .list{height:min(62dvh,520px)!important}
+ .list .item{min-height:54px!important}
+}
+@media(max-width:700px) and (max-height:580px){
+ .category-chips{padding-top:5px!important}
+ .category-chips button{min-height:33px!important;padding:7px 11px!important}
+ .map-tools{top:122px!important}
+ .list{height:118px!important}
+ .map-count{bottom:127px!important}
+}
+@media(max-width:350px){
+ header .brand{font-size:17px!important}
+ .category-chips button{font-size:11px!important;padding:8px 10px!important}
+ .map-count{font-size:11px!important}
+}
+@media(min-width:701px) and (max-width:1050px){
+ .list{width:min(360px,42vw)!important}
+ aside .controls{max-width:min(720px,calc(100vw - 48px))!important}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
 </style></head><body>
 <header><a href="./" class="back" aria-label="Voltar ao GOOY">←</a><a class="brand" href="./"><img src="gooy-mark.svg?v=1" alt="">GOOY <small>AI</small></a><div class="head-actions"><button type="button" id="focusSearch" aria-label="Buscar">⌕</button></div></header>
 <main><aside><div class="controls"><h1>Mapa de estabelecimentos</h1><p>Explore os locais cadastrados e ativos.</p><div class="search-line"><input class="field" id="search" type="search" placeholder="Buscar nome, categoria ou endereço..." aria-label="Buscar estabelecimentos"><button class="filter-btn" id="filterBtn" type="button" aria-label="Filtrar por cidade" aria-expanded="false">☷</button></div><div class="category-chips" id="categoryChips" aria-label="Filtrar categoria"><button type="button" class="active" data-category="Todos">▦ &nbsp; Todos</button><button type="button" data-category="Alimentação">♜ &nbsp; Alimentação</button><button type="button" data-category="Compras">▢ &nbsp; Compras</button><button type="button" data-category="Serviços">⚒ &nbsp; Serviços</button><button type="button" data-category="Saúde">✚ &nbsp; Saúde</button></div><select class="field city-field" id="city" aria-label="Filtrar por cidade"><option value="">Todas as cidades</option></select><div class="meta-row"><div class="meta" id="count" role="status">Carregando estabelecimentos…</div><button class="list-toggle" id="listToggle" type="button" aria-expanded="false" aria-controls="list">Ver lista ↑</button></div></div><div class="list" id="list" aria-label="Estabelecimentos"><div class="list-title">Estabelecimentos no mapa</div></div></aside><section class="map-wrap" aria-label="Mapa interativo de estabelecimentos"><div id="map"></div><div id="notice" class="notice" hidden></div><div class="map-tools"><button id="mapLocate" type="button" aria-label="Minha localização">◎</button><button id="mapZoomIn" type="button" aria-label="Aproximar">+</button><button id="mapZoomOut" type="button" aria-label="Afastar">−</button></div><div class="map-count" id="mapCount">Carregando...<span>Estabelecimentos no mapa</span></div></section></main>
@@ -215,6 +257,9 @@ el('focusSearch').addEventListener('click',()=>search.focus());
 el('mapZoomIn').addEventListener('click',()=>map?.zoomIn());el('mapZoomOut').addEventListener('click',()=>map?.zoomOut());
 el('mapLocate').addEventListener('click',()=>{if(!navigator.geolocation){notice.hidden=false;notice.textContent='Localização não disponível neste navegador.';return}navigator.geolocation.getCurrentPosition(p=>{map?.setView([p.coords.latitude,p.coords.longitude],14)},()=>{notice.hidden=false;notice.textContent='Não foi possível acessar sua localização.'},{enableHighAccuracy:false,timeout:10000})});
 search.addEventListener('input',render);city.addEventListener('change',render);
+let mapResizeFrame=0;
+function refreshMapSize(){if(!map)return;cancelAnimationFrame(mapResizeFrame);mapResizeFrame=requestAnimationFrame(()=>map.invalidateSize({pan:false}))}
+window.addEventListener('orientationchange',()=>setTimeout(refreshMapSize,250),{passive:true});
 window.addEventListener('resize',()=>{if(map)map.invalidateSize({pan:false})},{passive:true});
 if(window.visualViewport)window.visualViewport.addEventListener('resize',()=>{if(map)map.invalidateSize({pan:false})},{passive:true});
 load();

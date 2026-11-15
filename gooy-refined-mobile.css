@@ -232,3 +232,25 @@ body .chat .msgs .store-results-grid>.store-result-card .store-card-actions{
 @media(max-width:340px){
  body .chat .msgs .store-results-grid{grid-template-columns:1fr!important}
 }
+
+/* Fix: alinhar Ver loja ao rodapé, inclusive em cards com menos conteúdo. */
+body .chat .msgs .store-results-grid>.store-result-card.smart-card{
+ position:relative!important;display:flex!important;flex-direction:column!important;
+ padding-bottom:82px!important;
+}
+body .chat .msgs .store-results-grid>.store-result-card.smart-card:has(.store-card-actions>.store-action:nth-child(2)){
+ padding-bottom:132px!important;
+}
+body .chat .msgs .store-results-grid>.store-result-card.smart-card .store-card-actions{
+ position:absolute!important;left:12px!important;right:12px!important;bottom:12px!important;
+ width:auto!important;margin:0!important;padding:0!important;display:flex!important;
+ flex-direction:column!important;gap:7px!important;
+}
+body .chat .msgs .store-results-grid>.store-result-card.smart-card .store-card-actions>.store-action{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;min-height:42px!important;margin:0!important;
+ background:#3478F6!important;color:#fff!important;border-color:#3478F6!important;
+}
+body .chat .msgs .store-results-grid>.store-result-card.smart-card .store-card-actions>.store-action:not(.primary){
+ background:transparent!important;color:#3478F6!important;border-color:#DCE9FF!important;
+}

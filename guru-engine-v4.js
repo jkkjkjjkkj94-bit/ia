@@ -697,13 +697,13 @@ async function gooyButtonThinking(action){
  if(dots)dots.hidden=true;
  const steps=el('div','gooy-thinking-steps');
  typing.prepend(steps);
- const stages=['Pensando...','Buscando informações na sua cidade...','Hmm... analisando as opções...'];
+ const stages=['Pensando...'];
  const start=performance.now();
  try{
   for(let i=0;i<stages.length;i++){
    steps.appendChild(el('div','gooy-thinking-step gooy-thinking-fade',stages[i]));
    requestAnimationFrame(()=>keepThinkingVisible(typing));
-   await new Promise(resolve=>setTimeout(resolve,i===stages.length-1?Math.max(0,minTypingMs-(performance.now()-start)):i===0?1100:1200));
+   await new Promise(resolve=>setTimeout(resolve,Math.max(0,minTypingMs-(performance.now()-start))));
   }
   steps.remove();
   if(dots)dots.hidden=false;
@@ -1603,8 +1603,6 @@ async function submitSelectedStoreAction(store,label,question){
  const steps=el('div','gooy-thinking-steps');
  typing.prepend(steps);
  steps.appendChild(el('div','gooy-thinking-step','Pensando...'));
- const phaseOne=setTimeout(()=>steps.appendChild(el('div','gooy-thinking-step','Buscando informações na sua cidade...')),1100);
- const phaseTwo=setTimeout(()=>steps.appendChild(el('div','gooy-thinking-step','Hmm... analisando as opções...')),2300);
  replyBuffer=document.createDocumentFragment();
  try{
   await loadData();
@@ -1623,7 +1621,6 @@ async function submitSelectedStoreAction(store,label,question){
  }catch(err){msgError(err)}finally{
   const remaining=Math.max(0,minTypingMs-(performance.now()-started));
   if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining));
-  clearTimeout(phaseOne);clearTimeout(phaseTwo);
   steps.remove();if(dots)dots.hidden=false;
   await new Promise(resolve=>setTimeout(resolve,550));
   const fragment=replyBuffer;replyBuffer=null;typing.remove();
@@ -1644,28 +1641,11 @@ async function submitText(raw){
  const dots=typing.querySelector('.guru-typing-dots');
  if(dots)dots.hidden=true;
  const start=performance.now();
- const phases=[
-  {at:0,text:'Pensando...'},
-  {at:1050,text:'Buscando estabelecimentos na sua cidade...'},
-  {at:2250,text:'Hmm... analisando as opções...'}
- ];
- let phase=0;
- const phaseTimer=setInterval(()=>{
-  if(!typing.isConnected)return;
-  const elapsed=performance.now()-start;
-  while(phase+1<phases.length&&elapsed>=phases[phase+1].at)phase++;
-  if(status.textContent!==phases[phase].text){
-   status.classList.remove('gooy-thinking-fade');
-   void status.offsetWidth;
-   status.textContent=phases[phase].text;
-   status.classList.add('gooy-thinking-fade');
-  }
- },90);
+
  replyBuffer=document.createDocumentFragment();
  try{await Promise.race([run(t),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Tempo limite da pesquisa')),15000))])}catch(err){console.error('[GOOY] Falha na pesquisa',err);try{msgError(err)}catch{add('Não foi possível concluir esta pesquisa. Tente novamente em instantes.')}}finally{
   const remaining=Math.max(0,minTypingMs-(performance.now()-start));
   if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining));
-  clearInterval(phaseTimer);
   status.remove();
   typing.classList.remove('gooy-thinking-active');
   if(dots)dots.hidden=false;

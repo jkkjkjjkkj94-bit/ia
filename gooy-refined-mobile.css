@@ -304,3 +304,11 @@ body .chat .msgs .guru-typing-dots{display:inline-flex!important;align-items:cen
 body .chat .msgs .guru-typing-dot{background:#3478F6!important}
 html[data-theme="dark"] body .chat .msgs .gooy-thinking-status{color:#A9BAD1!important}
 @media(prefers-reduced-motion:reduce){body .chat .msgs .guru-typing-dot{animation:none!important;opacity:.7!important}}
+
+/* Etapas de busca discretas, semelhantes a um assistente conversacional. */
+body .chat .msgs .guru-typing.gooy-thinking-active{min-height:32px!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important;padding:4px 2px!important}
+body .chat .msgs .guru-typing .guru-typing-dots[hidden]{display:none!important}
+body .chat .msgs .gooy-thinking-status{font-size:13px!important;line-height:1.5!important;letter-spacing:-.01em!important;color:#697586!important}
+body .chat .msgs .gooy-thinking-fade{animation:gooy-thinking-enter .24s ease-out both}
+@keyframes gooy-thinking-enter{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){body .chat .msgs .gooy-thinking-fade{animation:none!important}}

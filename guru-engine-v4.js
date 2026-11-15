@@ -28,7 +28,7 @@ let lastDiscovery=null;
 let userCity='';
 let pendingCityQuery='';
 const userCityKey='guru_city_v1';
-try{userCity=String(sessionStorage.getItem(userCityKey)||'').trim().slice(0,90)}catch{}
+try{userCity=String(localStorage.getItem(userCityKey)||sessionStorage.getItem(userCityKey)||'').trim().slice(0,90)}catch{try{userCity=String(sessionStorage.getItem(userCityKey)||'').trim().slice(0,90)}catch{}}
 let replyBuffer=null;
 let lastSearchText='';
 const minTypingMs=2000;
@@ -338,7 +338,7 @@ function renderContext(){
  if(state.category)chip('Categoria: '+state.category,()=>{state.category=null;state.group=null;state.nameTerms=[]});
  if(state.group)chip('Grupo: '+state.group,()=>{state.group=null});
  if(state.specialtyTerm)chip('Especialidade: '+state.specialtyTerm,()=>{state.specialtyTerm=null});
- if(userCity)chip('Cidade: '+userCity,()=>{userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};state.location={...(state.location||{}),city:null};state.selectedStore=null;state.lastResults=[];askForCity()});
+ if(userCity)chip('Cidade: '+userCity,()=>{userCity='';try{sessionStorage.removeItem(userCityKey);localStorage.removeItem(userCityKey)}catch{};state.location={...(state.location||{}),city:null};state.selectedStore=null;state.lastResults=[];askForCity()});
  const f=state.filters||{};
  if(f.openNow)chip('Abertas agora',()=>{delete f.openNow});
  if(f.day!=null)chip(dayNames[f.day],()=>{delete f.day});
@@ -571,7 +571,7 @@ function setUserCity(city){
  if(value.length<2)return false;
  userCity=value;
  regionalSearchInfo=null;regionalConsentVersion++;
- try{sessionStorage.setItem(userCityKey,value)}catch{}
+ try{sessionStorage.setItem(userCityKey,value);localStorage.setItem(userCityKey,value)}catch{}
  state.location={...(state.location||{}),city:value,uf:null,neighborhood:null};
  state.selectedStore=null;state.selectedProduct=null;state.lastResults=[];state.resultOffset=0;
  renderContext();save();return true;
@@ -613,6 +613,20 @@ async function detectCityAutomatically(){
  return cityDetectionPromise;
 }
 function askForCity(query=''){
+ // Nunca abrir automaticamente o cartão de falha de geolocalização.
+ // Sem permissão GPS, a cidade pode ser informada na pesquisa ou no menu.
+ if(query){
+  pendingCityQuery=query;
+  notice('Inclua a cidade na pesquisa, por exemplo: comida em Salto de Pirapora.');
+  return;
+ }
+ if(!userCity){
+  notice('Informe sua cidade na pesquisa ou use a opção de localização no menu.');
+  return;
+ }
+ return;
+}
+function legacyCityChoice(query=''){
  if(!userCity && !locationAttempted){void detectCityAutomatically().then(ok=>{if(!ok)askForCity(query)});if(query)pendingCityQuery=query;return}
  if(document.querySelector('.guru-city-choice')){if(query)pendingCityQuery=query;return}
  document.body.classList.add('chat-started');
@@ -1726,7 +1740,7 @@ function initShell(){
  }
  setWelcome(welcomeIndex);
  side?.querySelector('.sidebar-collapse')?.addEventListener('click',()=>body.classList.toggle('sidebar-collapsed'));
- side?.addEventListener('click',e=>{const b=e.target.closest('[data-shell-action]');if(!b)return;if(b.dataset.shellAction==='new')resetConversation();if(b.dataset.shellAction==='location'){userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};askForCity()}});
+ side?.addEventListener('click',e=>{const b=e.target.closest('[data-shell-action]');if(!b)return;if(b.dataset.shellAction==='new')resetConversation();if(b.dataset.shellAction==='location'){userCity='';try{sessionStorage.removeItem(userCityKey);localStorage.removeItem(userCityKey)}catch{};askForCity()}});
  // Cabeçalho GOOY mobile: menus acessíveis, ações reais e fechamento externo.
  const top=document.querySelector('.gooy-header-v2');
  const mainToggle=document.getElementById('gooyMobileMenuButton');
@@ -1758,7 +1772,7 @@ function initShell(){
   if(action==='new'||action==='clear'){resetConversation()}
   if(action==='location'){
    userCity='';
-   try{sessionStorage.removeItem(userCityKey)}catch{}
+   try{sessionStorage.removeItem(userCityKey);localStorage.removeItem(userCityKey)}catch{}
    resetConversation();
    void detectCityAutomatically().then(ok=>{if(!ok)askForCity()});
   }
@@ -1780,7 +1794,7 @@ function initShell(){
   }
  });
  document.getElementById('resetBtn')?.addEventListener('click',resetConversation);
- document.getElementById('locBtn')?.addEventListener('click',()=>{userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};void detectCityAutomatically().then(ok=>{if(!ok)askForCity()})});
+ document.getElementById('locBtn')?.addEventListener('click',()=>{userCity='';try{sessionStorage.removeItem(userCityKey);localStorage.removeItem(userCityKey)}catch{};void detectCityAutomatically().then(ok=>{if(!ok)askForCity()})});
  document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>submitText(b.dataset.q||'')));
 }
 if(form&&input&&msgs){
@@ -1810,7 +1824,7 @@ if(form&&input&&msgs){
  input.addEventListener('keydown',e=>{if(e.key==='Escape')setSuggestions();if(e.key==='ArrowDown'&&visibleSuggestions.length){e.preventDefault();suggestions?.querySelector('button')?.focus()}});
  input.addEventListener('blur',()=>setTimeout(()=>{if(!suggestions?.contains(document.activeElement))setSuggestions()},100));
  restore();initShell();initMobileKeyboardLayout();renderContext();
- if(!userCity)void detectCityAutomatically();
+ // Não solicitar GPS automaticamente na abertura; respeitar a escolha do usuário.
  // Mostre as frases variáveis na abertura; solicite a cidade somente quando
  // a pessoa iniciar uma pesquisa ou tocar em "Usar localização".
  if(userCity){

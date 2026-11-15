@@ -254,3 +254,45 @@ body .chat .msgs .store-results-grid>.store-result-card.smart-card .store-card-a
 body .chat .msgs .store-results-grid>.store-result-card.smart-card .store-card-actions>.store-action:not(.primary){
  background:transparent!important;color:#3478F6!important;border-color:#DCE9FF!important;
 }
+
+/* Paleta consistente do cartão de loja selecionada — GOOY azul elétrico. */
+body .chat .msgs .selected-store-shell{
+ background:#fff!important;border:1px solid #E6EAF1!important;
+ color:#171B24!important;box-shadow:none!important;
+}
+body .chat .msgs .selected-store-title{color:#171B24!important}
+body .chat .msgs .selected-store-eyebrow,
+body .chat .msgs .selected-store-detail-label{color:#737E90!important}
+body .chat .msgs .selected-store-tag{
+ background:#F3F6FA!important;color:#475569!important;
+ border:1px solid transparent!important;
+}
+body .chat .msgs .selected-store-tag.store-chip-distance{
+ background:#EDF4FF!important;color:#2467DE!important;
+ border-color:#D8E7FF!important;
+}
+body .chat .msgs .selected-store-detail-icon,
+body .chat .msgs .selected-store-logo-fallback{
+ background:#F0F5FF!important;color:#3478F6!important;
+ border-color:#E0EAFF!important;
+}
+body .chat .msgs .selected-store-detail-icon svg,
+body .chat .msgs .selected-store-logo-fallback svg{stroke:#3478F6!important}
+body .chat .msgs .selected-store-details{border-color:#E8EDF4!important}
+body .chat .msgs .selected-store-detail-value{color:#252B35!important}
+body .chat .msgs .selected-store-actions .selected-store-action.active{
+ background:#3478F6!important;color:#fff!important;border-color:#3478F6!important;
+ box-shadow:none!important;
+}
+body .chat .msgs .selected-store-actions .selected-store-action:not(.active){
+ background:#fff!important;color:#3478F6!important;border:1px solid #DCE8FA!important;
+ box-shadow:none!important;
+}
+body .chat .msgs .selected-store-actions .selected-store-action.active svg{stroke:#fff!important}
+body .chat .msgs .selected-store-actions .selected-store-action:not(.active) svg{stroke:#3478F6!important}
+html[data-theme="dark"] body .chat .msgs .selected-store-shell{background:#1B2029!important;color:#F5F7FA!important;border-color:#333C4B!important}
+html[data-theme="dark"] body .chat .msgs .selected-store-title,
+html[data-theme="dark"] body .chat .msgs .selected-store-detail-value{color:#F5F7FA!important}
+html[data-theme="dark"] body .chat .msgs .selected-store-tag{background:#293242!important;color:#D6DFEE!important}
+html[data-theme="dark"] body .chat .msgs .selected-store-tag.store-chip-distance{background:#1C355A!important;color:#9FC3FF!important;border-color:#34547D!important}
+html[data-theme="dark"] body .chat .msgs .selected-store-actions .selected-store-action:not(.active){background:#232D3C!important;color:#A9C9FF!important;border-color:#3A5272!important}

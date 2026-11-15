@@ -174,3 +174,19 @@ body .chat .msgs .store-result-card .store-card-actions{margin-top:8px!important
 body .chat .msgs .store-result-card .store-card-top{margin-bottom:0!important}
 body .chat .msgs .store-result-card .store-address{margin-top:6px!important}
 body .chat .msgs .store-result-card .store-card-actions>.store-action{min-height:36px!important}
+
+/* Refinamento GOOY: menos ruído, azul elétrico somente nas ações importantes. */
+body .chat .msgs .guru-next-questions .gooy-more-options,
+body .chat .msgs .gooy-more-options{
+ width:auto!important;max-width:220px!important;min-width:130px!important;
+ min-height:36px!important;margin:10px auto 0!important;padding:8px 18px!important;
+ border-radius:999px!important;font-size:12px!important;font-weight:600!important;
+ background:#F3F6FC!important;border:1px solid #E2E9F5!important;
+ color:#3478F6!important;box-shadow:none!important;
+}
+body .chat .msgs .store-result-card .store-card-actions{margin-top:5px!important}
+body .chat .msgs .store-result-card .store-card-actions>.store-action.primary{
+ background:#3478F6!important;border-color:#3478F6!important;color:#fff!important;
+}
+body .chat .msgs .store-result-card .store-card-meta{row-gap:4px!important}
+html[data-theme="dark"] body .chat .msgs .gooy-more-options{background:#202A3B!important;border-color:#354867!important;color:#90B8FF!important}

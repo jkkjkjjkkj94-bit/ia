@@ -1028,7 +1028,7 @@ function displayResults(rows,offset=0){
  const m=add('',false);m.classList.add('hashtag-result-msg');
  const end=offset+rows.length,total=(state.lastResults||[]).length;
  const intro=regionalSearchInfo?(offset===0?'Encontrei opções em outras cidades da região de '+regionalSearchInfo.origin+':':'Mais opções em cidades próximas de '+regionalSearchInfo.origin+':'):(offset===0?'Encontrei estas opções em '+userCity+':':'Outras opções em '+userCity+':');
- if(!lastOuting)m.appendChild(el('div','hashtag-intro',regionalSearchInfo?intro:(offset===0?'Encontrei '+total+' '+(total===1?'estabelecimento':'estabelecimentos')+' em '+userCity+'.':'Mais opções em '+userCity+'.')));
+ if(!lastOuting)m.appendChild(el('div','hashtag-intro',regionalSearchInfo?intro:(offset===0?'Encontrei estabelecimentos em '+userCity+':':'Mais opções em '+userCity+'.')));
  const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,offset+i)));m.appendChild(grid);
  renderNextQuestions(m,rows,offset);return m;
 }

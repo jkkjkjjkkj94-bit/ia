@@ -774,7 +774,6 @@ function chooseStore(row){
   if(!actions.childElementCount)b.classList.add('active');
   actions.appendChild(b);
  }
- addGooyMapActions(actions,s,true);
  if(actions.childElementCount)shell.appendChild(actions);
  else shell.appendChild(el('div','selected-store-no-actions','Informações complementares ainda não cadastradas.'));
  box.appendChild(shell);return box;
@@ -861,26 +860,7 @@ function makeCard(row,index){
  }
  const phone=String(s.whatsapp||'').replace(/\D/g,'');
  if(phone.length>=10&&phone.length<=15){const a=el('a','store-action link','WhatsApp');a.href='https://wa.me/'+phone;a.target='_blank';a.rel='noopener noreferrer';actions.appendChild(a)}
- addGooyMapActions(actions,s);
  card.appendChild(actions);return card;
-}
-
-function gooyMapLink(store,route=false){
- const lat=Number(store?.latitude),lng=Number(store?.longitude);
- if(store?.latitude==null||store?.longitude==null||String(store.latitude).trim()===''||String(store.longitude).trim()===''||!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180||(lat===0&&lng===0))return null;
- const params=new URLSearchParams({store:String(store.id||''),lat:String(lat),lng:String(lng),name:String(store.name||'').slice(0,120)});
- if(route)params.set('route','1');
- return './mapa.html?'+params.toString();
-}
-function addGooyMapActions(host,store,selected=false){
- const locationUrl=gooyMapLink(store);
- if(!locationUrl)return;
- for(const [label,route] of [['Ver localização',false],['Ver rota',true]]){
-  const a=el('a',selected?'selected-store-action':'store-action',label);
-  a.href=gooyMapLink(store,route);
-  a.setAttribute('aria-label',label+' de '+store.name+' no GOOY Maps');
-  host.appendChild(a);
- }
 }
 
 function resultPageSize(){
@@ -1731,7 +1711,7 @@ function initShell(){
    resetConversation();
    void detectCityAutomatically().then(ok=>{if(!ok)askForCity()});
   }
-  if(action==='map'){window.location.href='./mapa.html';return}
+  if(action==='map'){return}
    if(action==='explore'){
    resetConversation();
    const details=document.querySelector('.guru-category-browser details');

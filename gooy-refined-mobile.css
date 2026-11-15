@@ -157,3 +157,20 @@ body .chat .msgs .store-result-card .store-card-actions>.store-action{
 @media(max-width:420px){
  body .chat .msgs .store-result-card.smart-card{width:100%!important;max-width:100%!important}
 }
+
+/* Resultado de pesquisa: resumo único e especialidades integradas às etiquetas. */
+body .chat .msgs .hashtag-result-msg .hashtag-intro{font-size:13px!important;font-weight:600!important;line-height:1.45!important;margin-bottom:10px!important}
+body .chat .msgs .store-result-card .store-card-meta .smart-specialties{
+ display:contents!important;margin:0!important;padding:0!important;border:0!important;
+}
+body .chat .msgs .store-result-card .store-card-meta .smart-specialties-list{
+ display:contents!important;margin:0!important;padding:0!important;max-height:none!important;
+}
+body .chat .msgs .store-result-card .store-card-meta .smart-specialty{
+ display:inline-flex!important;margin:0!important;background:#f4f5f7!important;border-radius:8px!important;
+ font-size:10px!important;padding:4px 7px!important;
+}
+body .chat .msgs .store-result-card .store-card-actions{margin-top:8px!important;gap:6px!important}
+body .chat .msgs .store-result-card .store-card-top{margin-bottom:0!important}
+body .chat .msgs .store-result-card .store-address{margin-top:6px!important}
+body .chat .msgs .store-result-card .store-card-actions>.store-action{min-height:36px!important}

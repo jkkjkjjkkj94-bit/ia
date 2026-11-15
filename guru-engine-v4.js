@@ -774,7 +774,8 @@ function chooseStore(row){
   if(!actions.childElementCount)b.classList.add('active');
   actions.appendChild(b);
  }
- if(availableActions.length)shell.appendChild(actions);
+ addGooyMapActions(actions,s,true);
+ if(actions.childElementCount)shell.appendChild(actions);
  else shell.appendChild(el('div','selected-store-no-actions','Informações complementares ainda não cadastradas.'));
  box.appendChild(shell);return box;
 }
@@ -860,8 +861,28 @@ function makeCard(row,index){
  }
  const phone=String(s.whatsapp||'').replace(/\D/g,'');
  if(phone.length>=10&&phone.length<=15){const a=el('a','store-action link','WhatsApp');a.href='https://wa.me/'+phone;a.target='_blank';a.rel='noopener noreferrer';actions.appendChild(a)}
+ addGooyMapActions(actions,s);
  card.appendChild(actions);return card;
 }
+
+function gooyMapLink(store,route=false){
+ const lat=Number(store?.latitude),lng=Number(store?.longitude);
+ if(store?.latitude==null||store?.longitude==null||!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return null;
+ const params=new URLSearchParams({store:String(store.id||''),lat:String(lat),lng:String(lng),name:String(store.name||'').slice(0,120)});
+ if(route)params.set('route','1');
+ return './mapa.html?'+params.toString();
+}
+function addGooyMapActions(host,store,selected=false){
+ const locationUrl=gooyMapLink(store);
+ if(!locationUrl)return;
+ for(const [label,route] of [['Ver localização',false],['Ver rota',true]]){
+  const a=el('a',selected?'selected-store-action':'store-action',label);
+  a.href=gooyMapLink(store,route);
+  a.setAttribute('aria-label',label+' de '+store.name+' no GOOY Maps');
+  host.appendChild(a);
+ }
+}
+
 function resultPageSize(){
  // Mobile: duas opções por vez; telas maiores preservam a paginação desktop.
  return window.matchMedia?.('(max-width:680px)')?.matches?2:RESULT_PAGE_SIZE;

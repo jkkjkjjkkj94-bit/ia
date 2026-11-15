@@ -587,7 +587,6 @@ async function runPendingCityQuery(){
  state.query='';
  renderContext();
  save();
- add('Cidade definida: '+userCity+'. O que você deseja encontrar?');
  input.placeholder='O que você procura em '+userCity+'?';
 }
 let cityDetectionPromise=null;

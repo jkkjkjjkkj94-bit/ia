@@ -830,7 +830,6 @@ function makeCard(row,index){
  if(row.hoursUnknown)card.appendChild(el('div','guru-hours-unconfirmed','Horário neste dia não confirmado — consulte a loja'));
  if(Array.isArray(s.specialties)&&s.specialties.length){
   const info=el('div','smart-specialties');
-  info.appendChild(el('b','','Especialidades'));
   const list=el('div','smart-specialties-list');
   const queryTerms=norm(state.query||'').split(/\s+/).filter(t=>t.length>=4);
   const ranked=[...s.specialties].sort((a,b)=>{
@@ -838,7 +837,7 @@ function makeCard(row,index){
    return score(b)-score(a);
   });
   ranked.slice(0,2).forEach(t=>list.appendChild(el('span','smart-specialty',t)));
-  info.appendChild(list);card.appendChild(info);
+  info.appendChild(list);tags.appendChild(info);
  }
  if(row.products.length&&state.productTerm){
   card.appendChild(el('div','smart-summary',row.products.slice(0,2).map(p=>p.name+' — '+money(priceOf(p))).join(' · ')));
@@ -987,28 +986,7 @@ function displayResults(rows,offset=0){
  const m=add('',false);m.classList.add('hashtag-result-msg');
  const end=offset+rows.length,total=(state.lastResults||[]).length;
  const intro=regionalSearchInfo?(offset===0?'Encontrei opções em outras cidades da região de '+regionalSearchInfo.origin+':':'Mais opções em cidades próximas de '+regionalSearchInfo.origin+':'):(offset===0?'Encontrei estas opções em '+userCity+':':'Outras opções em '+userCity+':');
- if(!lastOuting)m.appendChild(el('div','hashtag-intro',intro));
- if(position){
-  if(!lastOuting)m.appendChild(el('div','guru-city-distance-note','Distâncias aproximadas em linha reta. A classificação continua sendo por relevância, não por proximidade.'));
- }else if(!lastOuting){
-  const button=el('button','guru-next-button','Mostrar distância em km');
-  button.type='button';
-  button.onclick=async()=>{if(await locate(true)){
-   const activeResults=(state.lastResults||[]).map(r=>({...r,distance:distanceKm(position,r.store)}));
-   state.lastResults=activeResults;save();
-   const fresh=displayResults(activeResults.slice(offset,offset+rows.length),offset);
-   m.replaceWith(fresh);
-  }};
-  m.appendChild(button);
- }
- // A explicação textual fica sempre acima dos cards, dentro do mesmo resultado.
- if(!lastOuting&&offset===0 && rows.length){
-  const summary=el('div','guru-result-summary',
-   regionalSearchInfo?'Resultados de outras cidades, exibidos com sua autorização. Confira a cidade e o endereço de cada estabelecimento antes de ir.':(rows.length===1
-    ? 'Encontrei '+rows[0].store.name+', que combina com o que você procura. A opção está logo abaixo.'
-    : 'Encontrei '+rows.length+' opções para sua busca. Confira os estabelecimentos logo abaixo.'));
-  m.appendChild(summary);
- }
+ if(!lastOuting)m.appendChild(el('div','hashtag-intro',regionalSearchInfo?intro:(offset===0?'Encontrei '+total+' '+(total===1?'estabelecimento':'estabelecimentos')+' em '+userCity+'.':'Mais opções em '+userCity+'.')));
  const grid=el('div','store-results-grid');rows.forEach((r,i)=>grid.appendChild(makeCard(r,offset+i)));m.appendChild(grid);
  renderNextQuestions(m,rows,offset);return m;
 }

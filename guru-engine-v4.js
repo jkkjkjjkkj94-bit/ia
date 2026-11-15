@@ -679,14 +679,41 @@ function storeDetailIcon(kind){
  });
  return svg;
 }
-function chooseStore(row){
+
+// Animação compartilhada para ações acionadas pelos botões do chat.
+async function gooyButtonThinking(action){
+ if(searchBusy){notice('Aguarde a conclusão da resposta atual.');return}
+ searchBusy=true;input.disabled=true;
+ const typing=showTypingIndicator();
+ typing.classList.add('gooy-thinking-active');
+ const dots=typing.querySelector('.guru-typing-dots');
+ if(dots)dots.hidden=true;
+ const steps=el('div','gooy-thinking-steps');
+ typing.prepend(steps);
+ const stages=['Pensando...','Buscando informações na sua cidade...','Hmm... analisando as opções...'];
+ const start=performance.now();
+ try{
+  for(let i=0;i<stages.length;i++){
+   steps.appendChild(el('div','gooy-thinking-step gooy-thinking-fade',stages[i]));
+   await new Promise(resolve=>setTimeout(resolve,i===stages.length-1?Math.max(0,minTypingMs-(performance.now()-start)):i===0?1100:1200));
+  }
+  steps.remove();
+  if(dots)dots.hidden=false;
+  await new Promise(resolve=>setTimeout(resolve,550));
+  typing.remove();
+  await action();
+ }catch(err){console.error('[GOOY] Erro na ação do botão',err);msgError(err)}
+ finally{typing.remove();input.disabled=false;searchBusy=false}
+}
+
+function chooseStore(row,alreadyAnnounced=false){
  recordSelection(row.store?.id);
  rememberSelection(lastSearchText||state.query,row.store?.id);
  state.selectedStore=row.store;
  state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;
  renderContext();save();
  const s=row.store;
- add('Selecionar o estabelecimento "'+(s.name||'este estabelecimento')+'".',true);
+ if(!alreadyAnnounced)add('Selecionar o estabelecimento "'+(s.name||'este estabelecimento')+'".',true);
  add('Bacana! Você selecionou "'+(s.name||'este estabelecimento')+'". Confira os detalhes abaixo.');
  const box=add('',false);
  box.classList.add('selected-store-card');
@@ -866,7 +893,10 @@ function makeCard(row,index){
  if(quality.stale)card.appendChild(el('div','guru-data-alert','Informações da loja podem estar desatualizadas ('+quality.daysSinceUpdate+' dias).'));
  const actions=el('div','store-card-actions');
  const outingResult=!!lastOuting&&(state.lastResults||[]).some(x=>x.store?.id===s.id);
- const view=el('button','store-action primary',outingResult?'Ver local':'Ver loja');view.type='button';view.onclick=()=>chooseStore(row);actions.appendChild(view);
+ const view=el('button','store-action primary',outingResult?'Ver local':'Ver loja');view.type='button';view.onclick=()=>{
+ add('Selecionar o estabelecimento "'+(s.name||'este estabelecimento')+'".',true);
+ void gooyButtonThinking(()=>chooseStore(row,true));
+};actions.appendChild(view);
  if(!outingResult&&(db?.products||[]).some(p=>p.store_id===s.id&&eligibleProduct(p))){
   const products=el('button','store-action','Produtos');products.type='button';products.onclick=()=>{state.selectedStore=s;state.selectedProduct=null;replyAboutStore('quais produtos tem?','products');renderContext();save()};actions.appendChild(products);
  }
@@ -901,11 +931,13 @@ function renderNextQuestions(host,rows,offset=0){
    const batch=activeResults.slice(start,start+resultPageSize());
    if(!batch.length){more.remove();return}
    add('Quero mais opções',true);
-   state.resultOffset=start+batch.length;
-   save();
-   // Cada página deve surgir em uma nova resposta, abaixo da mensagem do usuário.
    panel.remove();
-   displayResults(batch,start);
+   void gooyButtonThinking(()=>{
+    if(state.lastResults!==activeResults){add('Os resultados foram atualizados. Faça uma nova pesquisa.');return}
+    state.resultOffset=start+batch.length;
+    save();
+    displayResults(batch,start);
+   });
   };
   buttons.appendChild(more);
  }

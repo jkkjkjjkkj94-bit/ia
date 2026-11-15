@@ -317,3 +317,11 @@ body .chat .msgs .gooy-thinking-steps{display:flex!important;flex-direction:colu
 body .chat .msgs .gooy-thinking-step{font-size:13px!important;line-height:1.5!important;color:#697586!important}
 body .chat .msgs .guru-typing .guru-typing-dots[hidden]{display:none!important}
 html[data-theme="dark"] body .chat .msgs .gooy-thinking-step{color:#A9BAD1!important}
+
+/* Evita que o indicador de pensamento fique encoberto pela barra fixa mobile. */
+@media(max-width:680px){
+ body .chat .msgs{scroll-padding-bottom:165px!important}
+ body .chat .msgs .guru-typing.gooy-thinking-active{display:flex!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;flex-direction:column!important;align-items:flex-start!important;gap:8px!important;margin-bottom:18px!important;padding:8px 4px 24px!important}
+ body .chat .msgs .gooy-thinking-steps{width:100%!important;gap:12px!important}
+ body .chat .msgs .gooy-thinking-step{max-width:100%!important;overflow-wrap:anywhere!important}
+}

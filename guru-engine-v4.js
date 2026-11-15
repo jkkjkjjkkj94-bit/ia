@@ -686,7 +686,7 @@ function chooseStore(row){
  state.selectedProduct=(state.productTerm&&row.products?.length===1)?row.products[0]:null;
  renderContext();save();
  const s=row.store;
- add('Quero mais opções',true);
+ add('Selecionar o estabelecimento "'+(s.name||'este estabelecimento')+'".',true);
  add('Bacana! Você selecionou "'+(s.name||'este estabelecimento')+'". Confira os detalhes abaixo.');
  const box=add('',false);
  box.classList.add('selected-store-card');

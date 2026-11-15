@@ -78,3 +78,12 @@
  }
  body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-composer-send svg{stroke:#101010!important}
 }
+
+/* GOOY clean chat: remove sugestões e reduzir ruído visual. */
+#gooyQuickSuggestions,#gooyMoreSuggestions,.guru-category-browser{display:none!important}
+.hero p{max-width:38ch}
+.guru-city-choice{max-width:460px!important;padding:14px!important;border-radius:16px!important}
+.guru-city-choice-controls{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+.guru-city-choice-controls input{min-width:0!important;flex:1 1 100%!important;font-size:16px!important}
+.guru-city-choice-controls button{flex:1 1 auto!important;font-size:13px!important}
+@media(max-width:680px){body .hero{margin-top:clamp(24px,5dvh,50px)!important}body .hero p{font-size:13px!important}body .chat .guru-chat-dock>.ctx{max-height:42px!important;overflow-x:auto!important;flex-wrap:nowrap!important}body .chat .guru-chat-dock>.send{box-shadow:none!important}body .guru-city-choice{padding:12px!important}}

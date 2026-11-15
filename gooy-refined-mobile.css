@@ -296,3 +296,11 @@ html[data-theme="dark"] body .chat .msgs .selected-store-detail-value{color:#F5F
 html[data-theme="dark"] body .chat .msgs .selected-store-tag{background:#293242!important;color:#D6DFEE!important}
 html[data-theme="dark"] body .chat .msgs .selected-store-tag.store-chip-distance{background:#1C355A!important;color:#9FC3FF!important;border-color:#34547D!important}
 html[data-theme="dark"] body .chat .msgs .selected-store-actions .selected-store-action:not(.active){background:#232D3C!important;color:#A9C9FF!important;border-color:#3A5272!important}
+
+/* Indicador de processamento da pesquisa: texto leve e três pontos animados. */
+body .chat .msgs .guru-typing{display:inline-flex!important;align-items:center!important;gap:10px!important;max-width:95%!important}
+body .chat .msgs .gooy-thinking-status{font-size:12px!important;font-weight:500!important;color:#64748B!important;white-space:normal!important}
+body .chat .msgs .guru-typing-dots{display:inline-flex!important;align-items:center!important;gap:4px!important;flex-shrink:0!important}
+body .chat .msgs .guru-typing-dot{background:#3478F6!important}
+html[data-theme="dark"] body .chat .msgs .gooy-thinking-status{color:#A9BAD1!important}
+@media(prefers-reduced-motion:reduce){body .chat .msgs .guru-typing-dot{animation:none!important;opacity:.7!important}}

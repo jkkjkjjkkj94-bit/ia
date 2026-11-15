@@ -867,7 +867,7 @@ function makeCard(row,index){
 
 function gooyMapLink(store,route=false){
  const lat=Number(store?.latitude),lng=Number(store?.longitude);
- if(store?.latitude==null||store?.longitude==null||!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return null;
+ if(store?.latitude==null||store?.longitude==null||String(store.latitude).trim()===''||String(store.longitude).trim()===''||!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180||(lat===0&&lng===0))return null;
  const params=new URLSearchParams({store:String(store.id||''),lat:String(lat),lng:String(lng),name:String(store.name||'').slice(0,120)});
  if(route)params.set('route','1');
  return './mapa.html?'+params.toString();

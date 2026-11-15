@@ -1588,6 +1588,15 @@ async function submitSelectedStoreAction(store,label,question){
  searchBusy=true;input.disabled=true;
  add(question,true);
  const typing=showTypingIndicator();
+ const started=performance.now();
+ typing.classList.add('gooy-thinking-active');
+ const dots=typing.querySelector('.guru-typing-dots');
+ if(dots)dots.hidden=true;
+ const steps=el('div','gooy-thinking-steps');
+ typing.prepend(steps);
+ steps.appendChild(el('div','gooy-thinking-step','Pensando...'));
+ const phaseOne=setTimeout(()=>steps.appendChild(el('div','gooy-thinking-step','Buscando informações na sua cidade...')),1100);
+ const phaseTwo=setTimeout(()=>steps.appendChild(el('div','gooy-thinking-step','Hmm... analisando as opções...')),2300);
  replyBuffer=document.createDocumentFragment();
  try{
   await loadData();
@@ -1604,6 +1613,11 @@ async function submitSelectedStoreAction(store,label,question){
   }
   renderContext();save();
  }catch(err){msgError(err)}finally{
+  const remaining=Math.max(0,minTypingMs-(performance.now()-started));
+  if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining));
+  clearTimeout(phaseOne);clearTimeout(phaseTwo);
+  steps.remove();if(dots)dots.hidden=false;
+  await new Promise(resolve=>setTimeout(resolve,550));
   const fragment=replyBuffer;replyBuffer=null;typing.remove();
   try{await showAssistantReply(fragment)}finally{input.disabled=false;searchBusy=false}
  }

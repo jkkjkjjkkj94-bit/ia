@@ -157,9 +157,26 @@ async function hybridResponse(question,rows){
 const money=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const dayNames=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 const el=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x};
+// Acompanha novas mensagens sem puxar a tela quando a pessoa rola para ler o histórico.
+let gooyFollowChat=true;
+let gooyScrollFrame=0;
+function gooyScrollToLatest(force=false){
+ if(!force&&!gooyFollowChat)return;
+ cancelAnimationFrame(gooyScrollFrame);
+ gooyScrollFrame=requestAnimationFrame(()=>{
+  if(!msgs.isConnected)return;
+  msgs.scrollTop=msgs.scrollHeight;
+ });
+}
+msgs.addEventListener('scroll',()=>{
+ const distance=msgs.scrollHeight-msgs.clientHeight-msgs.scrollTop;
+ gooyFollowChat=distance<170;
+},{passive:true});
 const add=(text,user=false)=>{
  const m=el('div','msg '+(user?'user':'bot'),text);
  (replyBuffer&&!user?replyBuffer:msgs).appendChild(m);
+ if(user){gooyFollowChat=true;gooyScrollToLatest(true)}
+ else if(!replyBuffer)gooyScrollToLatest();
  if(!replyBuffer){
   // Também anima respostas abertas diretamente pelos cards e pelo botão de reiniciar.
   if(!user)queueMicrotask(()=>{
@@ -187,6 +204,7 @@ function showTypingIndicator(){
  for(let i=0;i<3;i++)dots.appendChild(el('span','guru-typing-dot'));
  message.appendChild(dots);
  msgs.appendChild(message);
+ gooyScrollToLatest();
  return message;
 }
 // Escreve somente o texto da resposta, sem recriar cards nem elementos interativos.
@@ -210,6 +228,7 @@ async function animateAssistantText(node,original){
    }
    if(!count)count=1;
    node.nodeValue=letters.slice(0,count).join('');
+   gooyScrollToLatest();
    if(count>=letters.length){node.nodeValue=original;resolve();return}
    setTimeout(tick,24);
   };
@@ -228,6 +247,7 @@ async function showAssistantReply(fragment){
   const actions=message.querySelector('.chat-actions');
   if(reduced||!textNode||textNode.nodeType!==Node.TEXT_NODE||!textNode.nodeValue?.trim()){
    msgs.appendChild(message);
+   gooyScrollToLatest();
    continue;
   }
   const original=textNode.nodeValue;
@@ -235,6 +255,7 @@ async function showAssistantReply(fragment){
   if(grid)grid.style.display='none';
   if(actions)actions.style.display='none';
   msgs.appendChild(message);
+  gooyScrollToLatest();
   target.classList.add('guru-typewriter-caret');
   try{await animateAssistantText(textNode,original)}
   finally{
@@ -242,6 +263,7 @@ async function showAssistantReply(fragment){
    target.classList.remove('guru-typewriter-caret');
    if(grid)grid.style.display='';
    if(actions)actions.style.display='';
+   gooyScrollToLatest();
   }
  }
 }

@@ -171,6 +171,13 @@ const add=(text,user=false)=>{
  }
  return m;
 };
+function keepThinkingVisible(node){
+ if(!node?.isConnected)return;
+ const scroller=msgs;
+ if(scroller.scrollHeight>scroller.clientHeight){
+  scroller.scrollTo({top:scroller.scrollHeight,behavior:'smooth'});
+ }
+}
 function showTypingIndicator(){
  const message=el('div','msg bot guru-typing');
  message.setAttribute('role','status');
@@ -695,6 +702,7 @@ async function gooyButtonThinking(action){
  try{
   for(let i=0;i<stages.length;i++){
    steps.appendChild(el('div','gooy-thinking-step gooy-thinking-fade',stages[i]));
+   requestAnimationFrame(()=>keepThinkingVisible(typing));
    await new Promise(resolve=>setTimeout(resolve,i===stages.length-1?Math.max(0,minTypingMs-(performance.now()-start)):i===0?1100:1200));
   }
   steps.remove();

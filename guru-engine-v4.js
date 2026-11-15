@@ -820,13 +820,24 @@ function makeCard(row,index){
  if(s.verified)tags.appendChild(el('span','store-chip','Verificada'));
  if(s.sponsored)tags.appendChild(el('span','store-chip','Patrocinada'));
  identity.appendChild(tags);top.appendChild(identity);card.appendChild(top);
- if(s.address)card.appendChild(el('div','store-address',s.address));
+ if(s.address){
+  const address=String(s.address).trim();
+  const shortAddress=address.split(',').slice(0,2).join(',').replace(/\s+-\s+(?:SP|RJ|MG|PR|SC|RS|BA|GO|DF)$/i,'').trim();
+  const addressNode=el('div','store-address',shortAddress||address);
+  addressNode.title=address;
+  card.appendChild(addressNode);
+ }
  if(row.hoursUnknown)card.appendChild(el('div','guru-hours-unconfirmed','Horário neste dia não confirmado — consulte a loja'));
  if(Array.isArray(s.specialties)&&s.specialties.length){
   const info=el('div','smart-specialties');
   info.appendChild(el('b','','Especialidades'));
   const list=el('div','smart-specialties-list');
-  s.specialties.slice(0,5).forEach(t=>list.appendChild(el('span','smart-specialty',t)));
+  const queryTerms=norm(state.query||'').split(/\s+/).filter(t=>t.length>=4);
+  const ranked=[...s.specialties].sort((a,b)=>{
+   const score=t=>queryTerms.reduce((n,q)=>n+(norm(t).includes(q)?1:0),0);
+   return score(b)-score(a);
+  });
+  ranked.slice(0,2).forEach(t=>list.appendChild(el('span','smart-specialty',t)));
   info.appendChild(list);card.appendChild(info);
  }
  if(row.products.length&&state.productTerm){
@@ -854,7 +865,7 @@ function makeCard(row,index){
  const actions=el('div','store-card-actions');
  const outingResult=!!lastOuting&&(state.lastResults||[]).some(x=>x.store?.id===s.id);
  const view=el('button','store-action primary',outingResult?'Ver local':'Ver loja');view.type='button';view.onclick=()=>chooseStore(row);actions.appendChild(view);
- if(!outingResult){
+ if(!outingResult&&(db?.products||[]).some(p=>p.store_id===s.id&&eligibleProduct(p))){
   const products=el('button','store-action','Produtos');products.type='button';products.onclick=()=>{state.selectedStore=s;state.selectedProduct=null;replyAboutStore('quais produtos tem?','products');renderContext();save()};actions.appendChild(products);
  }
  const phone=String(s.whatsapp||'').replace(/\D/g,'');

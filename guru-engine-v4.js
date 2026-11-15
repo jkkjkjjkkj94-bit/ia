@@ -31,7 +31,7 @@ const userCityKey='guru_city_v1';
 try{userCity=String(sessionStorage.getItem(userCityKey)||'').trim().slice(0,90)}catch{}
 let replyBuffer=null;
 let lastSearchText='';
-const minTypingMs=5000;
+const minTypingMs=3500;
 const RESULT_PAGE_SIZE=3;
 
 /* Busca regional sob consentimento: somente cidades reconhecidas na região,

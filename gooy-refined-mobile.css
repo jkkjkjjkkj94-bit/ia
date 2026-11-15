@@ -100,3 +100,27 @@ body .guru-next-button:focus-visible,body .gooy-header-icon-button:focus-visible
 html[data-theme="dark"]{--gooy-accent-soft:#1B2A45}
 html[data-theme="dark"] body .chat .guru-chat-dock>.send.gooy-composer:focus-within{border-color:#3478F6!important}
 body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-composer-send{background:#fff!important;color:#101010!important;border-color:transparent!important}
+
+/* Azul elétrico — gravação, navegação e pequenos destaques. */
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording,
+html[data-theme="dark"] body .chat .guru-chat-dock>#chatForm.gooy-is-recording{
+ background:#3478F6!important;border-color:#3478F6!important;color:#fff!important;
+ box-shadow:0 5px 20px rgba(52,120,246,.16)!important;
+}
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-voice-wave i{background:#fff!important}
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-record-dot{background:#fff!important}
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-voice-meta{color:#fff!important}
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-voice-clock{color:#e0ebff!important}
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording #guruVoiceMic,
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-composer-send{
+ background:#fff!important;color:#3478F6!important;border-color:#fff!important;
+}
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording #guruVoiceMic svg,
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-composer-send svg{stroke:#3478F6!important}
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-composer-plus{color:#fff!important}
+body .sidebar-nav button.active{color:#3478F6!important}
+body .sidebar-nav button.active .side-icon{color:#3478F6!important}
+body .gooy-header-popover button:focus-visible,
+body .gooy-composer-menu button:focus-visible{outline:2px solid #3478F6!important;outline-offset:2px}
+body .guru-filter-chip{border-color:#C8DAFF!important}
+body .guru-clear-filters{color:#3478F6!important}

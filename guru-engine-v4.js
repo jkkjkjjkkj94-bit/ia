@@ -836,7 +836,8 @@ function makeCard(row,index){
    const score=t=>queryTerms.reduce((n,q)=>n+(norm(t).includes(q)?1:0),0);
    return score(b)-score(a);
   });
-  ranked.slice(0,2).forEach(t=>list.appendChild(el('span','smart-specialty',t)));
+  const shown=new Set([...tags.querySelectorAll('.store-chip')].map(node=>norm(node.textContent.trim())));
+  ranked.filter(t=>{const key=norm(String(t).trim());if(!key||shown.has(key))return false;shown.add(key);return true}).slice(0,2).forEach(t=>list.appendChild(el('span','smart-specialty',t)));
   info.appendChild(list);tags.appendChild(info);
  }
  if(row.products.length&&state.productTerm){

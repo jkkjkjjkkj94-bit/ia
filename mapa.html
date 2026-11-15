@@ -167,7 +167,7 @@ const KEY='sb_publishable_zBA2v4pRgaaAv1VeV2d-Uw_rIrt4ZxG';
 const el=id=>document.getElementById(id),search=el('search'),city=el('city'),list=el('list'),count=el('count'),notice=el('notice');
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const coords=s=>{const lat=Number(s.latitude),lng=Number(s.longitude);return s.latitude!=null&&s.longitude!=null&&Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180&&(lat!==0||lng!==0)?[lat,lng]:null};
+const coords=s=>{const lat=Number(s.latitude),lng=Number(s.longitude);return s.latitude!=null&&s.longitude!=null&&String(s.latitude).trim()!==''&&String(s.longitude).trim()!==''&&Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180&&(lat!==0||lng!==0)?[lat,lng]:null};
 const cityOf=s=>{const a=String(s.address||'');const m=a.match(/(?:^|[,\-])\s*([^,\-]+?)\s*-\s*[A-Z]{2}(?:\s|$)/i);return m?m[1].trim():''};
 let stores=[],markers=[],map,layer,selectedId=null,activeCategory='Todos',showUnlocated=false;
 let gpsWatchId=null,userCoords=null,userDot=null,userAccuracy=null,routeLine=null,routeDestination=null,routeRequest=0,gpsPending=false;

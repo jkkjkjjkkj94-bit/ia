@@ -125,3 +125,35 @@ body .gooy-composer-menu button:focus-visible{outline:2px solid #3478F6!importan
 body .guru-filter-chip{border-color:#C8DAFF!important}
 body .guru-clear-filters{color:#3478F6!important}
 
+
+/* Cards GOOY: compactos, sem alterar a disposição vertical dos botões. */
+body .chat .msgs .store-result-card.smart-card{
+ padding:12px!important;border-radius:15px!important;
+}
+body .chat .msgs .store-result-card .store-card-top{gap:7px!important}
+body .chat .msgs .store-result-card .store-card-top h3{font-size:14px!important;line-height:1.3!important}
+body .chat .msgs .store-result-card .store-card-meta{gap:4px!important;margin-top:6px!important}
+body .chat .msgs .store-result-card .store-chip,
+body .chat .msgs .store-result-card .smart-specialty{font-size:10px!important;padding:4px 7px!important}
+body .chat .msgs .store-result-card .store-address{
+ margin:8px 0 0!important;font-size:11px!important;line-height:1.45!important;
+ display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;
+}
+body .chat .msgs .store-result-card .smart-specialties{margin-top:8px!important;padding-top:7px!important}
+body .chat .msgs .store-result-card .smart-specialties b{font-size:11px!important}
+body .chat .msgs .store-result-card .smart-specialties-list{gap:4px!important;margin-top:5px!important}
+body .chat .msgs .store-result-card .store-card-actions{
+ display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;gap:7px!important;margin-top:12px!important;
+}
+body .chat .msgs .store-result-card .store-card-actions>.store-action{
+ width:100%!important;min-height:38px!important;padding:9px 12px!important;
+ border-radius:11px!important;font-size:12px!important;line-height:1.25!important;
+ box-shadow:none!important;text-align:center!important;
+}
+@media(min-width:681px){
+ body .chat .msgs .store-result-card.smart-card{padding:15px!important}
+ body .chat .msgs .store-result-card .store-card-top h3{font-size:16px!important}
+}
+@media(max-width:420px){
+ body .chat .msgs .store-result-card.smart-card{width:100%!important;max-width:100%!important}
+}

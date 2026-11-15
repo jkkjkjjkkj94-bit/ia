@@ -213,3 +213,22 @@ html[data-theme="dark"] body .chat .msgs .gooy-more-options{background:#202A3B!i
 @media(prefers-reduced-transparency:reduce){
  body .top.gooy-header-v2{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 }
+
+/* Cards de resultados: alturas iguais por linha, ação alinhada ao rodapé. */
+body .chat .msgs .store-results-grid{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ align-items:stretch!important;gap:12px!important;
+}
+body .chat .msgs .store-results-grid>.store-result-card.smart-card{
+ display:flex!important;flex-direction:column!important;height:100%!important;
+ min-height:0!important;box-sizing:border-box!important;
+}
+body .chat .msgs .store-results-grid>.store-result-card .store-card-actions{
+ margin-top:auto!important;padding-top:14px!important;flex-shrink:0!important;
+}
+@media(max-width:420px){
+ body .chat .msgs .store-results-grid{gap:9px!important}
+}
+@media(max-width:340px){
+ body .chat .msgs .store-results-grid{grid-template-columns:1fr!important}
+}

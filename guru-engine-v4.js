@@ -175,8 +175,17 @@ msgs.addEventListener('scroll',()=>{
 const add=(text,user=false)=>{
  const m=el('div','msg '+(user?'user':'bot'),text);
  (replyBuffer&&!user?replyBuffer:msgs).appendChild(m);
- if(user){gooyFollowChat=true;gooyScrollToLatest(true)}
- else if(!replyBuffer)gooyScrollToLatest();
+ if(user){
+  // Uma nova pergunta leva o usuário até a própria mensagem, mesmo se estiver lendo o histórico.
+  gooyFollowChat=true;
+  cancelAnimationFrame(gooyScrollFrame);
+  gooyScrollFrame=requestAnimationFrame(()=>{
+   if(!m.isConnected)return;
+   m.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+   // Mantém a pergunta e a resposta seguinte visíveis no fim da conversa.
+   requestAnimationFrame(()=>gooyScrollToLatest(true));
+  });
+ }else if(!replyBuffer)gooyScrollToLatest();
  if(!replyBuffer){
   // Também anima respostas abertas diretamente pelos cards e pelo botão de reiniciar.
   if(!user)queueMicrotask(()=>{

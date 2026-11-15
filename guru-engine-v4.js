@@ -589,14 +589,31 @@ async function runPendingCityQuery(){
  save();
  add('Cidade definida: '+userCity+'. O que você deseja encontrar?');
  input.placeholder='O que você procura em '+userCity+'?';
- input.focus();
+}
+let cityDetectionPromise=null;
+async function detectCityAutomatically(){
+ if(cityDetectionPromise)return cityDetectionPromise;
+ cityDetectionPromise=(async()=>{
+  const coords=await locate(false);
+  if(!coords)return false;
+  try{
+   const city=await findUserCity(coords);
+   if(!setUserCity(city))return false;
+   document.querySelectorAll('.guru-city-choice').forEach(node=>node.remove());
+   await runPendingCityQuery();
+   return true;
+  }catch(error){console.warn('[GOOY] Cidade automática indisponível:',error);return false}
+ })().finally(()=>{cityDetectionPromise=null});
+ return cityDetectionPromise;
 }
 function askForCity(query=''){
+ if(!userCity && !locationAttempted){void detectCityAutomatically().then(ok=>{if(!ok)askForCity(query)});if(query)pendingCityQuery=query;return}
+ if(document.querySelector('.guru-city-choice')){if(query)pendingCityQuery=query;return}
  document.body.classList.add('chat-started');
  if(query)pendingCityQuery=query;
  const m=add('',false);m.classList.add('guru-city-choice');
- m.appendChild(el('div','guru-city-choice-title','Qual é sua cidade?'));
- m.appendChild(el('div','guru-city-distance-note','A GOOY pesquisará apenas lojas dessa cidade. Digite o município ou autorize a localização.'));
+ m.appendChild(el('div','guru-city-choice-title','Não foi possível detectar sua cidade.'));
+ m.appendChild(el('div','guru-city-distance-note','Para buscar lojas locais, informe sua cidade ou tente a localização novamente.'));
  const controls=el('div','guru-city-choice-controls');
  const inputCity=el('input','');inputCity.type='text';inputCity.placeholder='Ex.: Salto de Pirapora';
  inputCity.maxLength=90;inputCity.autocomplete='address-level2';inputCity.setAttribute('aria-label','Cidade onde você está');
@@ -1586,7 +1603,7 @@ async function submitText(raw){
   typing.remove();
   try{await showAssistantReply(completed)}catch(err){console.error('[GOOY] Falha ao mostrar resposta',err);add('Não consegui exibir o resultado. Tente outra pesquisa.');}
   finally{
-   input.disabled=false;input.focus();searchBusy=false;
+   input.disabled=false;searchBusy=false;
   }
  }
 }
@@ -1597,7 +1614,6 @@ function resetConversation(){
  msgs.replaceChildren(el('div','msg bot','Olá! Diga o que você procura.'));
  document.body.classList.remove('chat-started');
  input.value='';setSuggestions();renderContext();
- input.focus({preventScroll:true});
 }
 function initMobileKeyboardLayout(){
  const viewport=window.visualViewport;
@@ -1683,17 +1699,16 @@ function initShell(){
  document.getElementById('gooyMobileNewChat')?.addEventListener('click',()=>{
   closeHeaderMenus();
   resetConversation();
-  input?.focus();
  });
  top?.querySelectorAll('[data-gooy-header-action]').forEach(button=>button.addEventListener('click',()=>{
   const action=button.dataset.gooyHeaderAction;
   closeHeaderMenus();
-  if(action==='new'||action==='clear'){resetConversation();input?.focus()}
+  if(action==='new'||action==='clear'){resetConversation()}
   if(action==='location'){
    userCity='';
    try{sessionStorage.removeItem(userCityKey)}catch{}
    resetConversation();
-   askForCity();
+   void detectCityAutomatically().then(ok=>{if(!ok)askForCity()});
   }
   if(action==='map'){window.location.href='./mapa.html';return}
    if(action==='explore'){
@@ -1713,7 +1728,7 @@ function initShell(){
   }
  });
  document.getElementById('resetBtn')?.addEventListener('click',resetConversation);
- document.getElementById('locBtn')?.addEventListener('click',()=>{userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};askForCity()});
+ document.getElementById('locBtn')?.addEventListener('click',()=>{userCity='';try{sessionStorage.removeItem(userCityKey)}catch{};void detectCityAutomatically().then(ok=>{if(!ok)askForCity()})});
  document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>submitText(b.dataset.q||'')));
 }
 if(form&&input&&msgs){
@@ -1743,6 +1758,7 @@ if(form&&input&&msgs){
  input.addEventListener('keydown',e=>{if(e.key==='Escape')setSuggestions();if(e.key==='ArrowDown'&&visibleSuggestions.length){e.preventDefault();suggestions?.querySelector('button')?.focus()}});
  input.addEventListener('blur',()=>setTimeout(()=>{if(!suggestions?.contains(document.activeElement))setSuggestions()},100));
  restore();initShell();initMobileKeyboardLayout();renderContext();
+ if(!userCity)void detectCityAutomatically();
  // Mostre as frases variáveis na abertura; solicite a cidade somente quando
  // a pessoa iniciar uma pesquisa ou tocar em "Usar localização".
  if(userCity){

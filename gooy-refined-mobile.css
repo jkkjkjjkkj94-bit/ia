@@ -125,35 +125,3 @@ body .gooy-composer-menu button:focus-visible{outline:2px solid #3478F6!importan
 body .guru-filter-chip{border-color:#C8DAFF!important}
 body .guru-clear-filters{color:#3478F6!important}
 
-/* Cards de busca: ações compactas, alinhadas e sem botões empilhados. */
-body .store-result-card .store-card-actions{
- display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
- gap:7px!important;align-items:stretch!important;margin-top:12px!important;
-}
-body .store-result-card .store-card-actions>.store-action{
- display:inline-flex!important;align-items:center!important;justify-content:center!important;
- width:100%!important;min-width:0!important;min-height:38px!important;height:auto!important;
- margin:0!important;padding:9px 10px!important;border-radius:11px!important;
- font-size:12px!important;font-weight:600!important;line-height:1.25!important;
- text-align:center!important;white-space:normal!important;box-shadow:none!important;
- background:#fff!important;color:#30343a!important;border:1px solid #e6e9ef!important;
- text-decoration:none!important;
-}
-body .store-result-card .store-card-actions>.store-action.primary{
- background:#3478F6!important;color:#fff!important;border-color:#3478F6!important;
-}
-body .store-result-card .store-card-actions>.store-action[href*="mapa.html"]{
- color:#2467DE!important;background:#F4F8FF!important;border-color:#DCE9FF!important;
-}
-body .store-result-card .store-card-actions>.store-action[href*="route=1"]{
- background:#3478F6!important;color:#fff!important;border-color:#3478F6!important;
-}
-body .selected-store-actions .selected-store-action[href*="mapa.html"]{
- font-size:12px!important;border-radius:10px!important;min-height:36px!important;
- padding:8px 10px!important;box-shadow:none!important;
-}
-@media(max-width:370px){
- body .store-result-card .store-card-actions{gap:6px!important}
- body .store-result-card .store-card-actions>.store-action{font-size:11px!important;padding:8px 5px!important}
-}
-html[data-theme="dark"] body .store-result-card .store-card-actions>.store-action:not(.primary):not([href*="route=1"]){background:#23252b!important;color:#e7eaf0!important;border-color:#3a3d46!important}

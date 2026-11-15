@@ -900,6 +900,7 @@ function renderNextQuestions(host,rows,offset=0){
    const start=Math.max(count,Number(state.resultOffset)||count);
    const batch=activeResults.slice(start,start+resultPageSize());
    if(!batch.length){more.remove();return}
+   add('Quero mais opções',true);
    batch.forEach((row,i)=>grid.appendChild(makeCard(row,start+i)));
    state.resultOffset=start+batch.length;
    save();

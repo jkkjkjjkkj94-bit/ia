@@ -31,7 +31,7 @@ const userCityKey='guru_city_v1';
 try{userCity=String(sessionStorage.getItem(userCityKey)||'').trim().slice(0,90)}catch{}
 let replyBuffer=null;
 let lastSearchText='';
-const minTypingMs=1900;
+const minTypingMs=3400;
 const RESULT_PAGE_SIZE=3;
 
 /* Busca regional sob consentimento: somente cidades reconhecidas na região,
@@ -1586,25 +1586,39 @@ async function submitText(raw){
  const typing=showTypingIndicator();
  const status=el('span','gooy-thinking-status','Pensando...');
  typing.prepend(status);
- const started=performance.now();
- const phases=['Pensando...','Buscando estabelecimentos na sua cidade...','Preparando resposta...'];
+ typing.classList.add('gooy-thinking-active');
+ const dots=typing.querySelector('.guru-typing-dots');
+ if(dots)dots.hidden=true;
+ const start=performance.now();
+ const phases=[
+  {at:0,text:'Pensando...'},
+  {at:1050,text:'Buscando estabelecimentos na sua cidade...'},
+  {at:2250,text:'Hmm... analisando as opções...'}
+ ];
  let phase=0;
  const phaseTimer=setInterval(()=>{
   if(!typing.isConnected)return;
-  phase=Math.min(phase+1,phases.length-1);
-  status.textContent=phases[phase];
- },750);
- const start=started;
+  const elapsed=performance.now()-start;
+  while(phase+1<phases.length&&elapsed>=phases[phase+1].at)phase++;
+  if(status.textContent!==phases[phase].text){
+   status.classList.remove('gooy-thinking-fade');
+   void status.offsetWidth;
+   status.textContent=phases[phase].text;
+   status.classList.add('gooy-thinking-fade');
+  }
+ },90);
  replyBuffer=document.createDocumentFragment();
  try{await Promise.race([run(t),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Tempo limite da pesquisa')),15000))])}catch(err){console.error('[GOOY] Falha na pesquisa',err);try{msgError(err)}catch{add('Não foi possível concluir esta pesquisa. Tente novamente em instantes.')}}finally{
   const remaining=Math.max(0,minTypingMs-(performance.now()-start));
   if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining));
   clearInterval(phaseTimer);
   status.remove();
+  typing.classList.remove('gooy-thinking-active');
+  if(dots)dots.hidden=false;
   typing.setAttribute('aria-label','GOOY está digitando a resposta');
   const completed=replyBuffer;
   replyBuffer=null;
-  try{await new Promise(resolve=>setTimeout(resolve,300))}finally{typing.remove()}
+  try{await new Promise(resolve=>setTimeout(resolve,650))}finally{typing.remove()}
   try{await showAssistantReply(completed)}catch(err){console.error('[GOOY] Falha ao mostrar resposta',err);add('Não consegui exibir o resultado. Tente outra pesquisa.');}
   finally{
    input.disabled=false;searchBusy=false;

@@ -190,3 +190,26 @@ body .chat .msgs .store-result-card .store-card-actions>.store-action.primary{
 }
 body .chat .msgs .store-result-card .store-card-meta{row-gap:4px!important}
 html[data-theme="dark"] body .chat .msgs .gooy-more-options{background:#202A3B!important;border-color:#354867!important;color:#90B8FF!important}
+
+/* Desvanecimento discreto nas bordas da conversa, sem sobrepor os controles. */
+@media(max-width:680px){
+ body .top.gooy-header-v2{
+  position:relative!important;z-index:12!important;
+  background:rgba(255,255,255,.90)!important;
+  -webkit-backdrop-filter:blur(16px)!important;backdrop-filter:blur(16px)!important;
+  border-bottom:0!important;
+ }
+ body .top.gooy-header-v2::after{
+  content:"";position:absolute;top:100%;left:0;right:0;height:24px;
+  pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,.94),rgba(255,255,255,0));
+ }
+ body .chat .guru-messages-region>.msgs{
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,black 22px,black calc(100% - 22px),transparent 100%)!important;
+  mask-image:linear-gradient(to bottom,transparent 0,black 22px,black calc(100% - 22px),transparent 100%)!important;
+ }
+ html[data-theme="dark"] body .top.gooy-header-v2{background:rgba(19,20,24,.90)!important}
+ html[data-theme="dark"] body .top.gooy-header-v2::after{background:linear-gradient(to bottom,rgba(19,20,24,.94),rgba(19,20,24,0))}
+}
+@media(prefers-reduced-transparency:reduce){
+ body .top.gooy-header-v2{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+}

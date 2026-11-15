@@ -24,7 +24,7 @@ body .chat .guru-chat-dock .guru-filter-chip,body .chat .guru-chat-dock .guru-cl
 .guru-category-option:hover,.guru-category-option:focus-visible{background:rgba(125,125,125,.1)}
 @media(max-width:680px){.guru-category-list{grid-template-columns:1fr;max-height:35vh}.guru-category-browser>details>summary{padding:10px 12px}}
 .guru-hours-unconfirmed{font-size:12px;line-height:1.45;color:var(--text-muted,#777);padding:7px 0;overflow-wrap:anywhere}
-</style><link rel="stylesheet" href="guru-mobile-ui-v2.css?v=11"><link rel="stylesheet" href="gooy-refined-mobile.css?v=7"><link rel="icon" type="image/svg+xml" href="gooy-mark.svg?v=1"><script>try{document.documentElement.dataset.theme=localStorage.getItem('guru_theme_v1')==='dark'?'dark':'light'}catch{document.documentElement.dataset.theme='light'}</script><style id="gooy-branding-v1">
+</style><link rel="stylesheet" href="guru-mobile-ui-v2.css?v=11"><link rel="stylesheet" href="gooy-refined-mobile.css?v=8"><link rel="icon" type="image/svg+xml" href="gooy-mark.svg?v=1"><script>try{document.documentElement.dataset.theme=localStorage.getItem('guru_theme_v1')==='dark'?'dark':'light'}catch{document.documentElement.dataset.theme='light'}</script><style id="gooy-branding-v1">
 .gooy-identity{display:flex;align-items:center;gap:9px;min-width:0;white-space:nowrap}
 .gooy-identity .brand-logo{display:block;width:28px;height:28px;flex:0 0 28px;object-fit:contain}
 .gooy-wordmark{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:800;letter-spacing:-.055em;font-size:19px;line-height:1;color:#111}
@@ -64,10 +64,10 @@ body .chat .guru-chat-dock>#chatForm.gooy-is-recording #guruVoiceMic svg{stroke:
   <nav class="gooy-header-popover" id="gooyMobileMainMenu" aria-label="Menu GOOY" hidden>
     <button type="button" data-gooy-header-action="new">Nova conversa</button>
     <button type="button" data-gooy-header-action="location">Definir cidade</button>
-    <button type="button" data-gooy-header-action="explore">Explorar categorias</button><button type="button" data-gooy-header-action="map">Mapa de estabelecimentos</button>
+    <button type="button" data-gooy-header-action="explore">Explorar categorias</button>
   </nav>
   <div class="gooy-header-popover gooy-header-more" id="gooyMobileMoreMenu" aria-label="Mais opções da GOOY" hidden>
-    <button type="button" data-gooy-header-action="location">Alterar cidade</button><button type="button" data-gooy-header-action="map">Ver mapa</button>
+    <button type="button" data-gooy-header-action="location">Alterar cidade</button>
     <button type="button" data-gooy-header-action="clear">Limpar conversa</button>
     <button type="button" class="guru-mobile-theme-toggle" data-guru-theme-toggle aria-label="Ativar tema escuro" aria-pressed="false"><span class="guru-theme-symbol"><svg data-theme-icon="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.1 15.1A8.4 8.4 0 0 1 8.9 3.9 8.6 8.6 0 1 0 20.1 15.1Z"/></svg><svg data-theme-icon="sun" viewBox="0 0 24 24" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="gooy-header-theme-label">Alternar tema</span></button>
   </div>
@@ -130,7 +130,7 @@ window.GuruBoot={status:'loading',error:null};
  });
 })();
 </script><script type="module">
-import('./guru-engine-v4.js?v=132').then(()=>{
+import('./guru-engine-v4.js?v=133').then(()=>{
  window.GuruBoot.status=window.GuruEngineV4?'ready':'error';
  if(!window.GuruEngineV4)window.GuruBoot.report(new Error('Módulo carregado, mas o mecanismo de chat não foi inicializado.'));
 }).catch(error=>window.GuruBoot.report(error));

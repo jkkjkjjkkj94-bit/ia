@@ -901,13 +901,11 @@ function renderNextQuestions(host,rows,offset=0){
    const batch=activeResults.slice(start,start+resultPageSize());
    if(!batch.length){more.remove();return}
    add('Quero mais opções',true);
-   batch.forEach((row,i)=>grid.appendChild(makeCard(row,start+i)));
    state.resultOffset=start+batch.length;
    save();
-   const left=activeResults.length-state.resultOffset;
-   if(left<=0){panel.remove();return}
-   more.textContent='Mais opções';
-   more.setAttribute('aria-label','Mostrar mais '+Math.min(left,resultPageSize())+' estabelecimentos');
+   // Cada página deve surgir em uma nova resposta, abaixo da mensagem do usuário.
+   panel.remove();
+   displayResults(batch,start);
   };
   buttons.appendChild(more);
  }

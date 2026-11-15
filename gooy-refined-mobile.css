@@ -87,3 +87,16 @@
 .guru-city-choice-controls input{min-width:0!important;flex:1 1 100%!important;font-size:16px!important}
 .guru-city-choice-controls button{flex:1 1 auto!important;font-size:13px!important}
 @media(max-width:680px){body .hero{margin-top:clamp(24px,5dvh,50px)!important}body .hero p{font-size:13px!important}body .chat .guru-chat-dock>.ctx{max-height:42px!important;overflow-x:auto!important;flex-wrap:nowrap!important}body .chat .guru-chat-dock>.send{box-shadow:none!important}body .guru-city-choice{padding:12px!important}}
+
+/* Identidade GOOY — azul elétrico, aplicada sem poluir o chat. */
+:root{--gooy-accent:#3478F6;--gooy-accent-hover:#2467DE;--gooy-accent-soft:#EDF4FF}
+.gooy-wordmark .gooy-ai,.gooy-mobile-brand small{color:var(--gooy-accent)!important}
+body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send,
+body .chat .guru-chat-dock>.send .gooy-composer-send{background:var(--gooy-accent)!important;color:#fff!important;border-color:var(--gooy-accent)!important}
+body .chat .guru-chat-dock>.send.gooy-composer .gooy-composer-send:hover{background:var(--gooy-accent-hover)!important}
+body .chat .guru-chat-dock>.send.gooy-composer:focus-within{border-color:#A8C7FF!important}
+body .gooy-composer-menu button:hover,body .gooy-header-popover button:hover{background:var(--gooy-accent-soft)!important}
+body .guru-next-button:focus-visible,body .gooy-header-icon-button:focus-visible{outline:2px solid var(--gooy-accent)!important;outline-offset:2px}
+html[data-theme="dark"]{--gooy-accent-soft:#1B2A45}
+html[data-theme="dark"] body .chat .guru-chat-dock>.send.gooy-composer:focus-within{border-color:#3478F6!important}
+body .chat .guru-chat-dock>#chatForm.gooy-is-recording .gooy-composer-send{background:#fff!important;color:#101010!important;border-color:transparent!important}

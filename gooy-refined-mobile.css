@@ -312,3 +312,8 @@ body .chat .msgs .gooy-thinking-status{font-size:13px!important;line-height:1.5!
 body .chat .msgs .gooy-thinking-fade{animation:gooy-thinking-enter .24s ease-out both}
 @keyframes gooy-thinking-enter{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){body .chat .msgs .gooy-thinking-fade{animation:none!important}}
+
+body .chat .msgs .gooy-thinking-steps{display:flex!important;flex-direction:column!important;gap:9px!important;align-items:flex-start!important}
+body .chat .msgs .gooy-thinking-step{font-size:13px!important;line-height:1.5!important;color:#697586!important}
+body .chat .msgs .guru-typing .guru-typing-dots[hidden]{display:none!important}
+html[data-theme="dark"] body .chat .msgs .gooy-thinking-step{color:#A9BAD1!important}

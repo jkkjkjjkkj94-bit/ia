@@ -142,6 +142,54 @@ body #chatForm.gooy-composer .guru-voice-btn[aria-pressed="true"] {
 body #chatForm.gooy-composer .guru-voice-btn:focus-visible,
 body #chatForm.gooy-composer .gooy-composer-send:focus-visible,
 body .sidebar-primary:focus-visible{outline:2px solid #0066ff!important;outline-offset:3px}
+</style><style id="gooy-theme-contrast-layout-fix-v1">
+/* Theme corrections: no light surfaces or black typography in dark mode. */
+html[data-theme="dark"] body .app-sidebar,
+html[data-theme="dark"] body .sidebar-bottom,
+html[data-theme="dark"] body .sidebar-cta,
+html[data-theme="dark"] body .sidebar-brand,
+html[data-theme="dark"] body .main,
+html[data-theme="dark"] body .chat,
+html[data-theme="dark"] body .guru-chat-dock {
+ background:#111214!important;color:#f3f4f6!important;border-color:#30343a!important;
+}
+html[data-theme="dark"] body .app-sidebar {background:#17191d!important}
+html[data-theme="dark"] body .sidebar-cta {background:#202329!important}
+html[data-theme="dark"] body .sidebar-nav button,
+html[data-theme="dark"] body .sidebar-theme-toggle,
+html[data-theme="dark"] body .guru-theme-toggle,
+html[data-theme="dark"] body .sidebar-collapse,
+html[data-theme="dark"] body .sidebar-cta strong,
+html[data-theme="dark"] body .hero h1,
+html[data-theme="dark"] body .main .hero h1,
+html[data-theme="dark"] body .msg,
+html[data-theme="dark"] body .app-footer-note strong {color:#f3f4f6!important}
+html[data-theme="dark"] body .hero p,
+html[data-theme="dark"] body .sidebar-cta p,
+html[data-theme="dark"] body .app-footer-note {color:#b1b8c5!important}
+html[data-theme="dark"] body .sidebar-nav button.active {background:#272d39!important;color:#fff!important}
+html[data-theme="dark"] body #chatForm.gooy-composer,
+html[data-theme="dark"] body .chat .guru-chat-dock #chatForm.gooy-composer {
+ background:#202329!important;border:1px solid #3b414b!important;box-shadow:none!important;
+}
+html[data-theme="dark"] body #chatForm.gooy-composer input#q {
+ background:transparent!important;color:#f3f4f6!important;caret-color:#0066ff!important;
+}
+html[data-theme="dark"] body #chatForm.gooy-composer input#q::placeholder {color:#aab2c0!important;opacity:1!important}
+html[data-theme="dark"] body .guru-filter-chip {background:#252a33!important;color:#f3f4f6!important;border-color:#414855!important}
+html[data-theme="dark"] body .guru-clear-filters {color:#bdc6d5!important}
+html[data-theme="dark"] body .sidebar-primary,
+html[data-theme="dark"] body #chatForm.gooy-composer .guru-voice-btn,
+html[data-theme="dark"] body #chatForm.gooy-composer .gooy-composer-send {background:#0066ff!important;border-color:#0066ff!important;color:white!important}
+html[data-theme="dark"] body #chatForm.gooy-composer .guru-voice-btn svg,
+html[data-theme="dark"] body #chatForm.gooy-composer .gooy-composer-send svg {stroke:white!important}
+@media(min-width:681px) {
+ body .app-footer-note {position:fixed!important;left:calc(248px + (100vw - 248px)/2)!important;bottom:3px!important;transform:translateX(-50%)!important;max-width:calc(100vw - 290px)!important;white-space:normal!important;text-align:center!important;font-size:10px!important;line-height:1.3!important;pointer-events:none!important}
+ body .chat .guru-chat-dock #chatForm.gooy-composer {bottom:37px!important}
+ body .chat .guru-chat-dock>.ctx {bottom:117px!important}
+ body.sidebar-collapsed .app-footer-note {left:calc(68px + (100vw - 68px)/2)!important}
+}
+@media(max-width:680px){body .app-footer-note{display:none!important}}
 </style></head><body>
 <aside class="app-sidebar"><div class="sidebar-top"><div class="sidebar-brand"><button class="sidebar-collapse" type="button" aria-label="Recolher menu"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M10 5v14"></path></svg></button></div><nav class="sidebar-nav"><button type="button" class="active" data-shell-action="new"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg></span><span>Nova busca</span></button><button type="button" data-shell-action="location"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg></span><span>Localização</span></button><button type="button" class="guru-theme-toggle" data-guru-theme-toggle aria-label="Ativar tema escuro" aria-pressed="false"><span class="side-icon guru-theme-symbol"><svg data-theme-icon="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.1 15.1A8.4 8.4 0 0 1 8.9 3.9 8.6 8.6 0 1 0 20.1 15.1Z"/></svg><svg data-theme-icon="sun" viewBox="0 0 24 24" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="guru-theme-label">Tema claro</span><span class="guru-theme-switch" aria-hidden="true"><span class="guru-theme-switch-thumb"></span></span></button></nav></div><div class="sidebar-bottom"><div class="sidebar-cta"><strong>Encontre locais perto de você</strong><p>Converse com o GOOY para encontrar estabelecimentos, produtos e serviços.</p><button type="button" data-shell-action="location" class="sidebar-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg><span>Usar localização</span></button></div></div></aside>
 <header class="top gooy-header-v2">

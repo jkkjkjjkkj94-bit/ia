@@ -283,6 +283,71 @@ body #chatForm.gooy-composer button.gooy-composer-send svg{
  margin:0!important;padding:0!important;fill:none!important;stroke:#fff!important;
  stroke-width:1.9!important;stroke-linecap:round!important;stroke-linejoin:round!important;
 }
+</style><style id="gooy-desktop-responsive-dock-v7">
+/* Desktop chat layout: independent scrolling results and non-overlapping controls. */
+@media(min-width:681px){
+ body .main .chat{
+  position:absolute!important;inset:68px 0 0 248px!important;
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:minmax(0,1fr) auto!important;
+  overflow:hidden!important;min-width:0!important;min-height:0!important;
+  padding:0 clamp(18px,3vw,42px) 24px!important;box-sizing:border-box!important;
+ }
+ body.sidebar-collapsed .main .chat{left:68px!important;right:0!important}
+ body .chat>.guru-messages-region{
+  grid-row:1!important;grid-column:1!important;display:flex!important;
+  flex-direction:column!important;min-width:0!important;min-height:0!important;
+  overflow:hidden!important;position:relative!important;
+ }
+ body .chat .guru-messages-region>.msgs,
+ body.chat-started .chat .guru-messages-region>.msgs{
+  position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+  right:auto!important;bottom:auto!important;transform:none!important;
+  display:flex!important;flex-direction:column!important;
+  width:100%!important;max-width:1120px!important;height:100%!important;max-height:100%!important;
+  min-height:0!important;min-width:0!important;overflow-y:auto!important;overflow-x:hidden!important;
+  margin:0 auto!important;padding:18px 8px 24px!important;box-sizing:border-box!important;
+  scroll-padding-bottom:24px!important;
+ }
+ body .chat>.guru-chat-dock{
+  grid-row:2!important;grid-column:1!important;position:relative!important;
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  gap:9px!important;min-width:0!important;width:100%!important;
+  max-width:1120px!important;margin:0 auto!important;padding:12px 0 0!important;
+  border-top:1px solid #e8eaf0!important;background:var(--bg,#fff)!important;
+  z-index:10!important;
+ }
+ body .chat .guru-chat-dock>.ctx,
+ body.chat-started .chat .guru-chat-dock>.ctx{
+  position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+  right:auto!important;bottom:auto!important;transform:none!important;
+  display:flex!important;flex-wrap:wrap!important;align-items:center!important;
+  width:100%!important;max-width:100%!important;min-height:0!important;max-height:90px!important;
+  overflow-y:auto!important;overflow-x:hidden!important;margin:0!important;padding:0 2px!important;
+  box-sizing:border-box!important;z-index:1!important;
+ }
+ body .chat .guru-chat-dock>.ctx:empty,
+ body .chat .guru-chat-dock>.ctx[hidden]{display:none!important}
+ body .chat .guru-chat-dock #chatForm.gooy-composer,
+ body.chat-started .chat .guru-chat-dock #chatForm.gooy-composer{
+  position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+  right:auto!important;bottom:auto!important;transform:none!important;
+  display:flex!important;align-items:center!important;flex:0 0 auto!important;
+  width:100%!important;max-width:100%!important;min-height:64px!important;
+  margin:0!important;padding:7px 10px 7px 16px!important;box-sizing:border-box!important;
+ }
+ body .chat .guru-chat-dock>.guru-suggestions{
+  position:absolute!important;bottom:calc(100% + 4px)!important;left:0!important;
+  right:0!important;top:auto!important;width:100%!important;z-index:15!important;
+ }
+ body .app-footer-note{bottom:2px!important;z-index:1!important}
+ html[data-theme="dark"] body .chat>.guru-chat-dock{
+  background:#111214!important;border-top-color:#30343a!important;
+ }
+}
+@media(min-width:681px) and (max-width:900px){
+ body .main .chat{padding-inline:16px!important}
+}
 </style></head><body>
 <aside class="app-sidebar"><div class="sidebar-top"><div class="sidebar-brand"><button class="sidebar-collapse" type="button" aria-label="Recolher menu"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M10 5v14"></path></svg></button></div><nav class="sidebar-nav"><button type="button" class="active" data-shell-action="new"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg></span><span>Nova busca</span></button><button type="button" data-shell-action="location"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg></span><span>Localização</span></button><button type="button" class="guru-theme-toggle" data-guru-theme-toggle aria-label="Ativar tema escuro" aria-pressed="false"><span class="side-icon guru-theme-symbol"><svg data-theme-icon="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.1 15.1A8.4 8.4 0 0 1 8.9 3.9 8.6 8.6 0 1 0 20.1 15.1Z"/></svg><svg data-theme-icon="sun" viewBox="0 0 24 24" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="guru-theme-label">Tema claro</span><span class="guru-theme-switch" aria-hidden="true"><span class="guru-theme-switch-thumb"></span></span></button></nav></div><div class="sidebar-bottom"><div class="sidebar-cta"><strong>Encontre locais perto de você</strong><p>Converse com o GOOY para encontrar estabelecimentos, produtos e serviços.</p><button type="button" data-shell-action="location" class="sidebar-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg><span>Usar localização</span></button></div></div></aside>
 <header class="top gooy-header-v2">

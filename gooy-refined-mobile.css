@@ -325,3 +325,20 @@ html[data-theme="dark"] body .chat .msgs .gooy-thinking-step{color:#A9BAD1!impor
  body .chat .msgs .gooy-thinking-steps{width:100%!important;gap:12px!important}
  body .chat .msgs .gooy-thinking-step{max-width:100%!important;overflow-wrap:anywhere!important}
 }
+
+/* GOOY: botão de paginação compacto, acima das regras antigas de cápsula azul. */
+body .chat .msgs .guru-next-questions .guru-next-button.guru-more-question.gooy-more-options,
+body .chat .msgs .guru-next-button.guru-more-question.gooy-more-options {
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ width:max-content!important;max-width:max-content!important;min-width:0!important;
+ height:30px!important;min-height:30px!important;padding:0 7px!important;
+ margin:5px auto 0!important;gap:5px!important;border:0!important;
+ border-radius:4px!important;background:transparent!important;box-shadow:none!important;
+ color:#525866!important;font-size:12px!important;font-weight:500!important;
+}
+body .chat .msgs .guru-next-button.guru-more-question.gooy-more-options:hover {
+ background:rgba(120,130,150,.07)!important;color:#24272d!important;
+}
+html[data-theme="dark"] body .chat .msgs .guru-next-button.guru-more-question.gooy-more-options {
+ background:transparent!important;border:0!important;color:#d5d6dc!important;
+}

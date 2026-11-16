@@ -237,6 +237,32 @@ body #chatForm.gooy-composer .guru-voice-btn svg,
 body #chatForm.gooy-composer .gooy-composer-send svg{
  stroke:#fff!important;color:#fff!important;
 }
+</style><style id="gooy-send-button-clean-v5">
+/* Send action: one consistent electric-blue rounded square, centered icon. */
+body #chatForm.gooy-composer button.gooy-composer-send,
+body .chat .guru-chat-dock #chatForm.gooy-composer button.gooy-composer-send {
+ appearance:none!important;box-sizing:border-box!important;
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 44px!important;width:44px!important;min-width:44px!important;max-width:44px!important;
+ height:44px!important;min-height:44px!important;max-height:44px!important;
+ padding:0!important;margin:0!important;border:0!important;border-radius:14px!important;
+ background:#0066ff!important;background-image:none!important;color:#fff!important;
+ box-shadow:none!important;line-height:1!important;vertical-align:middle!important;
+}
+body #chatForm.gooy-composer button.gooy-composer-send svg {
+ display:block!important;position:static!important;transform:none!important;
+ flex:none!important;width:20px!important;height:20px!important;
+ fill:none!important;stroke:#fff!important;stroke-width:1.9!important;
+ stroke-linecap:round!important;stroke-linejoin:round!important;
+ margin:0!important;padding:0!important;
+}
+body #chatForm.gooy-composer button.gooy-composer-send:hover{background:#0056dc!important}
+body #chatForm.gooy-composer button.gooy-composer-send:active{background:#004bbd!important}
+@media(max-width:680px){
+ body #chatForm.gooy-composer button.gooy-composer-send{
+ flex-basis:44px!important;width:44px!important;height:44px!important;
+ }
+}
 </style></head><body>
 <aside class="app-sidebar"><div class="sidebar-top"><div class="sidebar-brand"><button class="sidebar-collapse" type="button" aria-label="Recolher menu"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M10 5v14"></path></svg></button></div><nav class="sidebar-nav"><button type="button" class="active" data-shell-action="new"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg></span><span>Nova busca</span></button><button type="button" data-shell-action="location"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg></span><span>Localização</span></button><button type="button" class="guru-theme-toggle" data-guru-theme-toggle aria-label="Ativar tema escuro" aria-pressed="false"><span class="side-icon guru-theme-symbol"><svg data-theme-icon="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.1 15.1A8.4 8.4 0 0 1 8.9 3.9 8.6 8.6 0 1 0 20.1 15.1Z"/></svg><svg data-theme-icon="sun" viewBox="0 0 24 24" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="guru-theme-label">Tema claro</span><span class="guru-theme-switch" aria-hidden="true"><span class="guru-theme-switch-thumb"></span></span></button></nav></div><div class="sidebar-bottom"><div class="sidebar-cta"><strong>Encontre locais perto de você</strong><p>Converse com o GOOY para encontrar estabelecimentos, produtos e serviços.</p><button type="button" data-shell-action="location" class="sidebar-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg><span>Usar localização</span></button></div></div></aside>
 <header class="top gooy-header-v2">

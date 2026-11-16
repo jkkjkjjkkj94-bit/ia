@@ -1855,9 +1855,14 @@ if(form&&input&&msgs){
  input.addEventListener('keydown',e=>{if(e.key==='Escape')setSuggestions();if(e.key==='ArrowDown'&&visibleSuggestions.length){e.preventDefault();suggestions?.querySelector('button')?.focus()}});
  input.addEventListener('blur',()=>setTimeout(()=>{if(!suggestions?.contains(document.activeElement))setSuggestions()},100));
  restore();initShell();initMobileKeyboardLayout();renderContext();
- // Não solicitar GPS automaticamente na abertura; respeitar a escolha do usuário.
- // Mostre as frases variáveis na abertura; solicite a cidade somente quando
- // a pessoa iniciar uma pesquisa ou tocar em "Usar localização".
+ // No computador, solicitar localização ao navegador uma vez na abertura.
+ // O navegador controla a permissão; em caso de recusa, a busca manual continua.
+ // Em telas móveis, manter a solicitação somente mediante ação da pessoa.
+ if(window.matchMedia('(min-width: 681px)').matches && navigator.geolocation && window.isSecureContext){
+  void detectCityAutomatically().then(ok=>{
+   if(!ok)console.info('[GOOY] Localização não autorizada ou indisponível; busca manual mantida.');
+  });
+ }
  if(userCity){
   state.location={...(state.location||{}),city:userCity};
   renderContext();

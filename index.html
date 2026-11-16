@@ -348,6 +348,29 @@ body #chatForm.gooy-composer button.gooy-composer-send svg{
 @media(min-width:681px) and (max-width:900px){
  body .main .chat{padding-inline:16px!important}
 }
+</style><style id="gooy-four-card-grid-v8">
+@media(min-width:681px){
+ body .chat .guru-messages-region>.msgs{max-width:1480px!important}
+ body .msg.bot.hashtag-result-msg{width:100%!important;max-width:100%!important;min-width:0!important}
+ body .msg.bot.hashtag-result-msg .store-results-grid{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:12px!important;width:100%!important;align-items:stretch!important;
+ }
+ body .msg.bot.hashtag-result-msg .store-result-card.smart-card{
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  height:100%!important;box-sizing:border-box!important;
+ }
+}
+@media(min-width:1200px){
+ body .msg.bot.hashtag-result-msg .store-results-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important;
+ }
+ body .msg.bot.hashtag-result-msg .store-result-card.smart-card{padding:12px!important}
+ body .msg.bot.hashtag-result-msg .store-card-top h3{font-size:14px!important}
+}
+@media(min-width:681px) and (max-width:1199px){
+ body .msg.bot.hashtag-result-msg .store-results-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
 </style></head><body>
 <aside class="app-sidebar"><div class="sidebar-top"><div class="sidebar-brand"><button class="sidebar-collapse" type="button" aria-label="Recolher menu"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M10 5v14"></path></svg></button></div><nav class="sidebar-nav"><button type="button" class="active" data-shell-action="new"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg></span><span>Nova busca</span></button><button type="button" data-shell-action="location"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg></span><span>Localização</span></button><button type="button" class="guru-theme-toggle" data-guru-theme-toggle aria-label="Ativar tema escuro" aria-pressed="false"><span class="side-icon guru-theme-symbol"><svg data-theme-icon="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.1 15.1A8.4 8.4 0 0 1 8.9 3.9 8.6 8.6 0 1 0 20.1 15.1Z"/></svg><svg data-theme-icon="sun" viewBox="0 0 24 24" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="guru-theme-label">Tema claro</span><span class="guru-theme-switch" aria-hidden="true"><span class="guru-theme-switch-thumb"></span></span></button></nav></div><div class="sidebar-bottom"><div class="sidebar-cta"><strong>Encontre locais perto de você</strong><p>Converse com o GOOY para encontrar estabelecimentos, produtos e serviços.</p><button type="button" data-shell-action="location" class="sidebar-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg><span>Usar localização</span></button></div></div></aside>
 <header class="top gooy-header-v2">
@@ -427,7 +450,7 @@ window.GuruBoot={status:'loading',error:null};
  });
 })();
 </script><script type="module">
-import('./guru-engine-v4.js?v=157').then(()=>{
+import('./guru-engine-v4.js?v=158').then(()=>{
  window.GuruBoot.status=window.GuruEngineV4?'ready':'error';
  if(!window.GuruEngineV4)window.GuruBoot.report(new Error('Módulo carregado, mas o mecanismo de chat não foi inicializado.'));
 }).catch(error=>window.GuruBoot.report(error));

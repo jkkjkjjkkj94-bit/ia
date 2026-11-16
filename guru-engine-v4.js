@@ -32,7 +32,7 @@ try{userCity=String(localStorage.getItem(userCityKey)||sessionStorage.getItem(us
 let replyBuffer=null;
 let lastSearchText='';
 const minTypingMs=2000;
-const RESULT_PAGE_SIZE=3;
+const RESULT_PAGE_SIZE=4;
 
 /* Busca regional sob consentimento: somente cidades reconhecidas na região,
    sem GPS obrigatório, sem consulta externa e sem alterar a cidade preferida. */

@@ -113,6 +113,35 @@ html[data-theme="dark"] .guru-next-button.guru-more-question.gooy-more-options {
  body:not([data-theme="dark"]) .app-footer-note {color:#8a909a!important;font-size:11px!important;line-height:1.5!important;text-align:center!important}
  body:not([data-theme="dark"]) .app-footer-note strong {color:#555c68!important}
 }
+</style><style id="gooy-electric-actions-v3">
+:root{--gooy-electric:#0066ff}
+body .sidebar-primary,
+body:not([data-theme="dark"]) .sidebar-primary,
+body .chat .guru-chat-dock #chatForm.gooy-composer .guru-voice-btn,
+body .chat .guru-chat-dock #chatForm.gooy-composer .gooy-composer-send,
+body #chatForm.gooy-composer .guru-voice-btn,
+body #chatForm.gooy-composer .gooy-composer-send,
+body .chat .msgs .store-result-card .store-card-actions>.store-action.primary {
+ background:#0066ff!important;background-color:#0066ff!important;
+ border-color:#0066ff!important;color:#fff!important;
+ box-shadow:none!important;
+}
+body .sidebar-primary svg,
+body #chatForm.gooy-composer .guru-voice-btn svg,
+body #chatForm.gooy-composer .gooy-composer-send svg {
+ color:#fff!important;stroke:#fff!important;
+}
+body .sidebar-primary:hover,
+body #chatForm.gooy-composer .guru-voice-btn:hover,
+body #chatForm.gooy-composer .gooy-composer-send:hover {
+ background:#0054db!important;background-color:#0054db!important;
+}
+body #chatForm.gooy-composer .guru-voice-btn[aria-pressed="true"] {
+ background:#0044ba!important;border-color:#0044ba!important;
+}
+body #chatForm.gooy-composer .guru-voice-btn:focus-visible,
+body #chatForm.gooy-composer .gooy-composer-send:focus-visible,
+body .sidebar-primary:focus-visible{outline:2px solid #0066ff!important;outline-offset:3px}
 </style></head><body>
 <aside class="app-sidebar"><div class="sidebar-top"><div class="sidebar-brand"><button class="sidebar-collapse" type="button" aria-label="Recolher menu"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M10 5v14"></path></svg></button></div><nav class="sidebar-nav"><button type="button" class="active" data-shell-action="new"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg></span><span>Nova busca</span></button><button type="button" data-shell-action="location"><span class="side-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg></span><span>Localização</span></button><button type="button" class="guru-theme-toggle" data-guru-theme-toggle aria-label="Ativar tema escuro" aria-pressed="false"><span class="side-icon guru-theme-symbol"><svg data-theme-icon="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.1 15.1A8.4 8.4 0 0 1 8.9 3.9 8.6 8.6 0 1 0 20.1 15.1Z"/></svg><svg data-theme-icon="sun" viewBox="0 0 24 24" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="guru-theme-label">Tema claro</span><span class="guru-theme-switch" aria-hidden="true"><span class="guru-theme-switch-thumb"></span></span></button></nav></div><div class="sidebar-bottom"><div class="sidebar-cta"><strong>Encontre locais perto de você</strong><p>Converse com o GOOY para encontrar estabelecimentos, produtos e serviços.</p><button type="button" data-shell-action="location" class="sidebar-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg><span>Usar localização</span></button></div></div></aside>
 <header class="top gooy-header-v2">
@@ -192,7 +221,7 @@ window.GuruBoot={status:'loading',error:null};
  });
 })();
 </script><script type="module">
-import('./guru-engine-v4.js?v=156').then(()=>{
+import('./guru-engine-v4.js?v=157').then(()=>{
  window.GuruBoot.status=window.GuruEngineV4?'ready':'error';
  if(!window.GuruEngineV4)window.GuruBoot.report(new Error('Módulo carregado, mas o mecanismo de chat não foi inicializado.'));
 }).catch(error=>window.GuruBoot.report(error));
